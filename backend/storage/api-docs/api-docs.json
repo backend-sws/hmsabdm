@@ -1,0 +1,270 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "HMS ABDM Integration API",
+        "description": "API Documentation for the Hospital Management System",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Main API Server"
+        }
+    ],
+    "paths": {
+        "/api/v1/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Authenticate user and return token",
+                "operationId": "bae68d1c55329ecb6e41f48285840c8f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "superadmin@hms.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful login"
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    }
+                }
+            }
+        },
+        "/api/v1/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout the authenticated user",
+                "operationId": "c5cdd87fdbf9d0f95dede875bd023dec",
+                "responses": {
+                    "200": {
+                        "description": "Successful logout"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/user": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Get the authenticated user's profile",
+                "operationId": "069342e9901b0d9a8d0a86993c227938",
+                "responses": {
+                    "200": {
+                        "description": "User profile retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/patients": {
+            "get": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Get all patients",
+                "operationId": "6747f925788f494507252b8889e09dd1",
+                "responses": {
+                    "200": {
+                        "description": "List of patients retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Register a new patient",
+                "operationId": "9296610ded1a685f9284d36de20ab313",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "abha_number"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "abha_number": {
+                                        "type": "string",
+                                        "example": "12-3456-7890-1234"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Patient registered successfully"
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/storage/upload-url": {
+            "post": {
+                "tags": [
+                    "Storage"
+                ],
+                "summary": "Generate a presigned URL for direct file upload to Cloudflare R2 / S3",
+                "operationId": "41a7b3cdfae0df00af5aef003f807796",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "file_name",
+                                    "content_type"
+                                ],
+                                "properties": {
+                                    "file_name": {
+                                        "type": "string",
+                                        "example": "patient_report.pdf"
+                                    },
+                                    "content_type": {
+                                        "type": "string",
+                                        "example": "application/pdf"
+                                    },
+                                    "folder": {
+                                        "description": "Optional folder path",
+                                        "type": "string",
+                                        "example": "reports"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Upload URL generated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/storage/view-url": {
+            "get": {
+                "tags": [
+                    "Storage"
+                ],
+                "summary": "Generate a time-limited presigned URL to view a private file",
+                "operationId": "c5f108bace16218bcd22f2d47d3ef8dc",
+                "parameters": [
+                    {
+                        "name": "path",
+                        "in": "query",
+                        "description": "The exact path of the file in the bucket",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "View URL generated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Authentication",
+            "description": "Authentication"
+        },
+        {
+            "name": "Patients",
+            "description": "Patients"
+        },
+        {
+            "name": "Storage",
+            "description": "Storage"
+        }
+    ]
+}

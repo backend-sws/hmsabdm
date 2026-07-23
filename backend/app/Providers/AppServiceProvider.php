@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
+use App\Services\Storage\StorageServiceInterface;
+use App\Services\Storage\StorageService;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -11,7 +14,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Bindings moved to ServiceBindingProvider
     }
 
     /**
