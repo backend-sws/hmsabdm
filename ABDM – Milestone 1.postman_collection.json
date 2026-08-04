@@ -1,0 +1,1824 @@
+{
+  "info": {
+    "_postman_id": "3bef61f5-7f8e-4b6e-bc46-05096f32ba0e",
+    "name": "ABDM – Milestone 1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "56838055",
+    "_collection_link": "https://go.postman.co/collection/56838055-3bef61f5-7f8e-4b6e-bc46-05096f32ba0e?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "ABDM Session",
+      "item": [
+        {
+          "name": "Session API",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();\r",
+                  "pm.environment.set(\"access_token\", jsonData.accessToken);\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-CM-ID",
+                "value": "Sbx",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"clientId\": \"{{client_id}}\",\r\n  \"clientSecret\": \"{{client_secret}}\",\r\n  \"grantType\": \"client_credentials\"\r\n}\r\n"
+            },
+            "url": {
+              "raw": "https://dev.abdm.gov.in/api/hiecm/gateway/v3/sessions",
+              "protocol": "https",
+              "host": [
+                "dev",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "api",
+                "hiecm",
+                "gateway",
+                "v3",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public Key",
+      "item": [
+        {
+          "name": "Retrieve public key for RSA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-CM-ID",
+                "value": "Sbx",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/public/certificate",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "profile",
+                "public",
+                "certificate"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "ABHA enrolment via Aadhaar",
+      "item": [
+        {
+          "name": "Get OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();\r",
+                  "pm.environment.set(\"txnId\", jsonData.txnId);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-CM-ID",
+                "value": "Sbx",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"txnId\": \"\",\r\n \"scope\": [\r\n \"abha-enrol\"\r\n ],\r\n \"loginHint\": \"aadhaar\",\r\n \"loginId\": \"S3WssB12cGayxq4uEpursupj4iRZ/py4pOre8WlO8Y0ST8wv2pR6y6QsvCA7uuS8cz69xseLiMNDP5vJHbeMB/qSqdESqo4jW3Y0wirUvG5ZPZPtQakOQJ6YThgdgC1hXbO+yFfVp2nfzUojZRPOhjvehZ2VE4N3NextZKRujN0yyaI9qtcTxJowyxLadYAKlZEUk2L74Wd7MVNN66zRz1Sg1Km0HadKrOG50DKRVqWpfnbMP1B9BSYG4QSs31hjr+HMLGLx2pA4eKKQEVNN9sHpbDHml2rB/v/8s7FoVGFrekKr6rWbb0KyShyoPXWojiBiKGQxTHmhVrxDW4bkkS828t4ct5YS3ITq+p7bk9E208czXQspH+sq/Rc2rbKxD5X6x+rjbGy6dKX4yeLMEZgSlIjh0OEZrDSC7htL6hpD06lhE17amM6HWNx2WdFfvY7P9HAMYUzQHHtNrKOzlqcyJ1BHNIj6DzsZ44OWWkCnNvie4rBtG1AocpyCYyGRZA38NjBWjfgPgVz5X33Pp5dvw5jc0ATLiU4IM8MGkyWAoldzjrsPLwTjkgmdWhnsVT7tKwwIyfv/2Z+nGHbxXiFhLsqqmLAGcLlx7GMOUuS/C+Q3eXgQChd2mCoeb5+FdTSQw/qRceB2m9VvZpum/zFgQxMsHo6xMMGUMxbqfU4=\",\r\n \"otpSystem\": \"aadhaar\"\r\n} ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "enrollment",
+                "request",
+                "otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enrol ABHA",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"authData\": {\r\n \"authMethods\": [\r\n \"otp\"\r\n ],\r\n \"otp\": {\r\n \"txnId\": \"{{txnId}}\",\r\n \"otpValue\": \"OZxLJpW4i404a9T3aTPjKlrt+1+2SrzN7C3jmTHRVBlRFaHH/RXREyP2+uCZv0XVeKLI1Q+leL1Wty7Qzh3Wmq2ieESqXXGTJH//oeqXElu4qkP0d0I1t0Ns6vyVkaBTqLgUs1shPUqh3GdVLFR9H8bEt65WVw78Ze/fPpsb1OvqyNPkYrv10dCnOm9TNKIMdV/2mScCGWSf5mR8/Zd+4q7+AS/KmaCEA/rS1lZyLDPUKV6vcQ28FqxFFHnK0ZfZsTPyZpgkACBZRjbC89cPdW3qGeosFFfTwrgiky64IYn5twuIzZm6CeCzjMipcMLH1nEmFMn2d6BvrevUQZkrSyaq+qL+SfA9x6dG28q4GeQ6wnXxn0Ch+D+UlFzz1CUTyjrXohj76yYqpJb1lL/mHyeBSJRtlWZDLWIY7kIHG3Cavf1ke9DauYL02lnQCbAoFQ+i+nejZJtMR0HLr/5OZiXKF4XspPkpqGI4XXmwi5vEc9mFmVumH4+clfNETN2AW/j/iysT9cpxCC8Wpm3O7DI1UELs9PxezXFldpOuZGQjyShfHxYTT8BtxaQs+q4MeI+XgiwrGntXzK/bOhruORv7ciigNGcGXm2ibnLuMRTvCzs4MCJQfy62hkLKWhW8rbuP8AuNRU1C/eegbSNb0BeQSKerRN7RRgxJgrOUTo0=\",\r\n \"mobile\": \"9567061441\"\r\n }\r\n },\r\n \"consent\": {\r\n \"code\": \"abha-enrollment\",\r\n \"version\": \"1.4\"\r\n }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/byAadhaar",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "enrollment",
+                "enrol",
+                "byAadhaar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mobile Verification",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-CM-ID",
+                "value": "Sbx",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"txnId\": \"{{txnId}}\",\r\n \"scope\": [\r\n \"abha-enrol\",\r\n \"mobile-verify\"\r\n ],\r\n \"loginHint\": \"mobile\",\r\n \"loginId\": \"VwWQqjWN9AeTE3wNp0n4LOZphDm1nJc2+SUAREx8LzvMHgUTbzcjvWpVM4fBJaIQp3UVhutw6ITLxukhEQm/gjlrKeG4Z2ym9W73h/6ND6oOqGKb5nMNcz9yQvXiQEAH77IK7JyIuAI7t3nEDu9XglTv49TXq/1J9ZYsGIlm4x443FUgbGYGVtsVkLOnuxP/38jyJm3iq0MiTQ0HzFFtuh/2fOuCzFKmFNq7iSUYED1SZh8QxgFrXXkXKfQMSaU9UoaxzlfhB9ueP8+480ZIG5E4ItcHLPJUfKSCFkxv9CA1IWuP2B8ehWxQYyjf85oknqL5mopEYJacq2gnx55fO3Sh9B3mjPX4e1No5W8gRyil004Ly/mibSTP9KEe6AVasQGtFB/MSDLfARs84I48wz2wjPOuFnSsUBkElLrcL7ZQJqLdaSCARFlZ5B6p4tzmhkMo0oKYl9CS6ZSkNlVLlgIA7iaZ0YYnX1jsxPHr6qnSDJpMyWLMnCkDP6Q6gWX1v7KC+sYq5aZ0R2fzOPUPT82BrGnHrsC4pk4qQZC3vQ23zkTA32PmdvbjjvFaPjSypUbhAYkVszYT96rMwP71tY1UFPxUXcIKHDz8I5lOyhZx9DQzS2Q9sdHril7Jjd6+yZxyh51CKv5psmwm5M1sdQoIFKczDu8QRtxSiGs+qlY=\",\r\n \"otpSystem\": \"abdm\"\r\n} "
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "enrollment",
+                "request",
+                "otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mobile Verify OTP",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-CM-ID",
+                "value": "Sbx",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"scope\": [\r\n \"abha-enrol\",\r\n \"mobile-verify\"\r\n ],\r\n \"authData\": {\r\n \"authMethods\": [\r\n \"otp\"\r\n ],\r\n \"otp\": {\r\n \"timeStamp\": \"{{current_timestamp}}\",\r\n\"txnId\": \"{{txnId}}\", \r\n\"otpValue\":\"DOt/DWa/Cs85B9SEpTpivG8l5PmpvFUc+8HgVgIMs6OMw8CPSYAoALkHAiYgM+6uQfgJr9JOSZsVO7PAQ3Ujpsr4QduJvfwmQKCHdfuUzg3VhpoSz1OnGycWSGef/lXpFKdUX1C48ZoWHhBZN1nJ3g9mcDfbqZWNKqbSyrE6m+gk5naV4JUgIpT0HRVa3hVg0nSWFSJLp7+EelRhD6SvWeuRsJoyuSm6oRt8jFyJP5sbH85/WC26+YAJudMyzLNwzztfgSWb2qIJTRlyfw4zkpp6xWzURfNVPNVf/QJ+/+qCoN3nPVatXYGBxD9I3FXiOpLWSIxeK48L9vZQKWyo5EcIkmquNpTM2RmZnRRLdj2AhyD2in5aS9l6o1MGsZ03eA0F8aVi6X/IgLfqMBJTMR+RuXirdY9J27c9iuinmOKNuePMiw8aavLhN+P9x9fThzfij/Rz3E73VKgzFXRJScyAYdWl0TIXdEqKQyE9I27blKxeFumKDrMT5qj6Ee9vRN8Ez30QRlkL5mA7Gy2q0vztfeM5TItw3TP1B2nmQk1Bk6AIpoKfFxlnvta8cbUau9n/s/jYvE3rAurhu9Rbp5titTNYC7tMlzpqaAjz9Ij9eJvpYgqz+r2DxveCylFiiIha2j+ZgqjAMzX//T/uoOLGdMooIGc7e7yEIbQnX24=\"\r\n }\r\n }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/auth/byAbdm",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "enrollment",
+                "auth",
+                "byAbdm"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Email Verification",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-CM-ID",
+                "value": "Sbx",
+                "type": "text"
+              },
+              {
+                "key": "X-token",
+                "value": "{{vault:bearer-token}}4S6pEyA_uVbRIP5ckqaxKrmqNDiyhBbXlBexwicYnIfiZ6zQFVohkVKu6H2vnwWlyrBqD4c0W8LcZ551DXcKLMg0XAjfyT76tYafAimBwoQ-NonSy-ucms062ZQbwQbhzNUibV0XxF9lTaKmcr0iVmQbUPu6qs26tfoBQvWsBjHsQbNnf4WejYmXmlCTB17u6d-TxLjokDELJWxaPGFoVTMxxpPzWZGAZZeKAOS5uWAGamiLeAljn0M8FDmc",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"scope\": [\r\n \"abha-profile\",\r\n \"email-link-verify\"\r\n ],\r\n \"loginHint\": \"email\",\r\n\"loginId\":\"Z9hvU9SeWYRrrf3U33+4JKrohdNbfRJuMnoSzHMbffPbOumLfZ5sICj1r0ENT7NloLizHgDERpXGd5k1+TFwodu6RrWhUIWfn4PguVJYTP9mCicJ8t3mTAnMc/i16WqN/nUqKm9suPsO9ZdD8mfABbb3rMVtL72ee7EBM4VyP8zEJ0hzUO3VoDsVGiKribOar8NDDAmJjlewsXivkK5tFXe7HLI2ufIpHZDNCyc8oh9Kpq7x6XUCrholJqjLfIQpjZKrNezvTMzGU8tlo2lgcRRznZCwgI4kugTTmTvMoWCg2gbrcTG0tiu+wbXOM2KvdTSmm4mrZ6sjBpb5AMUZdoJNW3aLyjBJx+tzgIqmsnFnWpGicAd7UzJ+P4+/5bjPldNeuy9IG3OVI+c/7GUETBfeQIONtLBfcXeOCXCMOxD1f6++cCmYJtN8doVbiW00xAAtRFEq+pWOAHElapBVPhfP9cOB1ip39IFYU3kj1rr4Lte49ycycHTYbDLeS0Xndt03J2iOJwb6m30A3Ay87w3Ncf6zuSUGi+yMPKUyUCdxafOT6cIz4VEN1T9qrkYnqAgbG7QXmxMHRpfQ5Ovf92T5xu2bt8MZ7w/EJupMjABHQakZ48wfL9DeKYpeAmvHETVILAgjftXaaZ1K+OnaeI6WG4Obti19WfBzi9C/CtY=\",\r\n \"otpSystem\": \"abdm\"\r\n} ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/request/emailVerificationLink",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "profile",
+                "account",
+                "request",
+                "emailVerificationLink"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ABHA Address Suggestion",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-CM-ID",
+                "value": "Sbx",
+                "type": "text"
+              },
+              {
+                "key": "Transaction_Id",
+                "value": "{{txnId}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/suggestion",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "enrollment",
+                "enrol",
+                "suggestion"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Custom ABHA Address",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"txnId\":\"{{txnId}}\",\r\n \"abhaAddress\":\"aswalihnm_17012003\",\r\n \"preferred\": 1 }"
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/abha-address",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "enrollment",
+                "enrol",
+                "abha-address"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-token",
+                "value": "{{vault:bearer-token}}4S6pEyA_uVbRIP5ckqaxKrmqNDiyhBbXlBexwicYnIfiZ6zQFVohkVKu6H2vnwWlyrBqD4c0W8LcZ551DXcKLMg0XAjfyT76tYafAimBwoQ-NonSy-ucms062ZQbwQbhzNUibV0XxF9lTaKmcr0iVmQbUPu6qs26tfoBQvWsBjHsQbNnf4WejYmXmlCTB17u6d-TxLjokDELJWxaPGFoVTMxxpPzWZGAZZeKAOS5uWAGamiLeAljn0M8FDmc",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "profile",
+                "account"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Generate QR Code",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-token",
+                "value": "{{vault:bearer-token}}4S6pEyA_uVbRIP5ckqaxKrmqNDiyhBbXlBexwicYnIfiZ6zQFVohkVKu6H2vnwWlyrBqD4c0W8LcZ551DXcKLMg0XAjfyT76tYafAimBwoQ-NonSy-ucms062ZQbwQbhzNUibV0XxF9lTaKmcr0iVmQbUPu6qs26tfoBQvWsBjHsQbNnf4WejYmXmlCTB17u6d-TxLjokDELJWxaPGFoVTMxxpPzWZGAZZeKAOS5uWAGamiLeAljn0M8FDmc",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/qrCode",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "profile",
+                "account",
+                "qrCode"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Generate ABHA Card",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-token",
+                "value": "{{vault:bearer-token}}4S6pEyA_uVbRIP5ckqaxKrmqNDiyhBbXlBexwicYnIfiZ6zQFVohkVKu6H2vnwWlyrBqD4c0W8LcZ551DXcKLMg0XAjfyT76tYafAimBwoQ-NonSy-ucms062ZQbwQbhzNUibV0XxF9lTaKmcr0iVmQbUPu6qs26tfoBQvWsBjHsQbNnf4WejYmXmlCTB17u6d-TxLjokDELJWxaPGFoVTMxxpPzWZGAZZeKAOS5uWAGamiLeAljn0M8FDmc",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "profile",
+                "account",
+                "abha-card"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "ABHA Verification",
+      "item": [
+        {
+          "name": "Login via ABHA - Aadhaar OTP",
+          "item": [
+            {
+              "name": "Generate OTP",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();\r",
+                      "pm.environment.set(\"txnId\", jsonData.txnId);\r",
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-login\",\r\n \"aadhaar-verify\"\r\n ],\r\n \"loginHint\": \"abha-number\",\r\n \"loginId\": \"G/qPnhCrWpVsn1ORLOmB73SCnNAfZ5W40Ks+6ozpj/2KyvDSh/E8ruC9vMnd/WkRJsIVWNVG6V+PAAYgCFXFbSpsZGS+jXAH9unLtR148/lj3UVk3Ig9NiBjIJhnBMwI3EpEiLwIxrdtuQMveLescf2M4Z9gbo5fRtln0hq+lDa1fHAJVY9h/xpXgwWq/mDEL3AFSWDlnewFfCVjKEu6boYKWESI/hwlcselympyI5sn3ZsU753uVmX2NiWyPkKwPd8jfpardvCQbyOV0Dy9NFa/YVWljQ7BtYPtyGIUdwJKw39W3HD2EiVKK6QUVhSXZD7YgCKezDpV5yulFRW3Z/ZuGLM4EkI1KB/uIRY9nY0favrkqWa6Rm8SnC01qTzYHdHuOlZyzSf2W3EyMJQ/D9nUJAfTUqMJFULzS90g8tR3ThReBSQQp3dyrlBZba79PFovMeuqsVuhcwoJUuREKZXLnGqcP+6TREnq9i0217Of0Dw3JdcLChNqT+Zi0QzCjWDTwtM1CQ1e3QnmgySVivO1Kn6UmXi6NVB8K9gVrEbb84U6IyZ1uXF2ODpf0JlIGlPZmhdkklVdsI9M0O9M+zwPIAGo2Ryi50WIwZlj7x4yL/i2jfjGIu8Z9OTa6E01jZR16hHa0/sdY9mSNPZVhj255acFWN+7OAAN1mEqDOg=\",\r\n \"otpSystem\": \"aadhaar\"\r\n}\r\n"
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "login",
+                    "request",
+                    "otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Verify OTP",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-login\",\r\n \"aadhaar-verify\"\r\n ],\r\n \"authData\": {\r\n \"authMethods\": [\r\n \"otp\"\r\n ],\r\n \"otp\": {\r\n \"txnId\": \"{{txnId}}\",\r\n \"otpValue\": \"P/h+MBrnQI2UBpsS6mdR+lN+L+0cdwV6yDNkQWpVVxKDMYlLqIKGrTie+Bt1C2tjmB51EYwmeOeeRMdM4KGgug7LmsTA2mWpIzRD3/3Vpfw8Vn1Ap4iQiWPJIPPUIxUReil/Fx9HXv5BV06kMqrRYCMS1azcvNFPM8Cotxa9xjS9imMgYqnEhhbQJpjxgbDfytjwqedp1UHAHJfsSzanIZUdN9GAHrAm4gUCqx0Y45H1/NnOB03Eo7EetrNnqt5z9ykjZMIMSpGxPc7P4exN4/civMYsTZpN6gsDpDzmYZesUVmtwy7avGOnoRQly64W6PrEhofj7LAfln98kM/b/6D48VHJuUeYXrKENUxt7jrOgHei99oLw/2sfIzB6Q9WOUAdG3cX74duuu+Npa5CmMkr8xEHawG+fM0n5xFbxQU15CTfUNzgB250V7r+1QXru3jPBoWLfrDDjEoA0M1C//Yo41CaC9QLplc/wskSMe2mHdaemR/Mp+V1uJkyZR5Fob3fXbKMGZyWZ646nYX5MjmFaE0SzeEOuMb3ZrvkdipzTDUDGN3I/ZVkT7Hy/d8m4RrAJIKlML7hQpVvPvIXqtXaVHeytSYgXjZOxJznDTkBD3Juf0+ytVhcwX/Lv0q40coM+kjDzErHzfeEi4O7Hzjkqv1CfjZ5E9B/ZW1FaKU=\"\r\n }\r\n}\r\n} ",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "login",
+                    "verify"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Login via Aadhaar",
+          "item": [
+            {
+              "name": "Generate OTP",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();\r",
+                      "pm.environment.set(\"txnId\", jsonData.txnId);\r",
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-login\",\r\n \"aadhaar-verify\"\r\n ],\r\n \"loginHint\": \"aadhaar\",\r\n\"loginId\": \"eh1y113eMCMSYyxeWB8XzRw9VGg+jhU34/cPlkPOjgufk+tgonC8naHr93ZW+UPBEoh7R2XkHyQtv18ScXcgXS5TMhi1KZkD73bOrmo6jz1TiJruZyHY9tNmThlufn83CCZHorf620oeSNrFTkmUJ2FIOJ3igiz6F+SxsRNEDDVsGC2qKtT+g30FzKoxFWd8ETBVH1/akkXy/oMCQZ30AE6y2JjFa9SKFif1JQiTW2wiBxT1uliiGld+cJCYm5rhqb18QefgAlTGs9V8QwQHJ6E0deTS9UN1gHSLPe3Xg73z+UhbVvj8wfd9v7uXUck6GcMA+Dy6Ty8CDNlvp597ghnZ2T9O2cyk5rD01EKCng/xrjGirGig+k9WI9Vc0cgPkuCacOnruDiJHfuoeIYk2RI3N42x4DxEDItPrL08A+aQyDq+UL4PpDqLJaX79Vxiva1MGLrpnKklnDff97Sl1iJukXobBNHjkeQkbq08uq/C7/U2WLRO/R6EAAeSy57djWRqzfXp9TZDPKxnj90jod6dCczf2WIAfSlOiT9LI8EUC8rbUSKR6CL7+0f2NAI/FYUHGxBYaSLDfPCtRtVNFL0Ud75U351r4m/lnLDDubY8MsjMUARqVwMoJjgZoNDf+aLuKMqFWef0qdZWP5sieZonl4bhXtxjA/6nliCVnxo=\",\r\n \"otpSystem\": \"aadhaar\"\r\n}\r\n"
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "login",
+                    "request",
+                    "otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Verify OTP",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-login\",\r\n \"aadhaar-verify\"\r\n ],\r\n \"authData\": {\r\n \"authMethods\": [\r\n \"otp\"\r\n ],\r\n \"otp\": {\r\n \"txnId\": \"{{txnId}}\",\r\n \"otpValue\": \"pefHGm0lqSPVYfGOVWoYazv/5XxII7+mukWhwK5rVfc08pLn6lx3H+/AuTAYJVaiww+P35l8kEtgCpuvM2uzg9zviIzUKysizsRKBCdqVyVI/Ry9P62qZUvyYpPSwH9Vyz1I2wmkXdx20OXjwYF6FcJ7lV2NIO1xyYr5ZRX3n9/Y/JtmMDdpX9b2XhG6a6ztPmxWwgZoxdOCKfPjUFxdO8fJRVScoemTM8A6b5wokR/nEVxMxoF+tV1fJ5GSFCI7NI/cm9XBw0IOBzLLuHbCx2D3Z+Zcf0mrgDCAB0SQkAQhJL3qZ8A+2Sc9pYlOAwN6PEZ79xus5Wm1YKo4BKEbvxhoQFwFIm2T6rDs9U+WjgiM1XVYqhzJBZhc5Uzpjmuw1n8Ff09mC44i+RYoMMIQqEavBo4/i+Fg5fmyUWU6ZYCAhmL1SlmehxCIR14VbW1A/P59nvypbNry2YDGymIICEAJDfRHtNGQedXOUBhS6GeO5SCmf8445I7khA8ZjjuLL9nzXqC7IcwoT4AqhmqIueC3kyIyM96FkbhaK/sQTsxNcUKvnF7eRYKZgjH+5KHY9yaM5//kf6RYRUX0LN6Z+LoNo71C5mw2yXhvvmqEKMBlxSOYlqJUewBVvqDi4OBHacH6Az0ZJo3RqR5HGgVuPTGxwVtGilKDkLg3gleVtHY=\"\r\n }\r\n}\r\n}"
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "login",
+                    "verify"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Login via Abha - Mobile OTP",
+          "item": [
+            {
+              "name": "Generate OTP",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();\r",
+                      "pm.environment.set(\"txnId\", jsonData.txnId);\r",
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-login\",\r\n \"mobile-verify\"\r\n ],\r\n \"loginHint\": \"abha-number\",\r\n \"loginId\": \"Fk9pzhsEAj9ofUHhz7l+MofjBTSQLBRphwX3wil4ZCOZy1DJMSTyyDEKAK5MEEpH4Apnmq22iOdHgYQKqtz3BlyTcsbUQllyE7QpDU6DIo5fH/E7FC1kcqy7eDEF75ooIF6BW2IYN4hBVNPQDHnkwjnF7744j9A6iCFoPVxN0nA/2ttUXkc3krKOviVF2ghFUCGBublMJw6iube9B4sTWqyMULjVkzxhdqITNe00E+Qpxv+23HruXPMMgYKR/ZRGkkKxqdtwPa7/y7r6DOpmM/qy6uHU3UuR52geGo/Ly8GS+VKBgrz4d1isPwH61a+W6P1BsKwSqJCxBcbg57fh3j9C0x37CZBpzScA9Un2KXm+1xjXL3qKsGnt9kPGzdInfxXGNrRduolC46vkeAIZXc7aElQjsir6EWbS/v9CvWmxnK4muHhMDu83GJ1uEAIK+B+DmnaRpKsx9XDE7fNHBNhTIzQzyXPTiTB+R6QRpbzSWXzQh3Hs4cfu3rER/iM1T21rgNFxhPzwr7yBRzfN36XSl1p7rxzS6koB/LoyeFK2l+1EDPazkzwzxWFYxIupS+KPY7QsCTfG5lDX8dL9Ssm0xkTjNcrgaZ1U8yOvpufaBifnncdThV6l25kSDjhTlK1lmFZQN4AhdlEKXpV+6cQcnHlYsdsqvT6MB/cFH7U=\",\r\n \"otpSystem\": \"abdm\"\r\n} "
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "login",
+                    "request",
+                    "otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Verify OTP",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-login\",\r\n \"mobile-verify\"\r\n ],\r\n \"authData\": {\r\n \"authMethods\": [\r\n \"otp\"\r\n ],\r\n \"otp\": {\r\n \"txnId\": \"{{txnId}}\",\r\n \"otpValue\": \"ipDZuQMNru3/AZQz/QhSSSaf5JdeM2kIN5TPHY/G4tvSmjHj3C+jfHoS5o7Zaiuo+KWI3x8uyYf2el4h8pI644V7PE1Zdoy3fT6yog8eZiSI10GIFY+yoZhACYFZCzqyNiwMXcHTJzkNbZJxAUUEZOZPyQb807zOnjfTPgTIuHpgMhhqaj4h9Lf4IuefdPoO2/RyEKaWT5yIYuEKQ7Y7cqGaWrB9Kgzm/n1nW0k2uO3jPM8JqgDUEFRiH/KAnhz5YwwxibRVI1oMTVdSceeswnyqHR3PPylzCFL4/tRm5LcfE7KGxaUS2U67qq6TqtzBX782M8MbVQN6szD2majPiGAZQtw+n1/YGqVbw6HWMPMUxgkAQfer8u7twHtA9tJyDPLe438e8L8ijQOy6PPR95QWVYmojpFwwfxbFbF/aRbnDl+wWl+iIRXYyjtyePBCnohDQSvyMddh8xEA0K5nOjMAqa61/plJq7iHCegQxi5Bbur7wMX35CR5q9B975/eXeJFQQCGR4x1NXXMKcdsYvyR0t+/iAlFu3d/OAFSHHgKjQwRUINg45f1tPnq9qyfeGYRfqJxDYpahRNKPgQyLtAmWcGg2eTC3ur+GbwLiqhwlXiDDeWIRaQRX1n2vGtsFIXO4gljB03hpgxw0QzOGJQ5aqGYSd9P9W43ixOm47o=\"\r\n }\r\n }\r\n}\r\n\r\n"
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "login",
+                    "verify"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Login via Mobile",
+          "item": [
+            {
+              "name": "Generate OTP",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();\r",
+                      "pm.environment.set(\"txnId\", jsonData.txnId);\r",
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-login\",\r\n \"mobile-verify\"\r\n ],\r\n \"loginHint\": \"mobile\",\r\n \"loginId\": \"RwRr1BTLmd+uFFmtBeeGUipQk59Za0/zmo31v1/V0VOpZ51xKhavanfMqDl3IvBWi6Nj6jX7/TDisg82L0Noc37BLckN8QV+l2vD5dEY2pS5KPUQfGHIswDLPzI2I8y3z52BX3VqASutvNLX3qYDkKHwjmcc/GzwXDGrqNuOYf91pOIdxW26Si8JUNLtAKo6l3hwtDPFDh4RuuoDfS4+XUwkucWZKfePkeg1TAazKp0xL1L+7KJsM10XPuF7z6yXtHlVGlClMagkZOtolaLjo+pxSrULMCQVpCrnRgBB6ihahHV3XMJ80wIy2bMT2voofsGW2TQybLVVAnqcNVpUayLhy400iNnsX9VMjaZ08avmG9VFEAAawVUm0msDoUUcy3xrYZ0Dg3nh++zgs7rwQFjP7LlS+m2nyWCmshiZuP2lLOIB9SW4AD+SBZqp59KIvl3wZUpinhM5kvwABS1Uk5uQdWi8dmjNNvc1cdupTVcFIXm6wzNmea+7av6WqOHrGBnRmnd/mSS2AktnZN1efDvnY8iKL75oDerbbduNqDW6K9gXr9gUEp5DzbujtUvp6b6ihOUD77qE5Gnb8Zsw/zXHJDbDBlHCuvaYeZrca72UOR4xwl9iRtnI6/jrFSQGlGn6xEP1FX2llOmNyP+8EMGxz19hehCRRnlzVmMigfk=\",\r\n \"otpSystem\": \"abdm\"\r\n}\r\n"
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "login",
+                    "request",
+                    "otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Verify OTP",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-login\",\r\n \"mobile-verify\"\r\n ],\r\n \"authData\": {\r\n \"authMethods\": [\r\n \"otp\"\r\n ],\r\n \"otp\": {\r\n \"txnId\": \"{{txnId}}\",\r\n \"otpValue\": \"fYV6EKjMLFNCMvTX3aOGrjCr4bG2EQ5vxT7u3sj+vuUs/SrcrURL9BMAejYcw7wV9RFuNBXPQ7Xqxo8FWIPuwYCsaA9NvlX5REy04lxce7o9m+25DUOMZa154pP7v5Apq/HpXdE/Z+EQUANqJEkWnHc6J1ipX8SQep/C3waUANuKY1aFFOB0VYN5zUD3DNBRQbB+SYEsyF2ZzKkxt8B/aue+5xxRRnmIRqa3brSQ7tLlUxQ+q6duCN4J8oLcCC5aS//WDIH0iTojqQVvvWq8XKIZxYxer4uhWM35OBmVZjAMwxjrXQcJojuLX6ykmsd2U/QFfsBLgr664rrvvb0ZByHUqW0K49YLA8ZOEct7U42/GlD64azIXAX45nBqPZizRjP/up+AUIp+fFoTd6W5x/2N4Zm+bjPt+fafYrLWt79F0co7r+UBVDpeWspx170TUhC/2jnK2Xl09bOgYrHt7ZQpYv72fKmylUozIaoYEE1n5URgJaa8bA0HT3na2iO08refXYQEpmRTI+AJ/GaFvlshfQcMuBDfjxN9IbJEd21HhMqDfGs8TdDeb3p0IfXo6jrM3siOHFBQs6G/8aCCZWedmillNifKUPTGNbO3YG2VM1TQxiPl2HOOvc+pasdRRWS7548ePCLeSmSJkSikJN6Tb+XA3ws+zs4MS2VXmdo=\"\r\n }\r\n}\r\n}"
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "login",
+                    "verify"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Find ABHA",
+      "item": [
+        {
+          "name": "Search ABHA using Mobile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"scope\": [\"search-abha\"],\r\n \"mobile\":\"XT7h4C2qz98N+QAyO63QS8RN/AGPBRi5/J998mI1gw7PwTro5DaBA86VFBdITH5X2faLIZljAOc/LAksMKEnn6Xs8neynWhDlHwX0XTt5dmWn3bIkAGpILIpRyhz2QPOSiDs8KIqUHaYyXKDOSXtHRWPQFI+8psKHsqgUWpZhJAhsshaSsHe9WezeiNZcmOjInO4DsaWtCTpt4XATCUEnFSRCxN0dcBn8OU4V0xgkkxUnTFX1/BjMlLNhlDqnq6HEeFeU/o1AyyWxSCm/BIO5y75R4SYof3NgxAgtFBSSAcG5ckWYu5WAF8ZxYnQPfC02UipE20FjlBM8XBn70T9s30bIdQMScseNGw8kabLmGvnzMi2xgGjfJiKUETJNj2qSmluDjazycH2uCZsupHU+z/N5/dx7jPrIKOBy895wAXkbPFUpbUp3doj/8nARBZo5jKLDcUpfxv8kRovbDxKOrIFndLk0X8YQGpmY+OxTnjnVHETlPdG2HiuDvp0GGgefvDzgaA0DbYhcM2oe1veloyEmxIq3iIrxaN5wq7XqfAqPZu9xpDNzW7nK90/m6jKD81R2wBGhVmHLzRnxUnYpr+9jXQBnky8eqR5LVYpmgsujplEa1IlwgvkE1jZYvgciD6/8UYppbUREW6p5/0SS5oOU+ukFGwHbJ9K73zxrcE=\"\r\n}"
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha/search",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "profile",
+                "account",
+                "abha",
+                "search"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Deactivate ABHA Number",
+      "item": [
+        {
+          "name": "Deactivate ABHA Via Aadhaar",
+          "item": [
+            {
+              "name": "Send OTP",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-CM-ID",
+                    "value": "Sbx",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-token",
+                    "value": "",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-profile\",\r\n \"de-activate\"\r\n ],\r\n \"loginHint\": \"abha-number\",\r\n \"loginId\": \"qkYyckKRMqV5lAGqkRzAYsSspIKRIrJ8VVhX7pqT5N+GOVi2xd/bZGnvVYnqoYCuiHYPmaL8e+fBqQ9nn7pq4e+PLbeiSN6KHm0FaJ8/19bJYPpRLZrqBd78wdQvUmsScaGdlol0bVFrl0On2nML/VKeH6G4ysM6AQK4K7IihwM+dNG+27k9JC0OFsBBX7BLeiFKnBwHXbIVDtbe021EczRBzvlhalvbojFe9jRGvvOdaSRHCxeE/uVtsjrPWcp1u5NtafH6YmBc5CjrpEU1QpJWA6Gt/TTTW8XOuBmevZALhhuaNnh6cGsk3y6+WpckCitj3KZ6FRRzG+Sipsdp0sHAt2a7mbDxc/1PypZzxT7M05DCnvU6UOWgL7zvlML4KDvZCHJ6MaR0PRkDzbwlfinTpNXbpUR806q9iRHsYNuZVAOmL5+MCSPKv77MGEY4j9D1c56u2b3huegMXXsWrBnSiqb3ZzKv5r5Q22T6KKOStpYsN3VDppCz5PjkuW0zwG8BjILzycIkypH0F7hgvAeuQcJ8hjxRmqZ0J3a8ebQStDJJDEzDbIomyJEQSARnR06SMDXyhF43DY9xMhJXGAofdVCXB7WTdCGLMwRG4yrDySRPA9ifs5M1LcbWQfN1MNOo783wNNXbXREfJYvM+jniG7UlT3p3PUHQWsGB8aU=\",\r\n \"otpSystem\": \"aadhaar\"\r\n} "
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "enrollment",
+                    "request",
+                    "otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Verify OTP",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-CM-ID",
+                    "value": "Sbx",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-token",
+                    "value": "",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-profile\",\r\n \"de-activate\"\r\n ],\r\n \"authData\": {\r\n \"authMethods\": [\r\n \"otp\"\r\n ],\r\n \"otp\": {\r\n \"txnId\": \"{{txnId}}\",\r\n \"otpValue\": \"Hp/nLFajvs0PU3X5DKehMcKL5rBnbH45JfqgNNLNLSMBBMvRhLp1pLJvSx6ux3mDZ/sqFHJSbT+BPa1eYWQJJ8DrNPCI0d+iB6ZGrlM62qt7e9xbAmtpAjkZF4P71CarZgATXYKY3JtaQVUeCmcWwhgErTZQ5BVZJAT2vNQbnn41Mux1U6liqIbxo4XpL4Y3ZuRiIMloDIvgH22XyxC3b1DAM97qzgEoPLE4WZgxTKmmrJRVTLzLBoOFVnl0KUZVRrOnvOMqq0Iw8bYD3jPWQGQitzcRpJnkZQioGdiF9FfQo7O6wHu4DGCP79g1F6EH1VVP7w/GADwmBb5LmJFXa64GXAOJYzvsWijxfBYSLaJQWx3ECmRNA6qAz7pYcFm1jBAtfzKfNbKJDLdksmd2hY9L/dTLhour5u8PdWkqk4p8jxHTwefdfmkzancN+4WF89BnXCvRSyjLGbXajOFVVJNZ4+kWIQrZISlBqrH3CUUcuHRkcgCn6tFKdP/tkZpyb9n/+cfypRM6K4qM2xkVG1ysVLaquwOv25/Kbnvu6qoP3zAMXnc2OoAoMZNNwAwIx9r2COA9Gu1BrWI8G9eqGDHyr0Wy8+zrTd9076TvR9uh1P3g/dq9+tPncAttd9Mb3PhwSLrR4FpYanWBvVXuvulZp9PBGxrComFNwN6iI/4=\"\r\n }\r\n},\r\n \"reasons\": [\"aaaaa\",\"bbbb\"]\r\n} "
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/verify",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "account",
+                    "verify"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Deactivate ABHA Via ABHA",
+          "item": [
+            {
+              "name": "Send OTP",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-CM-ID",
+                    "value": "Sbx",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-token",
+                    "value": "",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-profile\",\r\n \"de-activate\"\r\n ],\r\n \"loginHint\": \"abha-number\",\r\n \"loginId\": \"qkYyckKRMqV5lAGqkRzAYsSspIKRIrJ8VVhX7pqT5N+GOVi2xd/bZGnvVYnqoYCuiHYPmaL8e+fBqQ9nn7pq4e+PLbeiSN6KHm0FaJ8/19bJYPpRLZrqBd78wdQvUmsScaGdlol0bVFrl0On2nML/VKeH6G4ysM6AQK4K7IihwM+dNG+27k9JC0OFsBBX7BLeiFKnBwHXbIVDtbe021EczRBzvlhalvbojFe9jRGvvOdaSRHCxeE/uVtsjrPWcp1u5NtafH6YmBc5CjrpEU1QpJWA6Gt/TTTW8XOuBmevZALhhuaNnh6cGsk3y6+WpckCitj3KZ6FRRzG+Sipsdp0sHAt2a7mbDxc/1PypZzxT7M05DCnvU6UOWgL7zvlML4KDvZCHJ6MaR0PRkDzbwlfinTpNXbpUR806q9iRHsYNuZVAOmL5+MCSPKv77MGEY4j9D1c56u2b3huegMXXsWrBnSiqb3ZzKv5r5Q22T6KKOStpYsN3VDppCz5PjkuW0zwG8BjILzycIkypH0F7hgvAeuQcJ8hjxRmqZ0J3a8ebQStDJJDEzDbIomyJEQSARnR06SMDXyhF43DY9xMhJXGAofdVCXB7WTdCGLMwRG4yrDySRPA9ifs5M1LcbWQfN1MNOo783wNNXbXREfJYvM+jniG7UlT3p3PUHQWsGB8aU=\",\r\n \"otpSystem\": \"abdm\"\r\n} "
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "enrollment",
+                    "request",
+                    "otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Verify OTP",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "REQUEST-ID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "TIMESTAMP",
+                    "value": "{{$isoTimestamp}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-CM-ID",
+                    "value": "Sbx",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-token",
+                    "value": "",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"scope\": [\r\n \"abha-profile\",\r\n \"de-activate\"\r\n ],\r\n \"authData\": {\r\n \"authMethods\": [\r\n \"otp\"\r\n ],\r\n \"otp\": {\r\n \"txnId\": \"{{txnId}}\",\r\n \"otpValue\": \"{{OTP_encryption}}\"\r\n }\r\n},\r\n \"reasons\": [\"aaaaa\",\"bbbb\"]\r\n} "
+                },
+                "url": {
+                  "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/verify",
+                  "protocol": "https",
+                  "host": [
+                    "abhasbx",
+                    "abdm",
+                    "gov",
+                    "in"
+                  ],
+                  "path": [
+                    "abha",
+                    "api",
+                    "v3",
+                    "profile",
+                    "account",
+                    "verify"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Re-activate ABHA Number",
+      "item": [
+        {
+          "name": "Generate OTP",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "X-CM-ID",
+                "value": "Sbx",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"txnId\": \"\",\r\n  \"scope\": [\"abha-login\", \"mobile-verify\", \"re-activate\"],\r\n  \"loginHint\": \"abha-number\",\r\n  \"loginId\": \"R72KrRDrIc73XHkQp2cOULMZiMwpi1mDyJJ3gqliG9ZeFp3rK9f/C2D+3gGtF71DxajZ5BEjin/GAKeIUQRadZsrGc+Va2ak4T4XvgQQ0lZNNEj9GoCxIhFyQDqTrWfonFD9y7rAnV2B7nGSHs5wunw173QG4qElt8NhCuZc7QhV/XX9RFWugiS2m4n453ARE0HEMiHjTtnNiS4hGQCK/cXGdx0Y7+YWsrYuoSGwl4Rw8/eUPHCxBt2ITCHOCglGEsJjYXvyWg4YFuAAI/c24UwUPflerNsCWedL/rUk1958E/G21ubWS92nllM/r4xIwfoebcTgaLRdWvhW5Fbz05aJDHibeZUDIe7p9hF0ddvOPddu7tAflgWnEW5v7Tdr9M50rWwcZf7+4oi+NPd4jsvQ0TF2Ouk0oAYHZSvlS3/Du/1gqeLa72139pgve6OVytM7IxPqJrSUVTDvnOdxudTTpYBmXbQQhT2nOszDFJCuT7ePOcXDkEjP/PyBk6LZa8gOd1IImRuQFUKRnlsnEzGld4WSWu3s+Y1soADeQ71b1a2ywyE7ssq5Z+B6/Sf2uHLs0l7rJotrc52V+LTd7h4epZVLBfx35E0ptOYnJvFnhq/Q3J2naE3NFJT6QF1c19ztcR0IFcoisaSr+uGnyYQKb2PCuK3j2VHDdq++AHo=\",\r\n  \"otpSystem\": \"abdm\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "profile",
+                "login",
+                "request",
+                "otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "TIMESTAMP",
+                "value": "{{$isoTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "REQUEST-ID",
+                "value": "{{$guid}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"scope\": [\r\n \"abha-login\",\r\n \"mobile-verify\",\r\n \"re-activate\"\r\n ],\r\n \"authData\": {\r\n \"authMethods\": [\r\n \"otp\"\r\n ],\r\n \"otp\": {\r\n \"txnId\": \"18219dd0-2860-4edb-9659-1ede5b43e668\",\r\n \"otpValue\": \"NLdbyN/yWxhitcOv6dBQNIIsvJbBR+Gx1UDLzjZpbDzwa7w97mWAwBJ0EkFfhpQm3mSLsfPqTDNOPe8ub+KYtAc7ym9QhNH0ex7TIE919r5o7mB/y5ryjY8lM80aTCg668zeLMJNuOiKiJLtvSZcuXTisBGABpN2oFlMy75FpJxNJr4Ja3ASY+fFdyWqWpz3L0iV3/2jTQYbHIG3b5dbBvOl2FstQJpy0IJ+FWr9DkLeEyjNcoP6+NP3A1e71nZQ6uPy6zNnv5cEoA29ggu5agnImHAm4NqekknSN7E9qiUIIG0aAmwBIxNYLqsY520O9VsQ7ZBSjSq036mayNeDAUVvN4lJOrbD/lPtYtQJ10eU7VYxQholdde4lGpnaCOZtaLHEkP4a5Wy+czMLi+5koBbRoIZSCHl3JcOZNU7jUOy8E8A0fPd5mKwF7gK49/iKINZXDeT8beYEteeBYLrPBI2MuEyudhej5UE8yEJjZ2E7WxXPHQfKG7qIHw6KH9bBJRdGOBVy8YuFCxcSdXW8zX1MaERu8eQWgg2lqzXQZxGWhMUnNYlbZozpR71u+5Oee2mj6Qy2/Ai6Ct8hHGmkmOxqJzwTJMdHVQ97tLFE2LRTeFyjhlICAS3RPaRf8xs2O8JVzHEbLyNEUe2XZGy0UR3g9SxpuGyJgpaeMd6M64=\"\r\n }\r\n}\r\n} "
+            },
+            "url": {
+              "raw": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify",
+              "protocol": "https",
+              "host": [
+                "abhasbx",
+                "abdm",
+                "gov",
+                "in"
+              ],
+              "path": [
+                "abha",
+                "api",
+                "v3",
+                "profile",
+                "login",
+                "verify"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

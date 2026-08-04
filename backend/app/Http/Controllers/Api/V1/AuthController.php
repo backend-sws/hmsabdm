@@ -6,13 +6,13 @@ use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
 use App\Services\Auth\AuthServiceInterface;
-use App\Http\Traits\ApiResponseTrait;
+use App\Http\Traits\HasApiResponse;
 use App\Http\Resources\UserResource;
 use OpenApi\Attributes as OA;
 
 class AuthController extends Controller
 {
-    use ApiResponseTrait;
+    use HasApiResponse;
 
     protected AuthServiceInterface $authService;
 
@@ -47,9 +47,14 @@ class AuthController extends Controller
 
         $data = $this->authService->login($credentials);
         
+        if (isset($data['user']->hospital_id)) {
+            setPermissionsTeamId($data['user']->hospital_id);
+            $data['user']->unsetRelation('roles');
+        }
+
         $data['user'] = new UserResource($data['user']);
 
-        return $this->success($data, 'Login successful');
+        return $this->successResponse($data, 'Login successful');
     }
 
     #[OA\Post(
@@ -62,7 +67,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $this->authService->logout($request->user());
-        return $this->success(null, 'Logged out successfully');
+        return $this->successResponse(null, 'Logged out successfully');
     }
 
     #[OA\Get(
@@ -75,6 +80,12 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         $user = $this->authService->getProfile($request->user());
-        return $this->success(new UserResource($user), 'User details fetched successfully');
+        
+        if (isset($user->hospital_id)) {
+            setPermissionsTeamId($user->hospital_id);
+            $user->unsetRelation('roles');
+        }
+
+        return $this->successResponse(new UserResource($user), 'User details fetched successfully');
     }
 }

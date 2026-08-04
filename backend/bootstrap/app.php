@@ -43,4 +43,33 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 401);
             }
         });
+
+        $exceptions->renderable(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                $previous = $e->getPrevious();
+                if ($previous instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                    $modelName = class_basename($previous->getModel());
+                    return response()->json([
+                        'success' => false,
+                        'message' => "{$modelName} not found"
+                    ], 404);
+                }
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Resource not found'
+                ], 404);
+            }
+        });
+
+        $exceptions->renderable(function (\App\Exceptions\AbdmApiException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'error'   => 'abdm_api_error',
+                    'code'    => $e->abdmCode,
+                ], 503);
+            }
+        });
     })->create();

@@ -10,6 +10,14 @@ use Illuminate\Support\Facades\Auth;
 trait BelongsToHospital
 {
     /**
+     * Initialize the trait to hide hospital_id in API responses.
+     */
+    public function initializeBelongsToHospital()
+    {
+        $this->hidden[] = 'hospital_id';
+    }
+
+    /**
      * Boot the trait to apply the global scope anonymously.
      */
     protected static function bootBelongsToHospital(): void

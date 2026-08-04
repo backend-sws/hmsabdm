@@ -1,0 +1,711 @@
+﻿[
+  {
+    "Project Name:": "Module Name:",
+    "ABDM - Sandbox Integration": "ABHA Creation and Verification",
+    "Test Designed by:  ": "Test Designed date: "
+  },
+  {
+    "Project Name:": "Release Version:",
+    "Test Designed by:  ": "Test Executed by: "
+  },
+  {
+    "Test Designed by:  ": "Test Execution date: "
+  },
+  {
+    "Test Designed by:  ": "Application/ System Name:"
+  },
+  {
+    "__EMPTY_1": "Session API",
+    "Project Name:": "https://dev.abdm.gov.in/api/hiecm/gateway/v3/sessions"
+  },
+  {
+    "__EMPTY": "S.No",
+    "__EMPTY_1": "Function",
+    "Project Name:": "Applicable To",
+    "ABDM - Sandbox Integration": "Mandatory/ Optional",
+    "__EMPTY_2": "Test Case ID",
+    "Test Designed by:  ": "Functionality",
+    "NHA": "Test Case\r\n(to be checked during functional testing)",
+    "__EMPTY_3": "Steps To Be Executed \r\n(By User or Functional Tester)",
+    "__EMPTY_4": "Expected Result",
+    "__EMPTY_5": "Suggestions for the Functional Tester",
+    "__EMPTY_6": "Status",
+    "__EMPTY_7": "Remark",
+    "__EMPTY_8": "V3 APIs"
+  },
+  {
+    "__EMPTY": "ABHA Creation Process"
+  },
+  {
+    "__EMPTY": 1,
+    "__EMPTY_1": "ABHA Creation Through\r\nAadhaar OTP",
+    "Project Name:": "All"
+  },
+  {
+    "__EMPTY": 1.1,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_101",
+    "Test Designed by:  ": "Create ABHA Option",
+    "NHA": "The system must provide an option to create ABHA through Aadhaar OTP",
+    "__EMPTY_4": "User will have an option to create ABHA",
+    "__EMPTY_8": "\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/byAadhaar\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/auth/byAbdm\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/suggestion\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/abha-address\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card"
+  },
+  {
+    "__EMPTY": 1.2,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_102",
+    "Test Designed by:  ": "Consent collection",
+    "NHA": "The system must display the  consent language/ disclaimer language and collect user's consent as per the ABDM published  consent.\r\nRefer Cell No-: M14",
+    "__EMPTY_3": "1. Read consent language\r\n2. Agree to the consent language (through 'I agree' checkbox or any other form of signature)",
+    "__EMPTY_4": "User provides consent for sharing of Aadhaar details and creation of ABHA.\r\n\r\nSystem records user consent for compliance with Health Data Management Policy.\r\n\r\n",
+    "__EMPTY_5": "Please refer  the approved consent language."
+  },
+  {
+    "__EMPTY": 1.3,
+    "ABDM - Sandbox Integration": "Optional ",
+    "__EMPTY_2": "CRT_ABHA_103",
+    "Test Designed by:  ": "Suggestions:- \r\nConsent collection should be multilingual ",
+    "NHA": "The system should be able to provide the consent in languages other than English also",
+    "__EMPTY_3": "1. Read consent language\r\n2. Agree to the consent language (through 'I agree' checkbox or any other form of signature)",
+    "__EMPTY_4": "User provides consent for sharing of Aadhaar details and creation of ABHA.\r\n\r\nSystem records user consent for compliance with Health Data Management Policy.\r\n\r\n"
+  },
+  {
+    "__EMPTY": 1.4,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_104",
+    "Test Designed by:  ": "Aadhaar collection and Error Message",
+    "NHA": "System must allow the user to enter Aadhaar Number and the system will display an error message for invalid Aadhaar Number",
+    "__EMPTY_3": "1. Enter Aadhaar number",
+    "__EMPTY_4": "User is prompted to enter correct Aadhaar Number\r\n\r\nIn case user enters an invalid Aadhaar number (A valid Aadhaar is a 12-digit number), the system shows an error message \"Aadhaar Number is not valid\"."
+  },
+  {
+    "__EMPTY": 1.5,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_105",
+    "Test Designed by:  ": "Aadhaar OTP Collection",
+    "NHA": "User receives Aadhaar OTP and System must allow the user to enter Aadhaar OTP.",
+    "__EMPTY_3": "1. Receive OTP on mobile number registered with Aadhaar\r\n2. Enter Aadhaar OTP",
+    "__EMPTY_4": "User will be able to enter a valid Aadhaar OTP (A valid Aadhaar OTP is a 6-digit number).\r\nExample -\r\nModified text for the \"Please enter 6 -digit OTP sent to Aadhaar linked mobile number \" step during the ABHA Creation workflow with ΓÇ£We just sent an OTP on the  Mobile Number *******XXXX  linked with Aadhaar. Enter the OTP below to proceed with ABHA creation\"."
+  },
+  {
+    "__EMPTY": 1.6,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_106",
+    "Test Designed by:  ": "Resend OTP",
+    "NHA": "System may activate the Resend OTP button maximum 2 times after  60 seconds",
+    "__EMPTY_3": "1. Click on Resend OTP Button\r\n2. Receive OTP on mobile",
+    "__EMPTY_4": "User will able to send OTP again and verify it"
+  },
+  {
+    "__EMPTY": 1.7,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_107",
+    "Test Designed by:  ": "OTP based Aadhaar Authentication",
+    "NHA": "System must verify the OTP",
+    "__EMPTY_3": "Click on verify button  (For Resend and Send)\r\n\r\nIt is recommended that verify button be auto enabled",
+    "__EMPTY_4": "System authenticates the user's Aadhaar through OTP\r\n\r\nIn case of incorrect OTP, the system displays an error\r\nIn case of correct OTP, the system allows the user to proceed"
+  },
+  {
+    "__EMPTY": 1.8,
+    "Project Name:": "Note: Many integrating entities have not implemented API for OTP not to be sent in case communication mobile is same as Aadhaar linked mobile. In that case the test scenario detailed under sl. No 1.8 will only be considered. However, it is recommended that API = checkAndGenerateMobileOTP be implemented. This will reduce one step of OTP verification in case communication mobile is same as the Aadhaar linked mobile",
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_108",
+    "Test Designed by:  ": "Communication Mobile Number verification-I",
+    "NHA": "1. If communication mobile number is same as Aadhaar linked mobile number then it should directly go to ABHA  creation screen .\r\n\r\n2. Alternatively , Integrators may also prompt for OTP  again from the user and then post verification of OTP user can go to ABHA  creation screen.",
+    "__EMPTY_3": " This is applicable for testcase cell no -G20 , point no-1 \r\n\r\n1. System will check entered mobile is same as Aadhaar linked mobile number. If returns true then user will directed to ABHA  creation screen.\r\n\r\n\r\n2. For point number 2 step are already mentioned in test case cell no- G20 , point no-2 \r\n\r\n\r\n",
+    "__EMPTY_4": "Redirect to the ABHA  creation screen."
+  },
+  {
+    "__EMPTY": 1.9,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_109",
+    "Test Designed by:  ": "Communication Mobile Number verification-II",
+    "NHA": "If communication mobile number is not same as Aadhaar linked mobile number then system must ask for the OTP to verify comuncation mobile number.",
+    "__EMPTY_3": "1. System must verify the mobile number.\r\n1. System must send OTP on mobile number \r\n2. User enters the OTP and clicks on verify\r\n3. In case of incorrect OTP, the system displays an error\r\n4. In case of correct OTP, the system allows the user to proceed",
+    "__EMPTY_4": "System verifies the communication mobile number"
+  },
+  {
+    "__EMPTY": 1.1,
+    "ABDM - Sandbox Integration": "Mandatory for Private /Government (Optional for integrated program using demo auth as they have default ABHA address generated)",
+    "__EMPTY_2": "CRT_ABHA_112",
+    "Test Designed by:  ": "Suggested ABHA Address",
+    "NHA": "1. The system should allow the user to select  the ABHA  address giving atleast 3 available suggestions \r\n\r\n2. Otherwise the system should have a provision to create a ABHA address with ABHA address Policy and validation rule should be print beside the field where ABHA Address is entered.\r\n\r\nValidation rules on ABHA Address to be set at the API level:\r\n1. Minimum length - 8 characters\r\n2. Maximum length - 18 characters\r\n3. Special characters allowed - 1 dot (.) and/or 1 underscore (_)\r\n4. Special character dot and underscore should be in between. Special characters cannot be in the beginning or at the end\r\n5. Alphanumeric - only numbers, only letters or any combination of numbers and letters is allowed.\r\n\r\n",
+    "__EMPTY_3": "1. Governemnt integrator may use the option for creating default ABHA  address. However, it is recommended that user-defined or system suggested ABHA address be used\r\n2. System should have a provision for private integrators to proceed with the suggested ABHA address.\r\n3. If beneficary use the existing ABHA address then system displays the \"ABHA Address is already exist\".",
+    "__EMPTY_4": "System should prompt / display the available or suggested ABHA addresses. System should allow the user to proceed with the enterered ABHA  Address. In case, entered ABHA address is already in use then system should allow the user to input and proceed with any one of the suggested ABHA address.\r\n\r\n"
+  },
+  {
+    "__EMPTY": 1.11,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_113",
+    "Test Designed by:  ": "Display of ABHA Number",
+    "NHA": "System must display the created ABHA Number",
+    "__EMPTY_3": "1. System shows the 14-digit ABHA number and ABHA  address  generated\r\n",
+    "__EMPTY_4": "User should be able to view the generated ABHA Number and linked ABHA address"
+  },
+  {
+    "__EMPTY": 1.12,
+    "ABDM - Sandbox Integration": "Mandatory  for Private ",
+    "__EMPTY_2": "CRT_ABHA_114",
+    "Test Designed by:  ": "View and Download ABHA details. \r\n(If integrators is generating ABHA card) ",
+    "NHA": "System must have a provision to View / Download ABHA card ",
+    "__EMPTY_3": "1. System should show the user their ABHA Card\r\n2. ABHA Card should be generated by API and should contain -\r\na. ABHA Number (Mandatory)\r\nb. User Photo-Optional\r\nc. ABHA QR code\r\nd. date of birth and gender\r\ne. ABHA Address",
+    "__EMPTY_4": "User should be able to view their ABHA Card with all the demographc details as mentioned in cell H26"
+  },
+  {
+    "__EMPTY": 1.13,
+    "ABDM - Sandbox Integration": "Either of the test cases CRT_ABHA_114 or CRT_ABHA_115 is mandatory for Governement \r\n\r\n\r\nOptional for Private ",
+    "__EMPTY_2": "CRT_ABHA_115",
+    "Test Designed by:  ": "View and Download ABHA details. \r\n(If integrators  is not  generating ABHA card) ",
+    "NHA": "System must have a provision to View details like ABHA number and ABHA address in the card (either ABHA card or any card being generated for their program/scheme/entity)",
+    "__EMPTY_3": "1. If Integrator is not generating ABHA card then They print the mentioned information on their program/scheme or any other card\r\na. ABHA Number (Mandatory)\r\nb. ABHA Address",
+    "__EMPTY_4": "User should be able to view card with ABHA  number and ABHA  address and the details should be saved in HIMS system and linked with the HIMS unique beneficary 's ID.g or as per their business requirement."
+  },
+  {
+    "__EMPTY": 2,
+    "__EMPTY_1": "ABHA Creation Through Aadhaar Biometric",
+    "Project Name:": "All"
+  },
+  {
+    "__EMPTY": 2.1,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_201",
+    "Test Designed by:  ": "Create ABHA \r\nOption",
+    "NHA": "The system must provide an option to create ABHA through Aadhaar Biometric",
+    "__EMPTY_4": "User will have a choice to create ABHA using Aadhaar Biometrics",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/byAadhaar\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/auth/byAbdm\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/suggestion\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/abha-address\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card"
+  },
+  {
+    "__EMPTY": 2.2,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_202",
+    "Test Designed by:  ": "Consent collection",
+    "NHA": "\r\n\r\n\r\nThe system must display the  consent language/ disclaimer language and collect user's consent as per the ABDM published  consent.\r\n\r\nRefer Cell No-: M14",
+    "__EMPTY_3": "1. Read consent language\r\n2. Agree to the consent language (through 'I agree' checkbox or any other form of signature)",
+    "__EMPTY_4": "User provides consent for sharing of Aadhaar details and creation of ABHA.\r\n\r\nSystem records user consent for compliance with Health Data Management Policy.\r\n\r\n",
+    "__EMPTY_5": "Please refer  the approved consent language."
+  },
+  {
+    "__EMPTY": 2.3,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_203",
+    "Test Designed by:  ": "Suggestions:- \r\nConsent collection should be multilingual ",
+    "NHA": "The system should be able to provide the consent in languages other than English also",
+    "__EMPTY_3": "1. Read consent language\r\n2. Agree to the consent language (through 'I agree' checkbox or any other form of signature)",
+    "__EMPTY_4": "User provides consent for sharing of Aadhaar details and creation of ABHA.\r\n\r\nSystem records user consent for compliance with Health Data Management Policy.\r\n\r\n"
+  },
+  {
+    "__EMPTY": 2.4,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_204",
+    "Test Designed by:  ": "Aadhaar collection and Error Message",
+    "NHA": "System must allow the user to enter Aadhaar Number and the system will display an error message for invalid Aadhaar Number",
+    "__EMPTY_3": "1. Enter Aadhaar number",
+    "__EMPTY_4": "User is prompted to enter correct Aadhaar Number\r\n\r\nIn case user enters an invalid Aadhaar number (A valid Aadhaar is a 12-digit number), the system shows an error message  \"Aadhaar Number is not valid\"."
+  },
+  {
+    "__EMPTY": 2.5,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_205",
+    "Test Designed by:  ": "Biometric based Aadhaar Authentication",
+    "NHA": "System must verify the biometrics (fingerprint or face) of the user",
+    "__EMPTY_3": "1. Scan biometrics (Fingerprint) \r\n2. Click on verify button",
+    "__EMPTY_4": "System authenticates the user's Aadhaar though user's biometrics\r\nIn case of incorrect biometrics, the system displays an error\r\nIn case of correct biometrics, the system allows the user to proceed"
+  },
+  {
+    "__EMPTY": 2.6,
+    "Project Name:": "Note: Many integrating entities have not implemented API for OTP not to be sent in case communication mobile is same as Aadhaar linked mobile. In that case the test scenario detailed under sl. No 2.6 will only be considered. However, it is recommended that API = checkAndGenerateMobileOTP be implemented. This will reduce one step of OTP verification in case communication mobile is same as the Aadhaar linked mobile",
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_206",
+    "Test Designed by:  ": "Communication Mobile Number verification-I",
+    "NHA": "1. If communication mobile number is same as Aadhaar linked mobile number then it should directly go to ABHA  creation screen .\r\n\r\n2. Alternatively , Integrators may also prompt for OTP  again from the user and then post verification of OTP user can go to ABHA  creation screen.",
+    "__EMPTY_3": " This is applicable for testcase cell no -G20 , point no-1 \r\n\r\n1. System will check entered mobile is same as Aadhaar linked mobile number. If returns true then user will directed to ABHA  creation screen.\r\n\r\n\r\n2. For point number 2 step are already mentioned in test case cell no- G20 , point no-2 \r\n\r\n\r\n",
+    "__EMPTY_4": "Redirect to the ABHA  creation screen."
+  },
+  {
+    "__EMPTY": 2.7,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_207",
+    "Test Designed by:  ": "Communication Mobile Number verification-II",
+    "NHA": "If communication mobile number is not same as Aadhaar linked mobile number then system must ask for the OTP to verify comuncation mobile number.",
+    "__EMPTY_3": "1. System must verify the mobile number.\r\n1. System must send OTP on mobile number \r\n2. User enters the OTP and clicks on verify\r\n3. In case of incorrect OTP, the system displays an error\r\n4. In case of correct OTP, the system allows the user to proceed",
+    "__EMPTY_4": "System verifies the communication mobile number"
+  },
+  {
+    "__EMPTY": 2.8,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_208",
+    "Test Designed by:  ": "Display of ABHA Number",
+    "NHA": "System must display the created ABHA Number",
+    "__EMPTY_3": "1. System shows the 14-digit ABHA number and ABHA  address  generated\r\n",
+    "__EMPTY_4": "User should be able to view the generated ABHA Number"
+  },
+  {
+    "__EMPTY": 2.9,
+    "ABDM - Sandbox Integration": "Mandatory  for Private ",
+    "__EMPTY_2": "CRT_ABHA_209",
+    "Test Designed by:  ": "View and Download ABHA details. \r\n(If integrators is generating ABHA card) ",
+    "NHA": "System must have a provision to View / Download ABHA card ",
+    "__EMPTY_3": "1. System should show the user their ABHA Card\r\n2. ABHA Card should be generated by API and should contain -\r\na. ABHA Number (Mandatory)\r\nb. User Photo-Optional\r\nc. ABHA QR code\r\nd. date of birth and gender\r\ne. ABHA Address",
+    "__EMPTY_4": "User should be able to view their ABHA Card"
+  },
+  {
+    "__EMPTY": 2.1,
+    "ABDM - Sandbox Integration": "Either of the test cases CRT_ABHA_209 or CRT_ABHA_210 is mandatory for Governement \r\n\r\n\r\nOptional for Private ",
+    "__EMPTY_2": "CRT_ABHA_210",
+    "Test Designed by:  ": "View and Download ABHA details. \r\n(If integrators  is not  generating ABHA card) ",
+    "NHA": "System must have a provision to View details like ABHA number and ABHA address in the card (either ABHA card or any card being generated for their program/scheme/entity)",
+    "__EMPTY_3": "1. If Integrator is not generating ABHA card then They print the mentioned information on their program/scheme or any other card\r\na. ABHA Number (Mandatory)\r\nb. ABHA Address",
+    "__EMPTY_4": "User should be able to view card with ABHA  number and ABHA  address and  the details should be saved in HIMS system and linked with the HIMS unique beneficary 's ID.g or as per their business requirement."
+  },
+  {
+    "__EMPTY": 3,
+    "__EMPTY_1": "ABHA Creation Through Demo Auth/ Offline Mode\r\n(Available Only for trusted entities. All    government Entities    are eligible. ",
+    "Project Name:": "Government"
+  },
+  {
+    "__EMPTY": 3.1,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_301",
+    "Test Designed by:  ": "Create ABHA \r\nOption",
+    "NHA": "The system must provide an option to create ABHA through Aadhaar Demographic/ Offline Mode",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/byAadhaar\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card"
+  },
+  {
+    "__EMPTY": 3.2,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_302",
+    "Test Designed by:  ": "Consent collection",
+    "NHA": "\r\n\r\n\r\nThe system must display the  consent language/ disclaimer language and collect user's consent as per the ABDM published  consent.\r\n\r\nRefer Cell No-: M14",
+    "__EMPTY_3": "1. Read consent language\r\n2. Agree to the consent language (through 'I agree' checkbox or any other form of signature)",
+    "__EMPTY_4": "User provides consent for sharing of Aadhaar details and creation of ABHA.\r\n\r\nSystem records user consent for compliance with Health Data Management Policy.\r\n\r\n",
+    "__EMPTY_5": "Please refer  the approved consent language."
+  },
+  {
+    "__EMPTY": 3.3,
+    "ABDM - Sandbox Integration": "Optional ",
+    "__EMPTY_2": "CRT_ABHA_303",
+    "Test Designed by:  ": "Suggestions:- \r\nConsent collection should be multilingual ",
+    "NHA": "The system should be able to provide the consent in languages other than English also",
+    "__EMPTY_3": "1. Read consent language\r\n2. Agree to the consent language (through 'I agree' checkbox or any other form of signature)",
+    "__EMPTY_4": "User provides consent for sharing of Aadhaar details and creation of ABHA.\r\n\r\nSystem records user consent for compliance with Health Data Management Policy.\r\n\r\n"
+  },
+  {
+    "__EMPTY": 3.4,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_304",
+    "Test Designed by:  ": "Aadhaar collection and Error Message",
+    "NHA": "System must allow the user to enter Aadhaar Number and the system will display an error message for invalid Aadhaar Number",
+    "__EMPTY_3": "1. Enter Aadhaar number",
+    "__EMPTY_4": "User is prompted to enter correct Aadhaar Number\r\n\r\nIn case user enters an invalid Aadhaar number (A valid Aadhaar is a 12-digit number), the system shows an error message  \"Aadhaar Number is not valid\"."
+  },
+  {
+    "__EMPTY": 3.5,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_305",
+    "Test Designed by:  ": "Demographic Information based authentication",
+    "NHA": "System must verify the demographic information of the user against their Aadhaar",
+    "__EMPTY_3": "1. Enter beneficiary's name, date of birth, gender, Aadhaar Number, Mobile Number, Address, State name, and district name in accordance with the details on their Aadhaar card.\r\n2. Case 1:If the beneficiary has an existing ABHA address, it should be displayed on both the ABHA card and the ABHA profile.\r\n                                       OR\r\n    Case 2: If beneficary want to create a customize ABHA address then same ABHA address should be displayed on both the ABHA card and the ABHA profile.\r\n3 : Case 3 : If the beneficiary have no ABHA address then system will create a Default ABHA Address ( ABHA Number @sbx) and same ABHA address should be displayed on both the ABHA card and the ABHA profile. (Mandatory )                         \r\n4. If a beneficiary's deatils are matched with Aadhaaar information then system will not allow  to create ABHA.\r\n5. If If a beneficiary's deatils are matched with Aadhaaar information then system will allow to create ABHA .\r\n",
+    "__EMPTY_4": "1. System authenticates the user's Aadhaar though user's demographic data.\r\n2.The fields for name, date of birth, and gender are set as non-editable, while the remaining fields can be open for editing i.e (Address, Email , Mobile Number, State, district , City e.t.c)"
+  },
+  {
+    "__EMPTY": 3.6,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_306",
+    "Test Designed by:  ": "Profile Completion",
+    "NHA": "System should accepts user's profile information -  ",
+    "__EMPTY_3": "1. System auto-populates  beneficiary's name, date of birth, gender, Aadhaar number, mobile number, address, state name, district name\r\n and ABHA Number.\r\n2.The fields for name, date of birth, and gender are set as non-editable, while the remaining fields can be open for editing.\r\n"
+  },
+  {
+    "__EMPTY": 3.7,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "CRT_ABHA_307",
+    "Test Designed by:  ": "Display of ABHA Number",
+    "NHA": "System must display the created ABHA Number",
+    "__EMPTY_3": "1. The system displays the 14-digit ABHA number and generates the corresponding ABHA Address, adhering to the implementation chosen by integrators, either as a default setting or a customized one.\r\n",
+    "__EMPTY_4": "User should be able to view the generated ABHA Number"
+  },
+  {
+    "__EMPTY": 3.8,
+    "ABDM - Sandbox Integration": "Mandatory  for Private ",
+    "__EMPTY_2": "CRT_ABHA_308",
+    "Test Designed by:  ": "View and Download ABHA details. \r\n(If integrators is generating ABHA card) ",
+    "NHA": "System must have a provision to View / Download ABHA card ",
+    "__EMPTY_3": "1. System should show the user their ABHA Card\r\n2. ABHA Card should be generated by API and should contain -\r\na. ABHA Number (Mandatory)\r\nb. ABHA QR code\r\nc. Name, date of birth and gender\r\nd. ABHA Address",
+    "__EMPTY_4": "User should be able to view their ABHA Card"
+  },
+  {
+    "__EMPTY": 3.9,
+    "ABDM - Sandbox Integration": "Either of the test cases CRT_ABHA_308 or CRT_ABHA_309 is mandatory for Governement \r\n\r\n\r\nOptional for Private ",
+    "__EMPTY_2": "CRT_ABHA_309",
+    "Test Designed by:  ": "View and Download ABHA details. \r\n(If integrators  is not  generating ABHA card) ",
+    "NHA": "System must have a provision to View details like ABHA number and ABHA address in the card (either ABHA card or any card being generated for their program/scheme/entity)",
+    "__EMPTY_3": "1. If Integrator is not generating ABHA card then They print the mentioned information on their program/scheme or any other card with the  beneficiary's demographic details.\r\na. ABHA Number (Mandatory)\r\nb. ABHA Address",
+    "__EMPTY_4": "User should be able to view card with ABHA  number and ABHA  address.and  the details should be saved in HIMS system and linked with the HIMS unique beneficary 's ID.g or as per their business requirement."
+  },
+  {
+    "__EMPTY": 4,
+    "__EMPTY_1": "ABHA Creation Through Driving License / PAN",
+    "Project Name:": "Optional for Private \r\n\r\nMandatory for Government"
+  },
+  {
+    "__EMPTY": 4.1,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_401",
+    "Test Designed by:  ": "Create ABHA Option",
+    "NHA": "The system must provide an option to create ABHA through Driving License / PAN ",
+    "__EMPTY_4": "User will have a choice to create ABHA using Aadhaar Biometrics",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/enrollment/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3enrollment/auth/byAbdm\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/enrollment/enrol/byDocument"
+  },
+  {
+    "__EMPTY": 4.2,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_402",
+    "Test Designed by:  ": "Consent Collection",
+    "NHA": "The System must display the consent/ disclaimer language and collect user's consent",
+    "__EMPTY_3": "1. Read the consent language\r\n2. Agree to the consent language (through 'I agree' checkbox or any other form of signature)",
+    "__EMPTY_4": "User provides consent for sharing of Aadhaar details and creation of ABHA.\r\n\r\nSystem records user consent for compliance with Health Data Management Policy.",
+    "__EMPTY_5": "Please refer  the approved consent language."
+  },
+  {
+    "__EMPTY": 4.3,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_403",
+    "Test Designed by:  ": "Communication Mobile Number",
+    "NHA": "System must collect the communication mobile number",
+    "__EMPTY_3": "1. Enters a valid mobile number for communication purpose",
+    "__EMPTY_4": "User will be able to enter their Mobile Number"
+  },
+  {
+    "__EMPTY": 4.4,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_404",
+    "Test Designed by:  ": "Mobile Number Verification",
+    "NHA": "System must verify the provided mobile number",
+    "__EMPTY_3": "1. Receive OTP on mobile number \r\n2. Enter the OTP and clicks on verify",
+    "__EMPTY_4": "In case of incorrect OTP, the system displays an error \r\nIn case of correct OTP, the system allows the user to proceed"
+  },
+  {
+    "__EMPTY": 4.5,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_405",
+    "Test Designed by:  ": "Document Verification",
+    "NHA": "System must verify the provided document - Driving License / PAN\r\n\r\n\r\n",
+    "__EMPTY_3": "1. Enter the Driving License / PAN number\r\n2. Enter name, date of birth and gender as per the document.\r\n3. successfully verification will generate enrollment number \r\n4. With this enrollment number patient/ user will approach with any ABDM facilty for creation of ABHA  number .",
+    "__EMPTY_4": "System validates user's Driving License / PAN"
+  },
+  {
+    "__EMPTY": 4.6,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_406",
+    "Test Designed by:  ": "Document Upload",
+    "NHA": "System must allow upload of front and back page of the Driving licence/ PAN",
+    "__EMPTY_3": "1. Upload the front and back page of the document i.e Driving License / PAN.",
+    "__EMPTY_4": "Document photos are uploaded in the system"
+  },
+  {
+    "__EMPTY": 4.7,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_407",
+    "Test Designed by:  ": "Manual Verification and ABHA Creation",
+    "NHA": "System Operator / healthcare worker must manually check the documents - Driving License / PAN ",
+    "__EMPTY_3": "1. A healthcare worker/ system operator manually verifies the Driving License / PAN",
+    "__EMPTY_4": "Documents are manually verified. \r\n\r\nIn case the document is valid, the operator approves ABHA creation.\r\n\r\nIn case the document is invalid, the operator rejects the ABHA creation."
+  },
+  {
+    "__EMPTY": 4.8,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_408",
+    "Test Designed by:  ": "Display of ABHA Number",
+    "NHA": "System should display the created ABHA Number",
+    "__EMPTY_3": "1. Show the 14-digit ABHA number generated\r\n2. Show ABHA Number instead of Health ID",
+    "__EMPTY_4": "User should be able to view the generated ABHA Number"
+  },
+  {
+    "__EMPTY": 4.9,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_410",
+    "Test Designed by:  ": "View and Download ABHA details. \r\n(If integrators is generating ABHA card) ",
+    "NHA": "System must have a provision to View / Download ABHA card ",
+    "__EMPTY_3": "1. System should show the user their ABHA Card\r\n2. ABHA Card should be generated by API and should contain -\r\na. ABHA Number (Mandatory)\r\nb. User Photo-Optional\r\nc. ABHA QR code\r\nd. date of birth and gender\r\ne. ABHA Address",
+    "__EMPTY_4": "User should be able to view their ABHA Card and  the details should be saved in HIMS system and linked with the HIMS unique beneficary 's ID.g or as per their business requirement."
+  },
+  {
+    "__EMPTY": 4.1,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "CRT_ABHA_411",
+    "Test Designed by:  ": "View and Download ABHA details. \r\n(If integrators  is not  generating ABHA card) ",
+    "NHA": " If Integrator is not generating ABHA card.",
+    "__EMPTY_3": "1. If Integrator is not generating ABHA card then They print the mentioned information on their own card.\r\na. ABHA Number (Mandatory)\r\nb. ABHA Address",
+    "__EMPTY_4": "User should be able to view card with ABHA  number and ABHA  address."
+  },
+  {
+    "__EMPTY": "ABHA Verification Process"
+  },
+  {
+    "__EMPTY": 5,
+    "__EMPTY_1": "ABHA Verification",
+    "Project Name:": "All"
+  },
+  {
+    "__EMPTY": 5.1,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "VRFY_ABHA_101",
+    "Test Designed by:  ": " ABHA Number Verification using Aadhaar OTP",
+    "NHA": "System must allow ABHA Number  verification using Aadhaar OTP",
+    "__EMPTY_3": "1. Share ABHA Number or ABHA Address\r\n2. Receive OTP on the Aadhaar linked mobile number \r\n3. Enter the OTP.\r\n4. System may activate the Resend OTP button maximum  2 times after  60  seconds in the OTP not received.\r\n5. If beneficiary updates their mobile number in the HIMS system and It is advisable to provide users with the option to update their mobile number in the ABHA profile with (Yes/No) using the profile API you should be able to update the details. ",
+    "__EMPTY_4": "1. In case of correct OTP, the verification is complete and the System can fetch user's ABHA profile - name, date of birth, gender, mobile number, photo and address, ABHA Number , ABHA Address and other details from the  APIs.\r\n2. In case of incorrect OTP, the verification fails.\r\n\r\n3. The fields for name, date of birth, and gender are set as non-editable, while the remaining fields can be open for editing i.e (Address, Email , Mobile Number, State, district , City e.t.c)\r\n\r\n4. After verification , the details should be saved in HIMS system and linked with the HIMS unique beneficary 's ID.g or as per their business requirement.",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify \r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card"
+  },
+  {
+    "__EMPTY": 5.2,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "VRFY_ABHA_102",
+    "Test Designed by:  ": "ABHA Address   Verification using Aadhaar OTP",
+    "NHA": "System must allow ABHA Address verification using Aadhaar OTP",
+    "__EMPTY_3": "1. Share ABHA Number or ABHA Address.\r\n2. Receive OTP on the Aadhaar linked mobile number.\r\n3. Enter the OTP.\r\n4. System may activate the Resend OTP button maximum 2 times after 60 seconds in the OTP not received.\r\n5. If beneficiary updates their mobile number in the HIMS system and It is advisable to provide users with the option to update their mobile number in the ABHA profile with (Yes/No) using the profile API you should be able to update the details. ",
+    "__EMPTY_4": "1. In case of correct OTP, the verification is complete and the System can fetch user's ABHA profile - name, date of birth, gender, mobile number, photo and address, , state,district, ABHA Number , ABHA Address and other details from the  APIs.\r\n\r\n2. In case of incorrect OTP, the verification fails.\r\n\r\n3. The fields for name, date of birth, and gender are set as non-editable, while the remaining fields can be open for editing i.e (Address, Email , Mobile Number, State, district , City e.t.c)\r\n\r\n4. After verification , the details should be saved in HIMS system and linked with the HIMS unique beneficary 's ID.g or as per their business requirement.",
+    "__EMPTY_8": "\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/abha/search\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/abha/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/abha/verify\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/profile/abha-profile\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/profile/abha/phr-card"
+  },
+  {
+    "__EMPTY": 6,
+    "__EMPTY_1": "ABHA  Verification",
+    "Project Name:": "All"
+  },
+  {
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "VRFY_ABHA_201",
+    "Test Designed by:  ": "ABHA Number  verification using   mobile OTP(ABHA Linked Mobile Number )",
+    "NHA": "System must allow ABHA Number  verification using \r\nmobile OTP(ABHA Linked Mobile Number )  ",
+    "__EMPTY_3": "1. Share ABHA Number or ABHA Address\r\n2. Receive OTP on the Communication mobile number \r\n3. Enter the OTP.\r\n4. System may activate the Resend OTP button maximum  2 times after 60 seconds in the OTP not received.\r\n5. If beneficiary updates their mobile number in the HIMS system and It is advisable to provide users with the option to update their mobile number in the ABHA profile with (Yes/No) using the profile API you should be able to update the details. ",
+    "__EMPTY_4": "1. In case of correct OTP, the verification is complete and the System can fetch user's ABHA profile - name, date of birth, gender, mobile number, photo and address, , state,district,ABHA Number , ABHA Address and other details from the  APIs.\r\n2.In case of incorrect OTP, the verification fails.\r\n\r\n2. The fields for name, date of birth, and gender are set as non-editable, while the remaining fields can be open for editing i.e (Address, Email , Mobile Number, State, district , City e.t.c)\r\n\r\n4. After verification , the details should be saved in HIMS system and linked with the HIMS unique beneficary 's ID.\r\n\r\n",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card"
+  },
+  {
+    "__EMPTY": 6.1,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "VRFY_ABHA_202",
+    "Test Designed by:  ": "ABHA Address verification using   mobile OTP(ABHA Linked Mobile Number )",
+    "NHA": "System must allow ABHA Address  verification using \r\nmobile OTP(ABHA Linked Mobile Number )  ",
+    "__EMPTY_3": "1. Share ABHA Number or ABHA Address\r\n2. Receive OTP on the Communication mobile number \r\n3. Enter the OTP.\r\n4. System may activate the Resend OTP button maximum  2 times after 60  seconds in the OTP not received.\r\n5. If beneficiary updates their mobile number in the HIMS system and It is advisable to provide users with the option to update their mobile number in the ABHA profile with (Yes/No) using the profile API you should be able to update the details. ",
+    "__EMPTY_4": "1. In case of correct OTP, the verification is complete and the System can fetch user's ABHA profile - name, date of birth, gender, mobile number, photo and address,, state,district, ABHA Number , ABHA Address and other details from the  APIs.\r\n\r\n2. In case of incorrect OTP, the verification fails.\r\n\r\n3. The fields for name, date of birth, and gender are set as non-editable, while the remaining fields can be open for editing i.e (Address, Email , Mobile Number, State, district , City e.t.c)\r\n\r\n4. After verification , the details should be saved in HIMS system and linked with the HIMS unique beneficary 's ID.g or as per their business requirement.\r\n",
+    "__EMPTY_8": "\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/abha/search\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/abha/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/abha/verify\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/profile/abha-profile\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/phr/web/login/profile/abha/phr-card"
+  },
+  {
+    "__EMPTY": 7,
+    "__EMPTY_1": "ABHA Verification",
+    "Project Name:": "All"
+  },
+  {
+    "__EMPTY": 7.1,
+    "ABDM - Sandbox Integration": "\r\n\r\nMandatory",
+    "__EMPTY_2": "VRFY_ABHA _301",
+    "Test Designed by:  ": "Fetch ABHA details using Mobile  (communication)authentication .\r\nMulti authentication feature also need to be implemented like Captcha preferred",
+    "NHA": "System must allow ABHA retrieval  using communication mobile OTP",
+    "__EMPTY_3": "1. If the user enters a in-valid mobile number(communication)  then  system will display an error message \" Please enter a valid mobile number\".\r\n\r\n  ",
+    "__EMPTY_4": "Display relevant error messgae.",
+    "__EMPTY_8": " https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp\r\n https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify/user\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card\r\n"
+  },
+  {
+    "__EMPTY": 7.2,
+    "ABDM - Sandbox Integration": "\r\n\r\nMandatory",
+    "__EMPTY_2": "VRFY_ABHA _302",
+    "NHA": "ABHA Details not  exists to  communicated Mobile Number",
+    "__EMPTY_3": "1. Incase ABHA Details not  exists to  communicated Mobile Number in ABHA system.\r\n    ",
+    "__EMPTY_4": "System will display an error message i.e. \r\n  \" ABHA Number not found\r\n    We did not find any ABHA number linked to this mobile number.\r\n     Please use ABHA linked mobile number\"       \r\n Kindly Note: System  should allow to create ABHA option should be open."
+  },
+  {
+    "__EMPTY": 7.3,
+    "ABDM - Sandbox Integration": "\r\n\r\nMandatory",
+    "__EMPTY_2": "VRFY_ABHA _303",
+    "NHA": "ABHA Details  exists to communicated Mobile Number. ",
+    "__EMPTY_3": "1. Incase ABHA Details  exists to communicated Mobile Number. \r\n      1.1.  If ABHA Details exists to comunication mobile number exists in ABHA system , In case ' Yes'  then system will display a message \"ABHA Exists to communication Mobile\" and user will receive the OTP i.e \"OTP sent to ABHA linked mobile number ending with ******XXXX\" and then Upon verification completion, the system will display a list of ABHA numbers linked to the mobile number, including the following details: Name, ABHA Number, ABHA Address, and the beneficiary's photograph. When the user attempts to link selected ABHA details, the system will verify if the selected record is present in the HIMS system. If so, it will display a message indicating that the record is already linked in the HIMS with the HIMS beneficiary's ID.\r\n     1.2  If the selected ABHA Profile  is not present in HIMS, the system will allow it to be Register and linked in their HIMS beneficary's ID or proceed as per bussiness requirement OR benefciary can download the ABHA card (Optional)",
+    "__EMPTY_4": "1. Fetching ABHA Details.\r\n2. Register and Linked in their HIMS OR OR benefciary can download the ABHA card."
+  },
+  {
+    "__EMPTY": 7.4,
+    "ABDM - Sandbox Integration": "\r\n\r\nMandatory",
+    "__EMPTY_2": "VRFY_ABHA _304",
+    "NHA": "Incorrect OTP",
+    "__EMPTY_3": "1. In case of incorrect OTP, the verification fails and display the relevant message.",
+    "__EMPTY_4": "Display relevant error messgae."
+  },
+  {
+    "__EMPTY": 7.5,
+    "ABDM - Sandbox Integration": "\r\n\r\nMandatory",
+    "__EMPTY_2": "VRFY_ABHA _305",
+    "NHA": "Resend OTP Functionality",
+    "__EMPTY_3": "1. System may activate the Resend OTP button maximum  2 times after 60 seconds in the OTP not received."
+  },
+  {
+    "__EMPTY": 8,
+    "__EMPTY_1": "Fetching ABHA details  using Aadhaar Number\r\n",
+    "Project Name:": "All"
+  },
+  {
+    "__EMPTY": 8.1,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "VRFY_ABHA_401",
+    "Test Designed by:  ": "Fetch ABHA details using Aadhaar Number \r\n",
+    "NHA": "System must allow ABHA retrieval  using Aadhaar Number ",
+    "__EMPTY_3": "1.If the user enters wrong Aadhaar Number   then  system will display an error message \"Invalid LoginId\" or some relevant message i.e \"Aadhaar Number is not valid\".\r\n  ",
+    "__EMPTY_4": "Display relevant error messgae.",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify \r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card"
+  },
+  {
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "VRFY_ABHA_402",
+    "NHA": "Incorrect OTP",
+    "__EMPTY_3": "1. In case of incorrect OTP, the verification fails and display the relevant message.",
+    "__EMPTY_4": "Display relevant error messgae."
+  },
+  {
+    "__EMPTY": 8.2,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "VRFY_ABHA_403",
+    "NHA": "ABHA Details not  exists to  Aadhaar Number",
+    "__EMPTY_3": "1. Beneficary enter Aadhaar Number .\r\n2. Beneficary will receive the OTP i.e \"OTP sent to Aadhaar linked mobile number ending with ******XXXX\" \r\n3. After OTP verfication then system will display \"NO ABHA user registered with this Aadhaar Number\".\r\n4. The system should have a provision to create ABHA.\r\n    \r\n    ",
+    "__EMPTY_4": "Display relevant error messgae."
+  },
+  {
+    "__EMPTY": 8.3,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "VRFY_ABHA_404",
+    "NHA": "ABHA Details  exists to Aadhaar Number",
+    "__EMPTY_3": "1. Enter Aadhaar Number.\r\n2. Beneficary will receive the OTP i.e \"OTP sent to Aadhaar linked mobile number ending with ******XXXX\" .\r\n3. After the OTP verfication. If ABHA Number exists then system will display Beneficary ABHA profile details and user can download the ABHA card.\r\n4. If  ABHA Profile  is not present in HIMS, the system will allow it to be Register and linked in their HIMS beneficary's ID or proceed as per bussiness requirement .",
+    "__EMPTY_4": "1. Display ABHA Profile details.\r\n2. Download ABHA Card. \r\n3. Register and linked in their HIMS beneficary's ID or proceed as per bussiness requirement ."
+  },
+  {
+    "__EMPTY": 8.4,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "VRFY_ABHA_405",
+    "NHA": "Resend OTP Functionality",
+    "__EMPTY_3": "1.  System may activate the Resend OTP button maximum  2 times after 60 seconds in the OTP not received.",
+    "__EMPTY_4": "Display relevant error messgae."
+  },
+  {
+    "__EMPTY": 9,
+    "__EMPTY_1": "ABHA Verification\r\n(Applicable for Government Entites)",
+    "Project Name:": "All"
+  },
+  {
+    "__EMPTY": 9.1,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "VRFY_ABHA_501",
+    "Test Designed by:  ": "ABHA Number  verification using  Aadhaar Biometric - Fingerprint",
+    "NHA": "System must allow ABHA Number verification using Biometric scan",
+    "__EMPTY_3": "1. Share ABHA Number or ABHA Address\r\n2. Scan fingerprint or face",
+    "__EMPTY_4": "In case the biometrics match, the verification is complete and the System can fetch user's ABHA profile - name, date of birth, gender, mobile number, photo and address, ABHA Number , ABHA Address and other details from the  APIs.\r\n\r\nIn case the biometrics do not match, the verification fails.",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/abha-card"
+  },
+  {
+    "__EMPTY": 9.2,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "VRFY_ABHA_502",
+    "Test Designed by:  ": "ABHA Address verification using  Aadhaar Biometric - Fingerprint",
+    "NHA": "System must allow ABHA Address verification using Biometric scan",
+    "__EMPTY_3": "1. Share ABHA Number or ABHA Address\r\n2. Scan fingerprint or face",
+    "__EMPTY_4": "In case the biometrics match, the verification is complete and the System can fetch user's ABHA profile - name, date of birth, gender, mobile number, photo and address, ABHA Number , ABHA Address and other details from the  APIs.\r\n\r\nIn case the biometrics do not match, the verification fails.",
+    "__EMPTY_8": "No API"
+  },
+  {
+    "__EMPTY": 10,
+    "__EMPTY_1": "Reading ABHA Info using ABHA QR Code",
+    "Project Name:": "All"
+  },
+  {
+    "__EMPTY": 10.1,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "VRFY_ABHA_501",
+    "Test Designed by:  ": "Reading ABHA Profile Info using ABHA QR Code",
+    "NHA": "System must allow scanning of ABHA QR code to read the ABHA information",
+    "__EMPTY_3": "1. EMR/HMIS scans the user's ABHA QR code",
+    "__EMPTY_4": "System reads the user information from the ABHA QR code - name, date of birth, gender, mobile and other details into the system for registration.",
+    "__EMPTY_8": "   No APIs"
+  },
+  {
+    "__EMPTY": 11,
+    "__EMPTY_1": "Profile Update",
+    "Project Name:": "All"
+  },
+  {
+    "__EMPTY": 11.1,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "PROF_ABHA_601",
+    "Test Designed by:  ": "Mobile Update",
+    "NHA": "System must allow the user to update their Mobile number",
+    "__EMPTY_3": "1. Enter new mobile number\r\n2. Enter OTP\r\n3. Enter Password/ OTP on old mobile number",
+    "__EMPTY_4": "Mobile number on ABHA profile is updated",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/verify"
+  },
+  {
+    "__EMPTY": 11.2,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "PROF_ABHA_602",
+    "Test Designed by:  ": "Photo Update",
+    "NHA": "System must allow the user to update their Photo",
+    "__EMPTY_3": "1. Click on Edit Photo\r\n2. Upload new photo",
+    "__EMPTY_4": "Photo on ABHA profile is updated",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account"
+  },
+  {
+    "__EMPTY": 11.3,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "PROF_ABHA_603",
+    "Test Designed by:  ": "Email Update",
+    "NHA": "System must allow the user to update their Email",
+    "__EMPTY_3": "1. Enter new Email ID\r\n2. Enter OTP",
+    "__EMPTY_4": "Email ID on ABHA profile is updated",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/verify"
+  },
+  {
+    "__EMPTY": 11.4,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "PROF_ABHA_604",
+    "Test Designed by:  ": "Re-KYC",
+    "NHA": "System must allow the user to perform re-KYC",
+    "__EMPTY_3": "1. Click on re-KYC option\r\n2. Enter OTP received on Aadhaar linked mobile numer",
+    "__EMPTY_4": "KYC details on ABHA profile are updated",
+    "__EMPTY_8": "https://abhasbx.abdm.gov.in/abha/api/v3/profile/account/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/verify"
+  },
+  {
+    "__EMPTY": 11.5,
+    "ABDM - Sandbox Integration": "Optional",
+    "__EMPTY_2": "PROF_ABHA_605",
+    "Test Designed by:  ": "Delete ABHA",
+    "NHA": "System must allow the user to Delete/ Deactivate ABHA",
+    "__EMPTY_3": "1. Click on Delete/ Deactivate ABHA\r\n2. Enter OTP received on mobile number to confirm deletion/ deactivation\r\n3. Try to login again using the same ABHA",
+    "__EMPTY_4": "ABHA Number should be deleted. \r\n\r\nThe system should not allow login through the same ABHA",
+    "__EMPTY_8": "Delete using Aadhaar OTP OR ABDM OTP\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/verify\r\n\r\nDeactivate using Aadhaar OTP OR ABDM OTP\r\n\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/account/verify\r\n\r\nRe-activate using Aadhaar OTP OR ABDM OTP\r\n\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/login/request/otp\r\nhttps://abhasbx.abdm.gov.in/abha/api/v3/profile/login/verify/user"
+  },
+  {
+    "__EMPTY": 16,
+    "__EMPTY_1": "Verify one ABHA Number is linked to the unique patient ID in  HIMS ",
+    "Project Name:": "All"
+  },
+  {
+    "__EMPTY": 16,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "TAGGING_UNIQUEPATIENTID_UNIQUEABHANUMBER ",
+    "Test Designed by:  ": "Verify one ABHA Number is linked to the unique patient ID in  HIMS ",
+    "NHA": "Intergrator's HIMS System should allow tagging of one ABHA Number with unique patient Id.",
+    "__EMPTY_3": "ABHA Number should be validated in the database if already exists before creating a new patient id to avoid tagging of multiple patient id with same ABHA Number.\r\nKindly Note:  This test scenario is applicable for both new and existing beneficiaries and linking will be happens with ABHA  creation and verification flow.\r\n",
+    "__EMPTY_4": "HIMS is able to tag Patient ID with ABHA number.",
+    "__EMPTY_8": "NO APIs "
+  },
+  {
+    "__EMPTY": 17,
+    "__EMPTY_1": "Share Profile ",
+    "Project Name:": "PHR app",
+    "ABDM - Sandbox Integration": "Mandatory"
+  },
+  {
+    "__EMPTY": 17.1,
+    "ABDM - Sandbox Integration": "Mandatory",
+    "__EMPTY_2": "SHARE _PATIENT_PROFILE_701",
+    "Test Designed by:  ": "Share Patient Profile",
+    "NHA": "User will scan the QR code which is placed the facility premises",
+    "__EMPTY_3": "1. Log into PHR app.\r\n2. User will scan the QR code which is placed at the facility premises/registration desk.\r\n3. Post scanning, patient profile details are displayed including ABHA number, ABHA address, Name, Gender, DoB, Mobile No and Address. Below this consent language is displayed - \"Your consent to the above information to be shared with <HIP Name>. They can use this information for your registration and linking your health records\" and both \"Cancel\" / \"Share\" buttons are provided. \r\n4.Check that after clicking on \"Share\" button, user profile is successfully shared with the HIP and if user click on \"Cancel\" button then user profile is not shared with the HIP. \r\n5. User clicks on share and gets a token number.\r\n6. User clicks on ok and gets token number with validity of 30 minutes.",
+    "__EMPTY_4": "1. Log into PHR app.\r\n2. User will scan the QR code which is placed at the facility premises/registration desk.\r\n3. Post scanning, patient profile details are displayed including ABHA number, ABHA address, Name, Gender, DoB, Mobile No and Address. Below this consent language is displayed - \"Your consent to the above information to be shared with <HIP Name>. They can use this information for your registration and linking your health records\" and both \"Cancel\" / \"Share\" buttons are provided. \r\n4.Check that after clicking on \"Share\" button, user profile is successfully shared with the HIP and if user click on \"Cancel\" button then user profile is not shared with the HIP. \r\n5. User clicks on share and gets a token number.\r\n6. User clicks on ok and gets token number with validity of 30 minutes.",
+    "__EMPTY_8": "https://dev.abdm.gov.in/api/hiecm/patient-share/v3/on-share"
+  }
+]

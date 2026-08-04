@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\Storage\StorageServiceInterface;
-use App\Http\Traits\ApiResponseTrait;
+use App\Http\Traits\HasApiResponse;
 use OpenApi\Attributes as OA;
 
 class StorageController extends Controller
 {
-    use ApiResponseTrait;
+    use HasApiResponse;
 
     protected $storageService;
 
@@ -22,7 +22,7 @@ class StorageController extends Controller
     #[OA\Post(
         path: "/api/v1/storage/upload-url",
         summary: "Generate a presigned URL for direct file upload to Cloudflare R2 / S3",
-        tags: ["Storage"],
+        tags: ["10. Storage"],
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
@@ -52,16 +52,13 @@ class StorageController extends Controller
 
         $uploadUrl = $this->storageService->generateUploadUrl($path, $request->content_type);
 
-        return $this->success([
-            'upload_url' => $uploadUrl,
-            'path' => $path
-        ], 'Presigned upload URL generated successfully');
+        return $this->successResponse(['url' => $uploadUrl, 'path' => $path], 'Upload URL generated successfully');
     }
 
     #[OA\Get(
         path: "/api/v1/storage/view-url",
         summary: "Generate a time-limited presigned URL to view a private file",
-        tags: ["Storage"],
+        tags: ["10. Storage"],
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(
@@ -80,8 +77,6 @@ class StorageController extends Controller
 
         $viewUrl = $this->storageService->generateViewUrl($request->path);
 
-        return $this->success([
-            'view_url' => $viewUrl
-        ], 'Presigned view URL generated successfully');
+        return $this->successResponse(['url' => $viewUrl], 'View URL generated successfully');
     }
 }

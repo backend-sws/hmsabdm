@@ -2,27 +2,19 @@
 
 namespace Database\Factories;
 
-use App\Models\Patient;
+use App\Models\Hospital;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Patient>
- */
 class PatientFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
+            'hospital_id' => Hospital::factory(),
             'name' => fake()->name(),
-            'phone' => fake()->unique()->numerify('##########'),
-            'abha_number' => fake()->unique()->numerify('##-####-####-####'),
-            'email' => fake()->unique()->safeEmail(),
-            'hospital_id' => null, // Will be overridden in Seeder
+            'mobile' => fake()->numerify('##########'),
+            'gender' => fake()->randomElement(['M', 'F', 'O']),
+            'dob' => fake()->date(),
         ];
     }
 }

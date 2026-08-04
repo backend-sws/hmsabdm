@@ -6,13 +6,13 @@ use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
 use App\Services\Patient\PatientServiceInterface;
-use App\Http\Traits\ApiResponseTrait;
+use App\Http\Traits\HasApiResponse;
 use App\Http\Resources\PatientResource;
 use OpenApi\Attributes as OA;
 
 class PatientController extends Controller
 {
-    use ApiResponseTrait;
+    use HasApiResponse;
 
     protected PatientServiceInterface $patientService;
 
@@ -24,7 +24,7 @@ class PatientController extends Controller
     #[OA\Get(
         path: "/api/v1/patients",
         summary: "Get all patients",
-        tags: ["Patients"],
+        tags: ["8. Patients"],
         security: [["bearerAuth" => []]]
     )]
     #[OA\Response(response: 200, description: "List of patients retrieved successfully")]
@@ -32,13 +32,13 @@ class PatientController extends Controller
     {
         $patients = $this->patientService->getAllPatients();
         $resource = PatientResource::collection($patients)->response()->getData(true);
-        return $this->success($resource, 'Patients retrieved successfully');
+        return $this->successResponse($resource, 'Patients retrieved successfully');
     }
 
     #[OA\Post(
         path: "/api/v1/patients",
         summary: "Register a new patient",
-        tags: ["Patients"],
+        tags: ["8. Patients"],
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
@@ -66,6 +66,6 @@ class PatientController extends Controller
 
         $patient = $this->patientService->registerPatient($data);
 
-        return $this->success(new PatientResource($patient), 'Patient registered successfully', 201);
+        return $this->createdResponse(new PatientResource($patient), 'Patient registered successfully');
     }
 }

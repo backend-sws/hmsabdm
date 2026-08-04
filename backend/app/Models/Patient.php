@@ -11,10 +11,7 @@ class Patient extends Model
     use HasFactory, BelongsToHospital;
 
     protected $fillable = [
-        'name',
-        'phone',
-        'abha_number',
-        'email',
-        'hospital_id'
+        'hospital_id', 'name', 'mobile', 'abha_number', 'abha_address',
+        'dob', 'gender', 'blood_group', 'address', 'city', 'pincode'
     ];
 }
