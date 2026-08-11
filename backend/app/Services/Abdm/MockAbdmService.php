@@ -98,7 +98,7 @@ class MockAbdmService implements AbdmServiceInterface
         throw new \App\Exceptions\AbdmApiException('Invalid OTP', 'AUTH_401', [], 401);
     }
 
-    public function suggestAbhaAddress(string $txnId): array
+    public function suggestAbhaAddress(string $txnId, string $token): array
     {
         return [
             'abhaAddresses' => [
@@ -108,7 +108,7 @@ class MockAbdmService implements AbdmServiceInterface
         ];
     }
 
-    public function createAbhaAddress(string $txnId, string $abhaAddress): array
+    public function createAbhaAddress(string $txnId, string $abhaAddress, string $token): array
     {
         return [
             'message' => 'ABHA address linked successfully (Mock)',

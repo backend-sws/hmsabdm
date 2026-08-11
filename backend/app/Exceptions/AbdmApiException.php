@@ -28,10 +28,14 @@ class AbdmApiException extends RuntimeException
         $message = $response['message'] 
             ?? $response['error']['message'] 
             ?? $response['error'] 
-            ?? 'ABDM API error';
+            ?? null;
 
         if (is_array($message)) {
-            $message = json_encode($message);
+            $firstString = collect($message)->flatten()->first(fn($val) => is_string($val));
+            $message = $firstString ?: 'ABDM API error';
+        } elseif ($message === null) {
+            $firstString = collect($response)->except(['timestamp', 'status', 'code'])->flatten()->first(fn($val) => is_string($val));
+            $message = $firstString ?: 'ABDM Validation Error';
         }
 
         $code = $response['code'] ?? $response['error']['code'] ?? '';

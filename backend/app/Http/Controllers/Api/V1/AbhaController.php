@@ -222,14 +222,16 @@ class AbhaController extends Controller
         tags: ["3. ABHA — Aadhaar Enrolment"]
     )]
     #[OA\Parameter(name: "txnId", in: "query", required: true, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "token", in: "query", required: true, schema: new OA\Schema(type: "string"), description: "X-Token from verify step")]
     #[OA\Response(response: 200, description: "Suggestions retrieved")]
     public function suggestAbhaAddress(Request $request)
     {
         $request->validate([
             'txnId' => 'required|string',
+            'token' => 'required|string',
         ]);
 
-        $response = $this->abdmService->suggestAbhaAddress($request->txnId);
+        $response = $this->abdmService->suggestAbhaAddress($request->txnId, $request->token);
         
         return $this->successResponse($response, 'ABHA Address Suggestions retrieved');
     }
@@ -246,6 +248,7 @@ class AbhaController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "txnId", type: "string"),
+                new OA\Property(property: "token", type: "string", description: "X-Token from verify step"),
                 new OA\Property(property: "abhaAddress", type: "string", example: "rohit123@abdm")
             ]
         )
@@ -256,11 +259,13 @@ class AbhaController extends Controller
         $request->validate([
             'txnId' => 'required|string',
             'abhaAddress' => 'required|string',
+            'token' => 'required|string',
         ]);
 
         $response = $this->abdmService->createAbhaAddress(
             $request->txnId,
-            $request->abhaAddress
+            $request->abhaAddress,
+            $request->token
         );
         
         return $this->successResponse($response, 'ABHA Address Created Successfully');

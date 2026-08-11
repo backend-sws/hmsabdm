@@ -199,9 +199,13 @@ class RealAbdmService implements AbdmServiceInterface
             ]
         ];
 
-        $response = $this->httpClient()
-            ->withHeaders($this->getGatewayHeaders())
-            ->post($endpoint, $payload);
+        try {
+            $response = $this->httpClient()
+                ->withHeaders($this->getGatewayHeaders())
+                ->post($endpoint, $payload);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+        }
 
         $responseData = $response->json();
 
@@ -258,9 +262,13 @@ class RealAbdmService implements AbdmServiceInterface
             ]
         ];
 
-        $response = $this->httpClient()
-            ->withHeaders($this->getGatewayHeaders())
-            ->post("{$this->abhaUrl}/v3/enrollment/enrol/byAadhaar", $payload);
+        try {
+            $response = $this->httpClient()
+                ->withHeaders($this->getGatewayHeaders())
+                ->post("{$this->abhaUrl}/v3/enrollment/enrol/byAadhaar", $payload);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+        }
 
         $responseData = $response->json();
 
@@ -299,14 +307,18 @@ class RealAbdmService implements AbdmServiceInterface
 
     public function generateMobileOtpForLinking(string $mobile, string $txnId, array $scopes = ['abha-enrol', 'mobile-verify']): array
     {
-        $response = $this->httpClient()
-            ->withHeaders($this->getGatewayHeaders())
-            ->post("{$this->abhaUrl}/v3/enrollment/request/otp", [
-                'scope' => $scopes,
-                'loginHint' => 'mobile',
-                'loginId' => $this->encryptData($mobile),
-                'otpSystem' => 'abdm'
-            ]);
+        try {
+            $response = $this->httpClient()
+                ->withHeaders($this->getGatewayHeaders())
+                ->post("{$this->abhaUrl}/v3/enrollment/request/otp", [
+                    'scope' => $scopes,
+                    'loginHint' => 'mobile',
+                    'loginId' => $this->encryptData($mobile),
+                    'otpSystem' => 'abdm'
+                ]);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+        }
 
         if ($response->failed()) {
             throw AbdmApiException::fromResponse($response->json() ?? ['message' => 'Failed to generate Mobile OTP']);
@@ -328,9 +340,13 @@ class RealAbdmService implements AbdmServiceInterface
             ]
         ];
 
-        $response = $this->httpClient()
-            ->withHeaders($this->getGatewayHeaders())
-            ->post("{$this->abhaUrl}/v3/enrollment/enrol/auth/byAbdm", $payload);
+        try {
+            $response = $this->httpClient()
+                ->withHeaders($this->getGatewayHeaders())
+                ->post("{$this->abhaUrl}/v3/enrollment/enrol/auth/byAbdm", $payload);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+        }
 
         if ($response->failed()) {
             throw AbdmApiException::fromResponse($response->json() ?? ['message' => 'Failed to verify Mobile OTP']);
@@ -339,11 +355,18 @@ class RealAbdmService implements AbdmServiceInterface
         return $response->json();
     }
 
-    public function suggestAbhaAddress(string $txnId): array
+    public function suggestAbhaAddress(string $txnId, string $token): array
     {
-        $response = $this->httpClient()
-            ->withHeaders($this->getGatewayHeaders())
-            ->get("{$this->abhaUrl}/v3/enrollment/enrol/suggestion?transactionId={$txnId}");
+        $headers = $this->getGatewayHeaders();
+        $headers['X-Token'] = "Bearer {$token}";
+
+        try {
+            $response = $this->httpClient()
+                ->withHeaders($headers)
+                ->get("{$this->abhaUrl}/v3/enrollment/enrol/suggestion?transactionId={$txnId}");
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+        }
 
         if ($response->failed()) {
             throw AbdmApiException::fromResponse($response->json() ?? ['message' => 'Failed to fetch suggestions']);
@@ -352,14 +375,21 @@ class RealAbdmService implements AbdmServiceInterface
         return $response->json();
     }
 
-    public function createAbhaAddress(string $txnId, string $abhaAddress): array
+    public function createAbhaAddress(string $txnId, string $abhaAddress, string $token): array
     {
-        $response = $this->httpClient()
-            ->withHeaders($this->getGatewayHeaders())
-            ->post("{$this->abhaUrl}/v3/enrollment/enrol/abha-address", [
-                'transactionId' => $txnId,
-                'abhaAddress' => $abhaAddress
-            ]);
+        $headers = $this->getGatewayHeaders();
+        $headers['X-Token'] = "Bearer {$token}";
+
+        try {
+            $response = $this->httpClient()
+                ->withHeaders($headers)
+                ->post("{$this->abhaUrl}/v3/enrollment/enrol/abha-address", [
+                    'transactionId' => $txnId,
+                    'abhaAddress' => $abhaAddress
+                ]);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+        }
 
         if ($response->failed()) {
             throw AbdmApiException::fromResponse($response->json() ?? ['message' => 'Failed to create ABHA Address']);

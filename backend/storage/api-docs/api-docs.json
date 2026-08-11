@@ -2,12 +2,12 @@
     "openapi": "3.0.0",
     "info": {
         "title": "HMS ABDM Integration API",
-        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide will help frontend developers understand exactly how to integrate the different workflows.\n\n### 1. Authentication (Step 0)\n- Call **`POST /api/v1/login`** with your credentials to get a Bearer Token.\n- Pass this token in the `Authorization: Bearer <token>` header for all subsequent API requests.\n\n### 2. ABHA Creation & Login (Patient Registration)\nThere are two main flows for handling ABHA (Ayushman Bharat Health Account):\n\n#### Flow A: Patient already has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/generate-otp`**: Send patient's mobile number.\n2. **`POST /api/v1/abha/verify-otp`**: Verify the OTP using `txnId` received in the first step.\n3. **`GET /api/v1/abha/profile`**: Fetch patient's ABHA profile details using the token.\n4. Finally, use **`POST /api/v1/reception/register`** to save the patient in our hospital database.\n\n#### Flow B: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send Aadhaar number.\n2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP + Mobile Number.\n3. **`POST /api/v1/abha/enrol/mobile-otp`**: Send Mobile OTP for linking.\n4. **`POST /api/v1/abha/enrol/verify-mobile`**: Verify the Mobile OTP.\n5. **`GET /api/v1/abha/enrol/suggest-address`**: Get ABHA address (username) suggestions.\n6. **`POST /api/v1/abha/enrol/create-address`**: Finalize the ABHA address.\n\n### 3. Walk-in & OPD Visit (Reception)\nOnce a patient is registered in the system:\n1. **`GET /api/v1/reception/departments`**: Fetch active departments & doctors.\n2. **`POST /api/v1/reception/visit`**: Create an OPD visit (appointment) for the patient and assign them to a doctor.\n\n### 4. Scan & Share (ABDM Fast-track)\nIf a patient scans the hospital's QR code using an ABDM app (like ABHA App):\n1. A webhook (`/webhook/abdm/v1/scan-and-share`) automatically receives patient details and adds them to a queue.\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views the waiting queue.\n3. **`POST /api/v1/reception/scan-and-share/token`**: Receptionist can search a specific token.\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: Receptionist confirms the patient and creates an OPD Visit.\n\n### 5. Doctor's Panel (OPD)\n1. **`GET /api/v1/opd/queue`**: Doctor views their patient queue for today.\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the patient in.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes the consultation and saves diagnosis/notes.",
+        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from the Super Admin down to the Doctor's consultation. \n\n## Phase 1: Onboarding & Setup (Super Admin & Admin)\n\n### Step 1.1: Super Admin Login & Hospital Creation\n1. **`POST /api/v1/login`**: Login using Super Admin credentials (e.g., `superadmin@hms.com`).\n2. **`POST /api/v1/hospitals`**: Register a new Hospital in the system. Note the returned Hospital ID.\n3. **`POST /api/v1/logout`**: Logout from the Super Admin account.\n\n### Step 1.2: Hospital Admin Setup\n1. **`POST /api/v1/login`**: Login using the newly created Hospital Admin credentials. (Pass `Authorization: Bearer <token>` in all next requests).\n2. **`POST /api/v1/departments`**: Create medical departments (e.g., Cardiology, Orthopedics).\n3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.\n4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup weekly working hours and patient limits for doctors.\n\n---\n\n## Phase 2: Patient Registration (Front Desk / Reception)\n\nWhen a patient arrives at the hospital, they must be registered before an OPD visit can be created. There are 3 ways to register a patient:\n\n### Option A: Standard Walk-in (No ABHA / Normal Patient)\nIf the patient does not have an ABHA ID or prefers not to use it:\n1. **`POST /api/v1/reception/register`**: Register the patient manually using their basic details (Name, Mobile, DOB, Gender). This is the simplest API for normal patients.\n\n### Option B: Patient already has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/generate-otp`**: Send the patient's mobile number.\n2. **`POST /api/v1/abha/verify-otp`**: Verify the OTP using `txnId`.\n3. **`GET /api/v1/abha/profile`**: Fetch patient's verified ABHA profile.\n4. **`POST /api/v1/reception/register`**: Save the patient in the hospital DB using the fetched details.\n\n### Option C: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`** → **`verify-aadhaar`**\n2. **`POST /api/v1/abha/enrol/mobile-otp`** → **`verify-mobile`**\n3. **`GET /api/v1/abha/enrol/suggest-address`** → **`create-address`**\n4. Follow up with **`POST /api/v1/reception/register`** to save to DB.\n\n---\n\n## Phase 3: Creating an OPD Visit (Appointment)\n\nOnce the patient is registered (via Option A, B, or C):\n1. **`GET /api/v1/reception/departments`**: Fetch active departments & available doctors.\n2. **`POST /api/v1/reception/visit`**: Create a direct OPD visit. This assigns a token number to the patient for that doctor's queue.\n\n### Alternative: Scan & Share (ABDM Fast-track)\nIf the patient bypasses the reception line and scans the Hospital's QR code using an ABHA App:\n1. A webhook (**`/webhook/abdm/v1/scan-and-share`**) automatically receives their data.\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views the incoming queue on their dashboard.\n3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Search specific token.\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: Receptionist maps the patient to a department/doctor, confirming the OPD visit in one click.\n\n---\n\n## Phase 4: Doctor's Panel (Consultation)\n\n1. **`GET /api/v1/opd/queue`**: Doctor views their patient queue for today.\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient in line.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes the consultation, entering the diagnosis and notes.",
         "version": "1.0.0"
     },
     "servers": [
         {
-            "url": "http://localhost:8000",
+            "url": "http://localhost",
             "description": "Main API Server"
         }
     ],
@@ -260,6 +260,15 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "X-Token from verify step",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -289,6 +298,10 @@
                             "schema": {
                                 "properties": {
                                     "txnId": {
+                                        "type": "string"
+                                    },
+                                    "token": {
+                                        "description": "X-Token from verify step",
                                         "type": "string"
                                     },
                                     "abhaAddress": {
