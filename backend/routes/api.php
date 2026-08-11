@@ -5,11 +5,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\PatientController;
 use App\Http\Controllers\Api\V1\StorageController;
-use App\Http\Controllers\AbdmWebhookController;
-use App\Http\Controllers\AbhaController;
-use App\Http\Controllers\AuthController as AppAuthController;
-use App\Http\Controllers\HospitalController;
-use App\Http\Controllers\ReceptionController;
+use App\Http\Controllers\Api\V1\AbdmWebhookController;
+use App\Http\Controllers\Api\V1\AbhaController;
+use App\Http\Controllers\Api\V1\HospitalController;
+use App\Http\Controllers\Api\V1\ReceptionController;
+use App\Http\Controllers\Api\V1\DepartmentController;
+use App\Http\Controllers\Api\V1\DoctorController;
+use App\Http\Controllers\Api\V1\OpdController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,7 +20,7 @@ use App\Http\Controllers\ReceptionController;
 */
 
 // Authentication
-Route::post('/v1/login', [AppAuthController::class, 'login']);
+Route::post('/v1/login', [AuthController::class, 'login']);
 
 // ABDM Public Webhooks
 Route::post('/webhook/abdm/v1/scan-and-share', [AbdmWebhookController::class, 'handleScanAndShare']);
@@ -46,11 +48,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/storage/view-url', [StorageController::class, 'generateViewUrl']);
 
         // Departments & Doctors (Admin / Core)
-        Route::apiResource('departments', \App\Http\Controllers\DepartmentController::class);
+        Route::apiResource('departments', DepartmentController::class);
         
-        Route::get('doctors/available-today', [\App\Http\Controllers\DoctorController::class, 'availableToday']);
-        Route::put('doctors/{doctor}/schedule', [\App\Http\Controllers\DoctorController::class, 'updateSchedule']);
-        Route::apiResource('doctors', \App\Http\Controllers\DoctorController::class);
+        Route::get('doctors/available-today', [DoctorController::class, 'availableToday']);
+        Route::put('doctors/{doctor}/schedule', [DoctorController::class, 'updateSchedule']);
+        Route::apiResource('doctors', DoctorController::class);
 
         // ABHA Endpoints
         Route::prefix('abha')->group(function () {
@@ -84,9 +86,9 @@ Route::prefix('v1')->group(function () {
 
         // OPD / Doctor's Panel
         Route::prefix('opd')->group(function () {
-            Route::get('/queue', [\App\Http\Controllers\OpdController::class, 'todayQueue']);
-            Route::post('/visit/{visitId}/call', [\App\Http\Controllers\OpdController::class, 'callPatient']);
-            Route::post('/visit/{visitId}/complete', [\App\Http\Controllers\OpdController::class, 'completeConsultation']);
+            Route::get('/queue', [OpdController::class, 'todayQueue']);
+            Route::post('/visit/{visitId}/call', [OpdController::class, 'callPatient']);
+            Route::post('/visit/{visitId}/complete', [OpdController::class, 'completeConsultation']);
         });
     });
 });

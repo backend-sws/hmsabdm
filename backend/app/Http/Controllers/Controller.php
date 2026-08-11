@@ -7,7 +7,49 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     version: "1.0.0",
     title: "HMS ABDM Integration API",
-    description: "API Documentation for the Hospital Management System with ABDM M1 Integration"
+    description: <<<EOT
+# HMS & ABDM Integration Guide
+
+Welcome to the API Documentation! This guide will help frontend developers understand exactly how to integrate the different workflows.
+
+### 1. Authentication (Step 0)
+- Call **`POST /api/v1/login`** with your credentials to get a Bearer Token.
+- Pass this token in the `Authorization: Bearer <token>` header for all subsequent API requests.
+
+### 2. ABHA Creation & Login (Patient Registration)
+There are two main flows for handling ABHA (Ayushman Bharat Health Account):
+
+#### Flow A: Patient already has ABHA (Mobile OTP Login)
+1. **`POST /api/v1/abha/generate-otp`**: Send patient's mobile number.
+2. **`POST /api/v1/abha/verify-otp`**: Verify the OTP using `txnId` received in the first step.
+3. **`GET /api/v1/abha/profile`**: Fetch patient's ABHA profile details using the token.
+4. Finally, use **`POST /api/v1/reception/register`** to save the patient in our hospital database.
+
+#### Flow B: Create New ABHA (Aadhaar Enrolment)
+1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send Aadhaar number.
+2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP + Mobile Number.
+3. **`POST /api/v1/abha/enrol/mobile-otp`**: Send Mobile OTP for linking.
+4. **`POST /api/v1/abha/enrol/verify-mobile`**: Verify the Mobile OTP.
+5. **`GET /api/v1/abha/enrol/suggest-address`**: Get ABHA address (username) suggestions.
+6. **`POST /api/v1/abha/enrol/create-address`**: Finalize the ABHA address.
+
+### 3. Walk-in & OPD Visit (Reception)
+Once a patient is registered in the system:
+1. **`GET /api/v1/reception/departments`**: Fetch active departments & doctors.
+2. **`POST /api/v1/reception/visit`**: Create an OPD visit (appointment) for the patient and assign them to a doctor.
+
+### 4. Scan & Share (ABDM Fast-track)
+If a patient scans the hospital's QR code using an ABDM app (like ABHA App):
+1. A webhook (`/webhook/abdm/v1/scan-and-share`) automatically receives patient details and adds them to a queue.
+2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views the waiting queue.
+3. **`POST /api/v1/reception/scan-and-share/token`**: Receptionist can search a specific token.
+4. **`POST /api/v1/reception/scan-and-share/confirm`**: Receptionist confirms the patient and creates an OPD Visit.
+
+### 5. Doctor's Panel (OPD)
+1. **`GET /api/v1/opd/queue`**: Doctor views their patient queue for today.
+2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the patient in.
+3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes the consultation and saves diagnosis/notes.
+EOT
 )]
 #[OA\Server(
     url: "http://localhost:8000",

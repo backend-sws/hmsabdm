@@ -22,6 +22,7 @@ class StorageController extends Controller
     #[OA\Post(
         path: "/api/v1/storage/upload-url",
         summary: "Generate a presigned URL for direct file upload to Cloudflare R2 / S3",
+        description: "Returns a presigned URL. The frontend should make a PUT request to this URL with the raw file data (binary) to upload it directly to cloud storage without passing through the backend.",
         tags: ["10. Storage"],
         security: [["bearerAuth" => []]]
     )]
@@ -58,6 +59,7 @@ class StorageController extends Controller
     #[OA\Get(
         path: "/api/v1/storage/view-url",
         summary: "Generate a time-limited presigned URL to view a private file",
+        description: "Returns a temporary URL (usually valid for 5-15 mins) that allows the frontend to display or download a privately stored file (like a PDF report or image).",
         tags: ["10. Storage"],
         security: [["bearerAuth" => []]]
     )]

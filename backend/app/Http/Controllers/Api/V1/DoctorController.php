@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
 
 use App\Http\Traits\HasApiResponse;
 use App\Services\Doctor\DoctorServiceInterface;
@@ -23,6 +25,7 @@ class DoctorController extends Controller
     #[OA\Get(
         path: "/api/v1/doctors",
         summary: "List all doctors in the hospital",
+        description: "Retrieves a paginated list of all registered doctors across all departments.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
@@ -37,6 +40,7 @@ class DoctorController extends Controller
     #[OA\Get(
         path: "/api/v1/doctors/available-today",
         summary: "List doctors available today",
+        description: "Fetches a list of doctors who have an active schedule for the current day of the week.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
@@ -51,6 +55,7 @@ class DoctorController extends Controller
     #[OA\Post(
         path: "/api/v1/doctors",
         summary: "Create a new doctor",
+        description: "Registers a new doctor and assigns them to a specific department.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
@@ -59,9 +64,14 @@ class DoctorController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "department_id", type: "integer", example: 1),
+                new OA\Property(property: "user_id", type: "integer", example: 2),
                 new OA\Property(property: "name", type: "string", example: "Dr. Smith"),
-                new OA\Property(property: "specialization", type: "string"),
-                new OA\Property(property: "phone", type: "string"),
+                new OA\Property(property: "specialization", type: "string", example: "Cardiologist"),
+                new OA\Property(property: "qualification", type: "string", example: "MBBS, MD"),
+                new OA\Property(property: "phone", type: "string", example: "9876543210"),
+                new OA\Property(property: "email", type: "string", format: "email", example: "dr.smith@hospital.com"),
+                new OA\Property(property: "hpr_id", type: "string", example: "HPR-1234"),
+                new OA\Property(property: "consultation_time", type: "integer", example: 15),
                 new OA\Property(property: "is_active", type: "boolean", example: true)
             ]
         )
@@ -91,6 +101,7 @@ class DoctorController extends Controller
     #[OA\Put(
         path: "/api/v1/doctors/{id}",
         summary: "Update a doctor",
+        description: "Updates the basic profile details of an existing doctor.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
@@ -100,7 +111,14 @@ class DoctorController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "department_id", type: "integer", example: 1),
+                new OA\Property(property: "user_id", type: "integer", example: 2),
                 new OA\Property(property: "name", type: "string", example: "Dr. Smith"),
+                new OA\Property(property: "specialization", type: "string", example: "Cardiologist"),
+                new OA\Property(property: "qualification", type: "string", example: "MBBS, MD"),
+                new OA\Property(property: "phone", type: "string", example: "9876543210"),
+                new OA\Property(property: "email", type: "string", format: "email", example: "dr.smith@hospital.com"),
+                new OA\Property(property: "hpr_id", type: "string", example: "HPR-1234"),
+                new OA\Property(property: "consultation_time", type: "integer", example: 15),
                 new OA\Property(property: "is_active", type: "boolean", example: true)
             ]
         )
@@ -130,6 +148,7 @@ class DoctorController extends Controller
     #[OA\Put(
         path: "/api/v1/doctors/{id}/schedule",
         summary: "Update doctor schedule",
+        description: "Updates the weekly availability of a doctor. Time must be in 24-hour HH:MM format (e.g., '09:00', '17:30'). Day of week: 0=Sun, 1=Mon, ..., 6=Sat.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
@@ -143,7 +162,9 @@ class DoctorController extends Controller
                         new OA\Property(property: "day_of_week", type: "integer", example: 1),
                         new OA\Property(property: "start_time", type: "string", example: "09:00"),
                         new OA\Property(property: "end_time", type: "string", example: "17:00"),
-                        new OA\Property(property: "max_patients", type: "integer", example: 50)
+                        new OA\Property(property: "max_patients", type: "integer", example: 50),
+                        new OA\Property(property: "opd_fee", type: "number", format: "float", example: 500.00),
+                        new OA\Property(property: "is_active", type: "boolean", example: true)
                     ]
                 ))
             ]
@@ -171,6 +192,7 @@ class DoctorController extends Controller
     #[OA\Delete(
         path: "/api/v1/doctors/{id}",
         summary: "Delete a doctor",
+        description: "Deactivates or deletes a doctor record from the hospital.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]

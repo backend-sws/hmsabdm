@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
 
 use App\Http\Traits\HasApiResponse;
 use App\Services\Department\DepartmentServiceInterface;
@@ -23,6 +25,7 @@ class DepartmentController extends Controller
     #[OA\Get(
         path: "/api/v1/departments",
         summary: "List all departments in the hospital",
+        description: "Retrieves a paginated list of all medical departments configured for the current hospital.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
@@ -37,6 +40,7 @@ class DepartmentController extends Controller
     #[OA\Post(
         path: "/api/v1/departments",
         summary: "Create a new department",
+        description: "Creates a new department in the hospital (e.g. Cardiology, Orthopedics). Code should be unique.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
@@ -46,7 +50,7 @@ class DepartmentController extends Controller
             properties: [
                 new OA\Property(property: "name", type: "string", example: "Cardiology"),
                 new OA\Property(property: "code", type: "string", example: "CARDIO"),
-                new OA\Property(property: "description", type: "string"),
+                new OA\Property(property: "description", type: "string", example: "Heart and blood vessels"),
                 new OA\Property(property: "is_active", type: "boolean", example: true)
             ]
         )
@@ -77,6 +81,7 @@ class DepartmentController extends Controller
     #[OA\Put(
         path: "/api/v1/departments/{id}",
         summary: "Update a department",
+        description: "Modifies an existing department's name, code, or active status.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
@@ -87,6 +92,7 @@ class DepartmentController extends Controller
             properties: [
                 new OA\Property(property: "name", type: "string", example: "Cardiology"),
                 new OA\Property(property: "code", type: "string", example: "CARDIO"),
+                new OA\Property(property: "description", type: "string", example: "Heart and blood vessels"),
                 new OA\Property(property: "is_active", type: "boolean")
             ]
         )
@@ -121,6 +127,7 @@ class DepartmentController extends Controller
     #[OA\Delete(
         path: "/api/v1/departments/{id}",
         summary: "Delete a department",
+        description: "Removes a department from the system. (Warning: affects associated doctors).",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]

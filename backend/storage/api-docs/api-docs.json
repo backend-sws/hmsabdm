@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "HMS ABDM Integration API",
-        "description": "API Documentation for the Hospital Management System with ABDM M1 Integration",
+        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide will help frontend developers understand exactly how to integrate the different workflows.\n\n### 1. Authentication (Step 0)\n- Call **`POST /api/v1/login`** with your credentials to get a Bearer Token.\n- Pass this token in the `Authorization: Bearer <token>` header for all subsequent API requests.\n\n### 2. ABHA Creation & Login (Patient Registration)\nThere are two main flows for handling ABHA (Ayushman Bharat Health Account):\n\n#### Flow A: Patient already has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/generate-otp`**: Send patient's mobile number.\n2. **`POST /api/v1/abha/verify-otp`**: Verify the OTP using `txnId` received in the first step.\n3. **`GET /api/v1/abha/profile`**: Fetch patient's ABHA profile details using the token.\n4. Finally, use **`POST /api/v1/reception/register`** to save the patient in our hospital database.\n\n#### Flow B: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send Aadhaar number.\n2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP + Mobile Number.\n3. **`POST /api/v1/abha/enrol/mobile-otp`**: Send Mobile OTP for linking.\n4. **`POST /api/v1/abha/enrol/verify-mobile`**: Verify the Mobile OTP.\n5. **`GET /api/v1/abha/enrol/suggest-address`**: Get ABHA address (username) suggestions.\n6. **`POST /api/v1/abha/enrol/create-address`**: Finalize the ABHA address.\n\n### 3. Walk-in & OPD Visit (Reception)\nOnce a patient is registered in the system:\n1. **`GET /api/v1/reception/departments`**: Fetch active departments & doctors.\n2. **`POST /api/v1/reception/visit`**: Create an OPD visit (appointment) for the patient and assign them to a doctor.\n\n### 4. Scan & Share (ABDM Fast-track)\nIf a patient scans the hospital's QR code using an ABDM app (like ABHA App):\n1. A webhook (`/webhook/abdm/v1/scan-and-share`) automatically receives patient details and adds them to a queue.\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views the waiting queue.\n3. **`POST /api/v1/reception/scan-and-share/token`**: Receptionist can search a specific token.\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: Receptionist confirms the patient and creates an OPD Visit.\n\n### 5. Doctor's Panel (OPD)\n1. **`GET /api/v1/opd/queue`**: Doctor views their patient queue for today.\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the patient in.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes the consultation and saves diagnosis/notes.",
         "version": "1.0.0"
     },
     "servers": [
@@ -18,7 +18,8 @@
                     "2. ABHA — Mobile Login"
                 ],
                 "summary": "Step A1 — Mobile OTP भेजो",
-                "operationId": "e1fbfebce861024cdf8ff363bfed14d5",
+                "description": "Initiates the ABHA login flow. Sends a 6-digit OTP to the user's mobile number registered with ABHA.",
+                "operationId": "f814722f547bc9fafd8301d4791ecf51",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -53,7 +54,8 @@
                     "2. ABHA — Mobile Login"
                 ],
                 "summary": "Step A2 — Mobile OTP Verify करो",
-                "operationId": "f09140ab06108fb2bec25909d57311b9",
+                "description": "Verifies the OTP received by the user. Requires the txnId returned in Step A1.",
+                "operationId": "1d574fd61265e9d0c55d5097a56622a5",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -91,7 +93,8 @@
                     "3. ABHA — Aadhaar Enrolment"
                 ],
                 "summary": "Step B1 — Aadhaar OTP भेजो",
-                "operationId": "16410894f184c79a5290332702017ae2",
+                "description": "Initiates the ABHA Enrolment flow by sending an OTP to the mobile linked with Aadhaar.",
+                "operationId": "d90323c551a40268320a6d99200875bf",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -126,7 +129,8 @@
                     "3. ABHA — Aadhaar Enrolment"
                 ],
                 "summary": "Step B2 — Aadhaar OTP Verify करो",
-                "operationId": "3bc8d278283cd299d0ce1f89bb9dc8aa",
+                "description": "Verifies Aadhaar OTP. Pass the txnId from Step B1. If verified, ABDM links the provided mobile number.",
+                "operationId": "d95c22ee14350e9c974b7b076ca23964",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -168,7 +172,8 @@
                     "3. ABHA — Aadhaar Enrolment"
                 ],
                 "summary": "Step B3 — Mobile OTP भेजो (Linking)",
-                "operationId": "a5bfbb5b1054979d322d33ae2fe4b188",
+                "description": "Sends a secondary OTP to verify the mobile number for linking with the newly created ABHA.",
+                "operationId": "51f9b37b0ca194543f6c390f43761b18",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -206,7 +211,8 @@
                     "3. ABHA — Aadhaar Enrolment"
                 ],
                 "summary": "Step B4 — Mobile OTP Verify करो (Linking)",
-                "operationId": "33242181e8b9ecc64358bd7bd7c42e92",
+                "description": "Verifies the Mobile OTP from Step B3 to finalize linking.",
+                "operationId": "eed76056a12de78a1293189864b69d37",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -244,7 +250,8 @@
                     "3. ABHA — Aadhaar Enrolment"
                 ],
                 "summary": "Step B5 — ABHA Address Suggestions लो",
-                "operationId": "f434dd81edcda84d75d946647f3dcd36",
+                "description": "Fetches a list of available ABHA addresses (usernames) based on user's Aadhaar data.",
+                "operationId": "83747ec87f37dc1fde3d80aa642edd5c",
                 "parameters": [
                     {
                         "name": "txnId",
@@ -273,7 +280,8 @@
                     "3. ABHA — Aadhaar Enrolment"
                 ],
                 "summary": "Step B6 — ABHA Address Choose करो",
-                "operationId": "84ca6beb52d892a074692dca30615190",
+                "description": "Finalizes the ABHA enrolment by selecting one of the suggested ABHA addresses.",
+                "operationId": "4f452a4ba3840c8836257c0595c3ea4c",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -311,7 +319,8 @@
                     "2. ABHA — Mobile Login"
                 ],
                 "summary": "Step A3 — Profile Fetch करो",
-                "operationId": "becfe318f2f0d483ce3f3522abba878c",
+                "description": "Fetches full ABHA profile details (name, gender, dob, photo) using the X-Token from verify step.",
+                "operationId": "2f90c338f171c159c0a2da35a08df89c",
                 "parameters": [
                     {
                         "name": "token",
@@ -341,7 +350,8 @@
                     "2. ABHA — Mobile Login"
                 ],
                 "summary": "Mobile से ABHA खोजो",
-                "operationId": "2abfdfc74c3e35eca7e6bf0c4de6d592",
+                "description": "Searches for ABHA records linked to a specific mobile number.",
+                "operationId": "68bcef4eda81b64001a262aeab22b648",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -376,7 +386,7 @@
                     "2. ABHA — Mobile Login"
                 ],
                 "summary": "ABHA Card (PDF) Download करो",
-                "operationId": "139e731fbb274abfe08c3e376401c54e",
+                "operationId": "f7b0871ac2119a2d7832f516d77718d3",
                 "parameters": [
                     {
                         "name": "token",
@@ -406,7 +416,7 @@
                     "2. ABHA — Mobile Login"
                 ],
                 "summary": "ABHA QR Code Download करो",
-                "operationId": "0254e727630bc6eea676c343f3dfd3c0",
+                "operationId": "dfaa64c5b9b31833887b4a13b539bb14",
                 "parameters": [
                     {
                         "name": "token",
@@ -511,12 +521,678 @@
                 ]
             }
         },
+        "/api/v1/departments": {
+            "get": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "List all departments in the hospital",
+                "description": "Retrieves a paginated list of all medical departments configured for the current hospital.",
+                "operationId": "149f8ee66a43550287b8c706fccbb9fd",
+                "responses": {
+                    "200": {
+                        "description": "List of departments"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "Create a new department",
+                "description": "Creates a new department in the hospital (e.g. Cardiology, Orthopedics). Code should be unique.",
+                "operationId": "c7acdb28cde544513edb45929eec541b",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Cardiology"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "example": "CARDIO"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Heart and blood vessels"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Department created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/departments/{id}": {
+            "put": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "Update a department",
+                "description": "Modifies an existing department's name, code, or active status.",
+                "operationId": "449226a8438ae73d48c2d487c005a223",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Cardiology"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "example": "CARDIO"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Heart and blood vessels"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Department updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "Delete a department",
+                "description": "Removes a department from the system. (Warning: affects associated doctors).",
+                "operationId": "6b5ef138dcefb819cbbcc160d33c236d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Department deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctors": {
+            "get": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "List all doctors in the hospital",
+                "description": "Retrieves a paginated list of all registered doctors across all departments.",
+                "operationId": "1ff2acc28425ccb6474cd7925c28ddd9",
+                "responses": {
+                    "200": {
+                        "description": "List of doctors"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "Create a new doctor",
+                "description": "Registers a new doctor and assigns them to a specific department.",
+                "operationId": "0cfe89b6136ea425fda895fce9de82d5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "department_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "user_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Dr. Smith"
+                                    },
+                                    "specialization": {
+                                        "type": "string",
+                                        "example": "Cardiologist"
+                                    },
+                                    "qualification": {
+                                        "type": "string",
+                                        "example": "MBBS, MD"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "dr.smith@hospital.com"
+                                    },
+                                    "hpr_id": {
+                                        "type": "string",
+                                        "example": "HPR-1234"
+                                    },
+                                    "consultation_time": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Doctor created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctors/available-today": {
+            "get": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "List doctors available today",
+                "description": "Fetches a list of doctors who have an active schedule for the current day of the week.",
+                "operationId": "d88e0cb4cfe658f97f23883a3f71612d",
+                "responses": {
+                    "200": {
+                        "description": "List of doctors available today"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctors/{id}": {
+            "put": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "Update a doctor",
+                "description": "Updates the basic profile details of an existing doctor.",
+                "operationId": "9d4a925ffd4e3b1007aaee415428f036",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "department_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "user_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Dr. Smith"
+                                    },
+                                    "specialization": {
+                                        "type": "string",
+                                        "example": "Cardiologist"
+                                    },
+                                    "qualification": {
+                                        "type": "string",
+                                        "example": "MBBS, MD"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "dr.smith@hospital.com"
+                                    },
+                                    "hpr_id": {
+                                        "type": "string",
+                                        "example": "HPR-1234"
+                                    },
+                                    "consultation_time": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Doctor updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "Delete a doctor",
+                "description": "Deactivates or deletes a doctor record from the hospital.",
+                "operationId": "d332a8941af19f68f3e7f32ee271e29e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Doctor deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/doctors/{id}/schedule": {
+            "put": {
+                "tags": [
+                    "7. Departments & Doctors"
+                ],
+                "summary": "Update doctor schedule",
+                "description": "Updates the weekly availability of a doctor. Time must be in 24-hour HH:MM format (e.g., '09:00', '17:30'). Day of week: 0=Sun, 1=Mon, ..., 6=Sat.",
+                "operationId": "d157c3c844f0dc33be71726732524bda",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "schedules": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "day_of_week": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "start_time": {
+                                                    "type": "string",
+                                                    "example": "09:00"
+                                                },
+                                                "end_time": {
+                                                    "type": "string",
+                                                    "example": "17:00"
+                                                },
+                                                "max_patients": {
+                                                    "type": "integer",
+                                                    "example": 50
+                                                },
+                                                "opd_fee": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 500
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Doctor schedule updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hospitals": {
+            "get": {
+                "tags": [
+                    "6. Hospitals & Admin"
+                ],
+                "summary": "List all registered Hospitals",
+                "description": "Super Admin API to retrieve a paginated list of all hospitals currently onboarded to the system.",
+                "operationId": "041c32c866f6521a62e8d306a4980751",
+                "responses": {
+                    "200": {
+                        "description": "List of Hospitals"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "6. Hospitals & Admin"
+                ],
+                "summary": "Register a new Hospital",
+                "description": "Super Admin API to onboard a new hospital into the system. ABDM HIP ID is optional but recommended.",
+                "operationId": "2e53ae79f3d5f8006da137bc174c751d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "City Care Hospital"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "example": "CCH-01"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "contact@citycare.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "011-23456789"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "123 Main St, Sector 4"
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "example": "New Delhi"
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "example": "Delhi"
+                                    },
+                                    "pincode": {
+                                        "type": "string",
+                                        "example": "110001"
+                                    },
+                                    "abdm_hip_id": {
+                                        "type": "string",
+                                        "example": "HIP-9999"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Hospital created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/opd/queue": {
+            "get": {
+                "tags": [
+                    "5. OPD (Doctor)"
+                ],
+                "summary": "Get today's OPD queue for a doctor",
+                "description": "Fetches the list of all patients assigned to a specific doctor for today's date.",
+                "operationId": "ea861ba2b44df830811d9d2645bc77ac",
+                "parameters": [
+                    {
+                        "name": "doctor_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of patients in today's queue"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/opd/visit/{visitId}/call": {
+            "post": {
+                "tags": [
+                    "5. OPD (Doctor)"
+                ],
+                "summary": "Call a patient into the doctor's cabin",
+                "description": "Marks the patient's status as 'Consulting', indicating the doctor has started the checkup.",
+                "operationId": "70a245fb130394c6c78efc490f8b5132",
+                "parameters": [
+                    {
+                        "name": "visitId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient called"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/opd/visit/{visitId}/complete": {
+            "post": {
+                "tags": [
+                    "5. OPD (Doctor)"
+                ],
+                "summary": "Complete a patient consultation",
+                "description": "Finishes the OPD visit. The doctor can add diagnosis, clinical notes, and medicines. Status becomes 'Completed'.",
+                "operationId": "32c74592c4164e5d49aab261d240bb70",
+                "parameters": [
+                    {
+                        "name": "visitId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "diagnosis": {
+                                        "type": "string",
+                                        "example": "Viral Fever"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Advised rest for 3 days and paracetamol 500mg SOS."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Consultation completed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/patients": {
             "get": {
                 "tags": [
                     "8. Patients"
                 ],
                 "summary": "Get all patients",
+                "description": "Retrieves a list of all patients registered in the hospital.",
                 "operationId": "6747f925788f494507252b8889e09dd1",
                 "responses": {
                     "200": {
@@ -534,6 +1210,7 @@
                     "8. Patients"
                 ],
                 "summary": "Register a new patient",
+                "description": "Manually registers a new patient with their ABHA number. Useful for manual data entry.",
                 "operationId": "9296610ded1a685f9284d36de20ab313",
                 "requestBody": {
                     "required": true,
@@ -541,16 +1218,14 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "name",
-                                    "phone",
-                                    "abha_number"
+                                    "name"
                                 ],
                                 "properties": {
                                     "name": {
                                         "type": "string",
                                         "example": "John Doe"
                                     },
-                                    "phone": {
+                                    "mobile": {
                                         "type": "string",
                                         "example": "9876543210"
                                     },
@@ -562,6 +1237,35 @@
                                         "type": "string",
                                         "format": "email",
                                         "example": "john@example.com"
+                                    },
+                                    "abha_address": {
+                                        "type": "string",
+                                        "example": "johndoe@abdm"
+                                    },
+                                    "dob": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1990-05-25"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "M"
+                                    },
+                                    "blood_group": {
+                                        "type": "string",
+                                        "example": "O+"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "123 Main St, Appt 4B"
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "example": "New Delhi"
+                                    },
+                                    "pincode": {
+                                        "type": "string",
+                                        "example": "110001"
                                     }
                                 },
                                 "type": "object"
@@ -584,12 +1288,269 @@
                 ]
             }
         },
+        "/api/v1/reception/scan-and-share/queues": {
+            "get": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "List all patients waiting in queue from Scan & Share",
+                "description": "Fetches a list of patients who have scanned the hospital's QR code and are waiting to be registered.",
+                "operationId": "ec0d3a2ce96d83833028d8408a4f3f92",
+                "responses": {
+                    "200": {
+                        "description": "List of waiting queues"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/scan-and-share/token": {
+            "post": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Find patient in queue by token",
+                "description": "Searches the waiting queue using the specific token number generated by the patient's ABHA app.",
+                "operationId": "d5b1ab9e92e5efb3918e36e69193d646",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "token": {
+                                        "type": "string",
+                                        "example": "482"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient details"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/departments": {
+            "get": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Get all departments with active doctors",
+                "description": "Used in the reception dropdowns to select a department and doctor for assigning an OPD visit.",
+                "operationId": "572004aa8bcf257a8b0eeb72a7580205",
+                "responses": {
+                    "200": {
+                        "description": "Departments and doctors list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/register": {
+            "post": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Register a patient without ABHA",
+                "description": "Registers a normal walk-in patient. Date of birth (dob) must be in YYYY-MM-DD format.",
+                "operationId": "d51d8bd9ded2d49ef40f173965474cf5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Rajesh Kumar"
+                                    },
+                                    "mobile": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "M"
+                                    },
+                                    "dob": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1985-08-15"
+                                    },
+                                    "blood_group": {
+                                        "type": "string",
+                                        "example": "B+"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "House 4, Sector 12"
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "example": "Gurgaon"
+                                    },
+                                    "pincode": {
+                                        "type": "string",
+                                        "example": "122001"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Patient Registered"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/scan-and-share/confirm": {
+            "post": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Confirm a Scan & Share queue and generate OPD Visit",
+                "description": "Links the queued patient to a department and doctor, creating their final OPD appointment.",
+                "operationId": "041adfdd5762d82643e3bb7891aff5dd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "queue_id": {
+                                        "type": "integer"
+                                    },
+                                    "doctor_id": {
+                                        "type": "integer"
+                                    },
+                                    "department_id": {
+                                        "type": "integer"
+                                    },
+                                    "appointment_type_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Queue Confirmed & OPD Visit Created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/visit": {
+            "post": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Create direct OPD visit for registered patient",
+                "description": "Creates an OPD appointment (visit) for a patient who is already registered in the hospital.",
+                "operationId": "4967224240e61aaab31bc6b879441331",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "integer",
+                                        "example": 10
+                                    },
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "department_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "appointment_type_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "chief_complaint": {
+                                        "type": "string",
+                                        "example": "Fever and cold"
+                                    },
+                                    "fee_charged": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 300
+                                    },
+                                    "payment_status": {
+                                        "type": "string",
+                                        "example": "paid"
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "upi"
+                                    },
+                                    "payment_ref": {
+                                        "type": "string",
+                                        "example": "UPI123456789"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OPD Visit Created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/storage/upload-url": {
             "post": {
                 "tags": [
                     "10. Storage"
                 ],
                 "summary": "Generate a presigned URL for direct file upload to Cloudflare R2 / S3",
+                "description": "Returns a presigned URL. The frontend should make a PUT request to this URL with the raw file data (binary) to upload it directly to cloud storage without passing through the backend.",
                 "operationId": "41a7b3cdfae0df00af5aef003f807796",
                 "requestBody": {
                     "required": true,
@@ -638,6 +1599,7 @@
                     "10. Storage"
                 ],
                 "summary": "Generate a time-limited presigned URL to view a private file",
+                "description": "Returns a temporary URL (usually valid for 5-15 mins) that allows the frontend to display or download a privately stored file (like a PDF report or image).",
                 "operationId": "c5f108bace16218bcd22f2d47d3ef8dc",
                 "parameters": [
                     {
@@ -653,765 +1615,6 @@
                 "responses": {
                     "200": {
                         "description": "View URL generated successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/departments": {
-            "get": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "List all departments in the hospital",
-                "operationId": "74d96038b7f2328679066615b851ca5f",
-                "responses": {
-                    "200": {
-                        "description": "List of departments"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "Create a new department",
-                "operationId": "eea1c299672895cbb560b0f89b6375f4",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Cardiology"
-                                    },
-                                    "code": {
-                                        "type": "string",
-                                        "example": "CARDIO"
-                                    },
-                                    "description": {
-                                        "type": "string"
-                                    },
-                                    "is_active": {
-                                        "type": "boolean",
-                                        "example": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Department created"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/departments/{id}": {
-            "put": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "Update a department",
-                "operationId": "c05be8f7715d3015bc5bfa1c6ea6fd49",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Cardiology"
-                                    },
-                                    "code": {
-                                        "type": "string",
-                                        "example": "CARDIO"
-                                    },
-                                    "is_active": {
-                                        "type": "boolean"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Department updated"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "Delete a department",
-                "operationId": "79246a2900e6a6af9f6203b5e40ba250",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Department deleted"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/doctors": {
-            "get": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "List all doctors in the hospital",
-                "operationId": "4f8fb6f904d745e95230082428cee92f",
-                "responses": {
-                    "200": {
-                        "description": "List of doctors"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "Create a new doctor",
-                "operationId": "532a91cce120fa94291aba1926fa5c26",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "department_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    },
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Dr. Smith"
-                                    },
-                                    "specialization": {
-                                        "type": "string"
-                                    },
-                                    "phone": {
-                                        "type": "string"
-                                    },
-                                    "is_active": {
-                                        "type": "boolean",
-                                        "example": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Doctor created"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/doctors/available-today": {
-            "get": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "List doctors available today",
-                "operationId": "ece7f8d18f9bbc08f307403b558cd849",
-                "responses": {
-                    "200": {
-                        "description": "List of doctors available today"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/doctors/{id}": {
-            "put": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "Update a doctor",
-                "operationId": "27da966e2e82d67170000ff969409d7e",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "department_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    },
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Dr. Smith"
-                                    },
-                                    "is_active": {
-                                        "type": "boolean",
-                                        "example": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Doctor updated"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "Delete a doctor",
-                "operationId": "bca50849ec5a78b2a6d114a978a83282",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Doctor deleted"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/doctors/{id}/schedule": {
-            "put": {
-                "tags": [
-                    "7. Departments & Doctors"
-                ],
-                "summary": "Update doctor schedule",
-                "operationId": "0bf148a7eca10d32710aebc0eff40921",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "schedules": {
-                                        "type": "array",
-                                        "items": {
-                                            "properties": {
-                                                "day_of_week": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "start_time": {
-                                                    "type": "string",
-                                                    "example": "09:00"
-                                                },
-                                                "end_time": {
-                                                    "type": "string",
-                                                    "example": "17:00"
-                                                },
-                                                "max_patients": {
-                                                    "type": "integer",
-                                                    "example": 50
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Doctor schedule updated"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/hospitals": {
-            "get": {
-                "tags": [
-                    "6. Hospitals & Admin"
-                ],
-                "summary": "List all registered Hospitals",
-                "operationId": "6a77ba172975bf3a463a11d8b0496fa7",
-                "responses": {
-                    "200": {
-                        "description": "List of Hospitals"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "6. Hospitals & Admin"
-                ],
-                "summary": "Register a new Hospital",
-                "operationId": "2e68d0417e231d8092c3199e951eedac",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "City Care Hospital"
-                                    },
-                                    "address": {
-                                        "type": "string",
-                                        "example": "123 Main St"
-                                    },
-                                    "abdm_hip_id": {
-                                        "type": "string",
-                                        "example": "HIP-9999"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Hospital created successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/opd/queue": {
-            "get": {
-                "tags": [
-                    "5. OPD (Doctor)"
-                ],
-                "summary": "Get today's OPD queue for a doctor",
-                "operationId": "ee7f5a22d41c3e3868aafb7b84dd2c56",
-                "parameters": [
-                    {
-                        "name": "doctor_id",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of patients in today's queue"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/opd/visit/{visitId}/call": {
-            "post": {
-                "tags": [
-                    "5. OPD (Doctor)"
-                ],
-                "summary": "Call a patient into the doctor's cabin",
-                "operationId": "32707fe862f7ca93aa64aba9a587e57a",
-                "parameters": [
-                    {
-                        "name": "visitId",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "doctor_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Patient called"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/opd/visit/{visitId}/complete": {
-            "post": {
-                "tags": [
-                    "5. OPD (Doctor)"
-                ],
-                "summary": "Complete a patient consultation",
-                "operationId": "689ce7e1d4d74dc6584405164d767d13",
-                "parameters": [
-                    {
-                        "name": "visitId",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "doctor_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    },
-                                    "diagnosis": {
-                                        "type": "string"
-                                    },
-                                    "notes": {
-                                        "type": "string"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Consultation completed"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/reception/scan-and-share/queues": {
-            "get": {
-                "tags": [
-                    "4. Reception"
-                ],
-                "summary": "List all patients waiting in queue from Scan & Share",
-                "operationId": "8bea56ee4aee81fa2ab8914900560c5e",
-                "responses": {
-                    "200": {
-                        "description": "List of waiting queues"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/reception/scan-and-share/token": {
-            "post": {
-                "tags": [
-                    "4. Reception"
-                ],
-                "summary": "Find patient in queue by token",
-                "operationId": "961e39616e09b4013c802568705ec04b",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "token": {
-                                        "type": "string",
-                                        "example": "482"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Patient details"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/reception/departments": {
-            "get": {
-                "tags": [
-                    "4. Reception"
-                ],
-                "summary": "Get all departments with active doctors",
-                "operationId": "26efd829351985a0276d56cbc427645a",
-                "responses": {
-                    "200": {
-                        "description": "Departments and doctors list"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/reception/register": {
-            "post": {
-                "tags": [
-                    "4. Reception"
-                ],
-                "summary": "Register a patient without ABHA",
-                "operationId": "3e7c44f9987fc2e8161bbdb777315bd0",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "mobile": {
-                                        "type": "string"
-                                    },
-                                    "gender": {
-                                        "type": "string",
-                                        "example": "M"
-                                    },
-                                    "dob": {
-                                        "type": "string",
-                                        "format": "date"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Patient Registered"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/reception/scan-and-share/confirm": {
-            "post": {
-                "tags": [
-                    "4. Reception"
-                ],
-                "summary": "Confirm a Scan & Share queue and generate OPD Visit",
-                "operationId": "a5934ebf5c625d208f97297f89d4b297",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "queue_id": {
-                                        "type": "integer"
-                                    },
-                                    "doctor_id": {
-                                        "type": "integer"
-                                    },
-                                    "department_id": {
-                                        "type": "integer"
-                                    },
-                                    "appointment_type_id": {
-                                        "type": "integer",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Queue Confirmed & OPD Visit Created"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/reception/visit": {
-            "post": {
-                "tags": [
-                    "4. Reception"
-                ],
-                "summary": "Create direct OPD visit for registered patient",
-                "operationId": "b6368ce5e7d429eb08d9f6af4f58d107",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "patient_id": {
-                                        "type": "integer"
-                                    },
-                                    "doctor_id": {
-                                        "type": "integer"
-                                    },
-                                    "department_id": {
-                                        "type": "integer"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "OPD Visit Created"
                     }
                 },
                 "security": [

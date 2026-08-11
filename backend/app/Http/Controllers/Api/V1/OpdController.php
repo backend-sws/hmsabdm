@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
 
 use App\Http\Traits\HasApiResponse;
 use App\Services\Opd\OpdServiceInterface;
@@ -23,6 +25,7 @@ class OpdController extends Controller
     #[OA\Get(
         path: "/api/v1/opd/queue",
         summary: "Get today's OPD queue for a doctor",
+        description: "Fetches the list of all patients assigned to a specific doctor for today's date.",
         security: [["bearerAuth" => []]],
         tags: ["5. OPD (Doctor)"]
     )]
@@ -43,6 +46,7 @@ class OpdController extends Controller
     #[OA\Post(
         path: "/api/v1/opd/visit/{visitId}/call",
         summary: "Call a patient into the doctor's cabin",
+        description: "Marks the patient's status as 'Consulting', indicating the doctor has started the checkup.",
         security: [["bearerAuth" => []]],
         tags: ["5. OPD (Doctor)"]
     )]
@@ -75,6 +79,7 @@ class OpdController extends Controller
     #[OA\Post(
         path: "/api/v1/opd/visit/{visitId}/complete",
         summary: "Complete a patient consultation",
+        description: "Finishes the OPD visit. The doctor can add diagnosis, clinical notes, and medicines. Status becomes 'Completed'.",
         security: [["bearerAuth" => []]],
         tags: ["5. OPD (Doctor)"]
     )]
@@ -84,8 +89,8 @@ class OpdController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "doctor_id", type: "integer", example: 1),
-                new OA\Property(property: "diagnosis", type: "string"),
-                new OA\Property(property: "notes", type: "string")
+                new OA\Property(property: "diagnosis", type: "string", example: "Viral Fever"),
+                new OA\Property(property: "notes", type: "string", example: "Advised rest for 3 days and paracetamol 500mg SOS.")
             ]
         )
     )]
