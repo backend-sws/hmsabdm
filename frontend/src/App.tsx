@@ -11,6 +11,7 @@ import { OpdQueuePage } from "@/pages/opd/OpdQueuePage"
 import { DoctorsPage } from "@/pages/doctors/DoctorsPage"
 import { DepartmentsPage } from "@/pages/departments/DepartmentsPage"
 import { HospitalsPage } from "@/pages/hospitals/HospitalsPage"
+import InputHelperDemoPage from "@/pages/demo/InputHelperDemoPage"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="/doctors" element={<DoctorsPage />} />
               <Route path="/departments" element={<DepartmentsPage />} />
               <Route path="/hospitals" element={<HospitalsPage />} />
+              <Route path="/demo/input-helper" element={<InputHelperDemoPage />} />
             </Route>
 
             {/* Catch-all Fallback */}
