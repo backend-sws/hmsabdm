@@ -37,6 +37,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
     {
+      title: "Hospitals",
+      path: "/hospitals",
+      icon: Building,
+      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
+      // badge: "Scan & Share",
+    },
+    {
       title: "Reception & Walk-in",
       path: "/reception",
       icon: QrCode,

@@ -42,11 +42,15 @@ export default function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/reception" element={<ReceptionPage />} />
               <Route path="/patients" element={<PatientsPage />} />
+
               <Route path="/opd" element={<OpdQueuePage />} />
               <Route path="/doctors" element={<DoctorsPage />} />
               <Route path="/departments" element={<DepartmentsPage />} />
               <Route path="/hospitals" element={<HospitalsPage />} />
-              <Route path="/demo/input-helper" element={<InputHelperDemoPage />} />
+              <Route
+                path="/demo/input-helper"
+                element={<InputHelperDemoPage />}
+              />
             </Route>
 
             {/* Catch-all Fallback */}
