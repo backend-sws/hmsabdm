@@ -31,14 +31,24 @@ export async function apiClient<T>(
   })
 
   if (!response.ok) {
-    let errorData
+    let errorData: any = null
     try {
       errorData = await response.json()
     } catch {
       errorData = null
     }
 
-    const message = errorData?.message || errorData?.error || `HTTP error ${response.status}`
+    let message = errorData?.message || errorData?.error
+    if (errorData?.errors && typeof errorData.errors === "object") {
+      const firstKey = Object.keys(errorData.errors)[0]
+      if (firstKey && Array.isArray(errorData.errors[firstKey]) && errorData.errors[firstKey][0]) {
+        message = errorData.errors[firstKey][0]
+      }
+    }
+    if (!message) {
+      message = `HTTP error ${response.status}`
+    }
+
     throw new ApiError(message, response.status, errorData)
   }
 
@@ -47,5 +57,10 @@ export async function apiClient<T>(
     return {} as T
   }
 
-  return response.json()
+  const json = await response.json()
+  if (json && typeof json === "object" && "data" in json && json.success === true) {
+    return json.data as T
+  }
+
+  return json as T
 }

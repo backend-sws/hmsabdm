@@ -40,19 +40,15 @@ export const LoginPage: React.FC = () => {
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    // defaultValues: {
-    //   email: "doctor@cityhospital.com",
-    //   password: "Password123!",
-    //   rememberMe: true,
-    // },
+    defaultValues: {
+      email: "superadmin@hms.com",
+      password: "password",
+      rememberMe: true,
+    },
   })
-
-  const rememberMe = watch("rememberMe")
 
   const onSubmit = async (data: LoginFormData) => {
     setErrorMessage(null)
@@ -127,7 +123,7 @@ export const LoginPage: React.FC = () => {
 
             {/* 3 Soft Glassmorphism Feature Cards */}
             <div className="max-w-md space-y-3">
-              <div className="flex items-center gap-4 rounded-2xl p-3.5 shadow-xs backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/75">
+              <div className="p- flex items-center gap-4 rounded-2xl border-white/80 bg-white/80 p-3.5 shadow-xs backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/75">
                 <div className="shrink-0 rounded-xl bg-teal-50 p-2.5 text-[#0D9488] dark:bg-teal-950/50">
                   <Users className="h-5 w-5" />
                 </div>
@@ -141,7 +137,7 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 rounded-2xl border p-3.5 shadow-xs backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/75">
+              <div className="p- flex items-center gap-4 rounded-2xl border border-white/80 bg-white/80 p-3.5 shadow-xs backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/75">
                 <div className="shrink-0 rounded-xl bg-teal-50 p-2.5 text-[#0D9488] dark:bg-teal-950/50">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
@@ -155,7 +151,7 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="d flex items-center gap-4 rounded-2xl p-3.5 shadow-xs backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/75">
+              <div className="p- flex items-center gap-4 rounded-2xl border-white/80 bg-white/80 p-3.5 shadow-xs backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/75">
                 <div className="shrink-0 rounded-xl bg-teal-50 p-2.5 text-[#0D9488] dark:bg-teal-950/50">
                   <TrendingUp className="h-5 w-5" />
                 </div>
@@ -171,7 +167,7 @@ export const LoginPage: React.FC = () => {
             </div>
 
             {/* Bottom Floating Stats Card */}
-            <div className="max-w-md rounded-2xl p-4 shadow-md backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/85">
+            <div className="max-w-md rounded-2xl border border-white/80 bg-white/80 p-4 shadow-md backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/85">
               <div className="grid grid-cols-3 gap-2 divide-x divide-slate-200 text-center dark:divide-slate-800">
                 <div className="flex items-center justify-center gap-2 px-1">
                   <div className="shrink-0 rounded-xl bg-teal-50 p-2 text-[#0D9488] dark:bg-teal-950/50">
@@ -270,31 +266,7 @@ export const LoginPage: React.FC = () => {
                     inputClassName="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-2 focus-visible:ring-[#0D9488]"
                     {...register("password")}
                   />
-                  <div className="flex justify-end pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        alert(
-                          "Please contact your Hospital IT Administrator to reset your credentials."
-                        )
-                      }
-                      className="text-xs font-semibold text-[#2563EB] hover:underline dark:text-blue-400"
-                    >
-                      Forgot Password?
-                    </button>
-                  </div>
                 </div>
-
-                {/* Remember Me Checkbox */}
-                <FormInput
-                  id="rememberMe"
-                  type="checkbox"
-                  label="Remember me"
-                  value={rememberMe}
-                  onChange={(e) => setValue("rememberMe", e.target.checked)}
-                  containerClassName="pt-1"
-                  inputClassName="accent-[#0D9488]"
-                />
 
                 {/* Submit Button */}
                 <Button

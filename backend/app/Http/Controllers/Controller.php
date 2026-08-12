@@ -52,8 +52,16 @@ If a patient scans the hospital's QR code using an ABDM app (like ABHA App):
 EOT
 )]
 #[OA\Server(
+    url: "/",
+    description: "Current Host / Relative Server (Recommended - Prevents CORS Errors)"
+)]
+#[OA\Server(
     url: "http://localhost:8000",
-    description: "Main API Server"
+    description: "Direct Localhost Port 8000"
+)]
+#[OA\Server(
+    url: "http://localhost",
+    description: "Docker Nginx Port 80"
 )]
 #[OA\SecurityScheme(
     securityScheme: "bearerAuth",
