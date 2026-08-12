@@ -28,8 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation Error',
-                    'data'    => $e->errors()
+                    'message' => $e->getMessage(),
+                    'errors'  => $e->errors()
                 ], 422);
             }
         });
@@ -67,9 +67,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'message' => $e->getMessage(),
-                    'error'   => 'abdm_api_error',
-                    'code'    => $e->abdmCode,
-                ], 503);
+                    'error'   => $e->abdmCode ? "abdm_error_{$e->abdmCode}" : 'abdm_api_error',
+                    'details' => $e->context
+                ], 400);
             }
         });
     })->create();

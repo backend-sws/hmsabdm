@@ -10,45 +10,65 @@ use OpenApi\Attributes as OA;
     description: <<<EOT
 # HMS & ABDM Integration Guide
 
-Welcome to the API Documentation! This guide will help frontend developers understand exactly how to integrate the different workflows.
+Welcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from the Super Admin down to the Doctor's consultation. 
 
-### 1. Authentication (Step 0)
-- Call **`POST /api/v1/login`** with your credentials to get a Bearer Token.
-- Pass this token in the `Authorization: Bearer <token>` header for all subsequent API requests.
+## Phase 1: Onboarding & Setup (Super Admin & Admin)
 
-### 2. ABHA Creation & Login (Patient Registration)
-There are two main flows for handling ABHA (Ayushman Bharat Health Account):
+### Step 1.1: Super Admin Login & Hospital Creation
+1. **`POST /api/v1/login`**: Login using Super Admin credentials (e.g., `superadmin@hms.com`).
+2. **`POST /api/v1/hospitals`**: Register a new Hospital in the system. Note the returned Hospital ID.
+3. **`POST /api/v1/logout`**: Logout from the Super Admin account.
 
-#### Flow A: Patient already has ABHA (Mobile OTP Login)
-1. **`POST /api/v1/abha/generate-otp`**: Send patient's mobile number.
-2. **`POST /api/v1/abha/verify-otp`**: Verify the OTP using `txnId` received in the first step.
-3. **`GET /api/v1/abha/profile`**: Fetch patient's ABHA profile details using the token.
-4. Finally, use **`POST /api/v1/reception/register`** to save the patient in our hospital database.
+### Step 1.2: Hospital Admin Setup
+1. **`POST /api/v1/login`**: Login using the newly created Hospital Admin credentials. (Pass `Authorization: Bearer <token>` in all next requests).
+2. **`POST /api/v1/departments`**: Create medical departments (e.g., Cardiology, Orthopedics).
+3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.
+4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup weekly working hours and patient limits for doctors.
 
-#### Flow B: Create New ABHA (Aadhaar Enrolment)
-1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send Aadhaar number.
-2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP + Mobile Number.
-3. **`POST /api/v1/abha/enrol/mobile-otp`**: Send Mobile OTP for linking.
-4. **`POST /api/v1/abha/enrol/verify-mobile`**: Verify the Mobile OTP.
-5. **`GET /api/v1/abha/enrol/suggest-address`**: Get ABHA address (username) suggestions.
-6. **`POST /api/v1/abha/enrol/create-address`**: Finalize the ABHA address.
+---
 
-### 3. Walk-in & OPD Visit (Reception)
-Once a patient is registered in the system:
-1. **`GET /api/v1/reception/departments`**: Fetch active departments & doctors.
-2. **`POST /api/v1/reception/visit`**: Create an OPD visit (appointment) for the patient and assign them to a doctor.
+## Phase 2: Patient Registration (Front Desk / Reception)
 
-### 4. Scan & Share (ABDM Fast-track)
-If a patient scans the hospital's QR code using an ABDM app (like ABHA App):
-1. A webhook (`/webhook/abdm/v1/scan-and-share`) automatically receives patient details and adds them to a queue.
-2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views the waiting queue.
-3. **`POST /api/v1/reception/scan-and-share/token`**: Receptionist can search a specific token.
-4. **`POST /api/v1/reception/scan-and-share/confirm`**: Receptionist confirms the patient and creates an OPD Visit.
+When a patient arrives at the hospital, they must be registered before an OPD visit can be created. There are 3 ways to register a patient:
 
-### 5. Doctor's Panel (OPD)
+### Option A: Standard Walk-in (No ABHA / Normal Patient)
+If the patient does not have an ABHA ID or prefers not to use it:
+1. **`POST /api/v1/reception/register`**: Register the patient manually using their basic details (Name, Mobile, DOB, Gender). This is the simplest API for normal patients.
+
+### Option B: Patient already has ABHA (Mobile OTP Login)
+1. **`POST /api/v1/abha/generate-otp`**: Send the patient's mobile number.
+2. **`POST /api/v1/abha/verify-otp`**: Verify the OTP using `txnId`.
+3. **`GET /api/v1/abha/profile`**: Fetch patient's verified ABHA profile.
+4. **`POST /api/v1/reception/register`**: Save the patient in the hospital DB using the fetched details.
+
+### Option C: Create New ABHA (Aadhaar Enrolment)
+1. **`POST /api/v1/abha/enrol/aadhaar-otp`** → **`verify-aadhaar`**
+2. **`POST /api/v1/abha/enrol/mobile-otp`** → **`verify-mobile`**
+3. **`GET /api/v1/abha/enrol/suggest-address`** → **`create-address`**
+4. Follow up with **`POST /api/v1/reception/register`** to save to DB.
+
+---
+
+## Phase 3: Creating an OPD Visit (Appointment)
+
+Once the patient is registered (via Option A, B, or C):
+1. **`GET /api/v1/reception/departments`**: Fetch active departments & available doctors.
+2. **`POST /api/v1/reception/visit`**: Create a direct OPD visit. This assigns a token number to the patient for that doctor's queue.
+
+### Alternative: Scan & Share (ABDM Fast-track)
+If the patient bypasses the reception line and scans the Hospital's QR code using an ABHA App:
+1. A webhook (**`/webhook/abdm/v1/scan-and-share`**) automatically receives their data.
+2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views the incoming queue on their dashboard.
+3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Search specific token.
+4. **`POST /api/v1/reception/scan-and-share/confirm`**: Receptionist maps the patient to a department/doctor, confirming the OPD visit in one click.
+
+---
+
+## Phase 4: Doctor's Panel (Consultation)
+
 1. **`GET /api/v1/opd/queue`**: Doctor views their patient queue for today.
-2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the patient in.
-3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes the consultation and saves diagnosis/notes.
+2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient in line.
+3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes the consultation, entering the diagnosis and notes.
 EOT
 )]
 #[OA\Server(

@@ -61,13 +61,13 @@ interface AbdmServiceInterface
      * Get ABHA Address Suggestions
      * GET /v3/enrollment/enrol/suggestion
      */
-    public function suggestAbhaAddress(string $txnId): array;
+    public function suggestAbhaAddress(string $txnId, string $token): array;
 
     /**
      * Create ABHA Address
      * POST /v3/enrollment/enrol/abha-address
      */
-    public function createAbhaAddress(string $txnId, string $abhaAddress): array;
+    public function createAbhaAddress(string $txnId, string $abhaAddress, string $token): array;
 
     /**
      * Check if a patient's ABHA number exists or retrieve profile
