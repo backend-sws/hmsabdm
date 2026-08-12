@@ -28,8 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation Error',
-                    'data'    => $e->errors()
+                    'message' => $e->getMessage(),
+                    'errors'  => $e->errors()
                 ], 422);
             }
         });
