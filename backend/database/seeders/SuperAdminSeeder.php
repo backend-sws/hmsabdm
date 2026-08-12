@@ -39,6 +39,16 @@ class SuperAdminSeeder extends Seeder
         );
         $superAdminUser->assignRole($superAdminRole);
 
+        $superAdminUser2 = User::firstOrCreate(
+            ['email' => 'superadmin@hms.com'],
+            [
+                'name' => 'HMS Super Admin',
+                'password' => Hash::make('password'),
+                'hospital_id' => null,
+            ]
+        );
+        $superAdminUser2->assignRole($superAdminRole);
+
         // 2. Create Default Hospital and its Admin
         setPermissionsTeamId($hospital->id);
         

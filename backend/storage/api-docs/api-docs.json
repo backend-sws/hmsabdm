@@ -7,8 +7,16 @@
     },
     "servers": [
         {
+            "url": "/",
+            "description": "Current Host / Relative Server (Recommended - Prevents CORS Errors)"
+        },
+        {
+            "url": "http://localhost:8000",
+            "description": "Direct Localhost Port 8000"
+        },
+        {
             "url": "http://localhost",
-            "description": "Main API Server"
+            "description": "Docker Nginx Port 80"
         }
     ],
     "paths": {

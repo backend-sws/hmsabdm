@@ -72,8 +72,16 @@ If the patient bypasses the reception line and scans the Hospital's QR code usin
 EOT
 )]
 #[OA\Server(
-    url: L5_SWAGGER_CONST_HOST,
-    description: "Main API Server"
+    url: "/",
+    description: "Current Host / Relative Server (Recommended - Prevents CORS Errors)"
+)]
+#[OA\Server(
+    url: "http://localhost:8000",
+    description: "Direct Localhost Port 8000"
+)]
+#[OA\Server(
+    url: "http://localhost",
+    description: "Docker Nginx Port 80"
 )]
 #[OA\SecurityScheme(
     securityScheme: "bearerAuth",
