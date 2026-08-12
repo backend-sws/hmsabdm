@@ -46,7 +46,7 @@ export const LoginPage: React.FC = () => {
     defaultValues: {
       email: "superadmin@hms.com",
       password: "password",
-      rememberMe: true,
+      // rememberMe: true,
     },
   })
 
@@ -290,7 +290,7 @@ export const LoginPage: React.FC = () => {
                 {/* Data Security Footer Badge */}
                 <div className="flex items-center justify-center gap-1.5 pt-3 text-xs font-medium text-slate-400 dark:text-slate-500">
                   <Lock className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Your data is 100% secure</span>
+                  <span>Your data is secure</span>
                 </div>
               </form>
             </div>

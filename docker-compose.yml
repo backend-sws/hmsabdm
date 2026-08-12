@@ -75,6 +75,8 @@ services:
     container_name: hms_frontend
     restart: unless-stopped
     working_dir: /app
+    environment:
+      - VITE_PROXY_TARGET=http://nginx
     volumes:
       - ./frontend:/app
       - /app/node_modules

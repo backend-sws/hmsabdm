@@ -14,48 +14,68 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const TOKEN_KEY = "hms_auth_token"
-const USER_KEY = "hms_auth_user"
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem(USER_KEY)
-    return savedUser ? JSON.parse(savedUser) : null
-  })
   const [token, setToken] = useState<string | null>(() => {
+    localStorage.removeItem("hms_auth_user")
     return localStorage.getItem(TOKEN_KEY)
   })
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    return !!localStorage.getItem(TOKEN_KEY)
+  })
 
   useEffect(() => {
-    if (token && !user) {
-      setIsLoading(true)
-      authService
-        .getCurrentUser()
-        .then((fetchedUser) => {
+    if (!token) {
+      setUser(null)
+      setIsLoading(false)
+      return
+    }
+
+    let isMounted = true
+    setIsLoading(true)
+
+    authService
+      .getCurrentUser()
+      .then((fetchedUser) => {
+        if (isMounted) {
           setUser(fetchedUser)
-          localStorage.setItem(USER_KEY, JSON.stringify(fetchedUser))
-        })
-        .catch(() => {
-          // If token invalid, clear session
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
           localStorage.removeItem(TOKEN_KEY)
-          localStorage.removeItem(USER_KEY)
           setToken(null)
           setUser(null)
-        })
-        .finally(() => {
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
           setIsLoading(false)
-        })
+        }
+      })
+
+    return () => {
+      isMounted = false
     }
-  }, [token, user])
+  }, [token])
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     setIsLoading(true)
     try {
       const response = await authService.login(credentials)
-      setToken(response.token)
-      setUser(response.user)
-      localStorage.setItem(TOKEN_KEY, response.token)
-      localStorage.setItem(USER_KEY, JSON.stringify(response.user))
+      const newToken = response.token
+
+      localStorage.setItem(TOKEN_KEY, newToken)
+      setToken(newToken)
+
+      const fetchedUser = await authService.getCurrentUser()
+      setUser(fetchedUser)
+    } catch (error) {
+      localStorage.removeItem(TOKEN_KEY)
+      setToken(null)
+      setUser(null)
+      throw error
     } finally {
       setIsLoading(false)
     }
@@ -66,10 +86,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authService.logout()
     } finally {
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem("hms_auth_user")
       setToken(null)
       setUser(null)
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(USER_KEY)
       setIsLoading(false)
     }
   }, [])

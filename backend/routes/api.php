@@ -38,6 +38,8 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'me']);
+        Route::get('/me', [AuthController::class, 'me']);
+        Route::get('/profile', [AuthController::class, 'me']);
         
         // Patients
         Route::get('/patients', [PatientController::class, 'index']);
