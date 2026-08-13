@@ -6,7 +6,12 @@ use App\Http\Controllers\Controller;
 
 use App\Http\Traits\HasApiResponse;
 use App\Models\Hospital;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 use OpenApi\Attributes as OA;
 
@@ -20,8 +25,8 @@ class HospitalController extends Controller
 
     #[OA\Post(
         path: "/api/v1/hospitals",
-        summary: "Register a new Hospital",
-        description: "Super Admin API to onboard a new hospital into the system. ABDM HIP ID is optional but recommended.",
+        summary: "Register a new Hospital & create default Admin",
+        description: "Super Admin API to onboard a new hospital into the system and set up its initial Admin account.",
         security: [["bearerAuth" => []]],
         tags: ["6. Hospitals & Admin"]
     )]
@@ -37,11 +42,14 @@ class HospitalController extends Controller
                 new OA\Property(property: "city", type: "string", example: "New Delhi"),
                 new OA\Property(property: "state", type: "string", example: "Delhi"),
                 new OA\Property(property: "pincode", type: "string", example: "110001"),
-                new OA\Property(property: "abdm_hip_id", type: "string", example: "HIP-9999")
+                new OA\Property(property: "abdm_hip_id", type: "string", example: "HIP-9999"),
+                new OA\Property(property: "admin_name", type: "string", example: "Dr. Admin"),
+                new OA\Property(property: "admin_email", type: "string", format: "email", example: "admin@citycare.com"),
+                new OA\Property(property: "admin_password", type: "string", format: "password", example: "AdminPass123!")
             ]
         )
     )]
-    #[OA\Response(response: 201, description: "Hospital created successfully")]
+    #[OA\Response(response: 201, description: "Hospital registered and Admin account created successfully")]
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -54,11 +62,50 @@ class HospitalController extends Controller
             'state' => 'nullable|string|max:100',
             'pincode' => 'nullable|string|max:20',
             'abdm_hip_id' => 'nullable|string|unique:hospitals,abdm_hip_id',
+            'admin_name' => 'nullable|string|max:255',
+            'admin_email' => 'nullable|email|max:255|unique:users,email',
+            'admin_password' => 'nullable|string|min:6',
         ]);
 
-        $hospital = Hospital::create($validated);
+        $hospital = DB::transaction(function () use ($request, $validated) {
+            $hospitalData = collect($validated)->except(['admin_name', 'admin_email', 'admin_password'])->toArray();
+            $createdHospital = Hospital::create($hospitalData);
 
-        return $this->successResponse($hospital, 'Hospital registered successfully', 201);
+            $adminName = $request->input('admin_name') ?: ($createdHospital->name . ' Admin');
+            $adminEmail = $request->input('admin_email') ?: ($createdHospital->email ?: ('admin_' . $createdHospital->id . '@hospital.com'));
+            $plainPassword = $request->input('admin_password') ?: Str::random(10);
+
+            // Scope Spatie permission team context to new hospital
+            setPermissionsTeamId($createdHospital->id);
+
+            // Ensure Admin role exists for this hospital
+            $adminRole = Role::firstOrCreate([
+                'name' => 'Admin',
+                'guard_name' => 'sanctum',
+                'hospital_id' => $createdHospital->id,
+            ]);
+
+            // Create Hospital Admin user
+            $adminUser = User::create([
+                'name' => $adminName,
+                'email' => $adminEmail,
+                'password' => Hash::make($plainPassword),
+                'hospital_id' => $createdHospital->id,
+            ]);
+
+            $adminUser->assignRole($adminRole);
+
+            $createdHospital->admin_credentials = [
+                'id' => $adminUser->id,
+                'name' => $adminUser->name,
+                'email' => $adminUser->email,
+                'password' => $plainPassword,
+            ];
+
+            return $createdHospital;
+        });
+
+        return $this->successResponse($hospital, 'Hospital registered and Admin account created successfully', 201);
     }
 
     #[OA\Get(

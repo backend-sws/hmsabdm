@@ -20,4 +20,7 @@ export const HOSPITAL_FORM_INITIAL_DATA = {
   city: "",
   state: "",
   pincode: "",
+  admin_name: "",
+  admin_email: "",
+  admin_password: "",
 }

@@ -55,12 +55,20 @@ export default function HospitalEdit({ open, onClose, hospital }: HospitalEditPr
       isEditMode && hospitalId
         ? hospitalService.updateHospital(hospitalId, data)
         : hospitalService.createHospital(data),
-    onSuccess: () => {
-      toast.success(
-        isEditMode
-          ? "Hospital updated successfully"
-          : "Hospital registered successfully"
-      )
+    onSuccess: (res: any) => {
+      const adminCreds = res?.data?.admin_credentials || res?.admin_credentials
+      if (adminCreds && !isEditMode) {
+        toast.success(
+          `Hospital & Admin created! Email: ${adminCreds.email} | Password: ${adminCreds.password}`,
+          { duration: 8000 }
+        )
+      } else {
+        toast.success(
+          isEditMode
+            ? "Hospital updated successfully"
+            : "Hospital registered successfully"
+        )
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.hospitals.all })
       reset()
       onClose(false)
@@ -91,7 +99,7 @@ export default function HospitalEdit({ open, onClose, hospital }: HospitalEditPr
           ? "Viewing healthcare facility information and ABDM integration parameters."
           : isEditMode
             ? "Update facility profile and contact details."
-            : "Register a new healthcare facility in NHA ABDM registry."
+            : "Register a new healthcare facility in NHA ABDM registry and configure its Admin account."
       }
       size="lg"
       footer={
@@ -217,6 +225,42 @@ export default function HospitalEdit({ open, onClose, hospital }: HospitalEditPr
             />
           </div>
         </div>
+
+        {/* Section 03 - Primary Admin Setup (Creation Mode Only) */}
+        {!isEditMode && !isViewMode && (
+          <div className="space-y-4 rounded-xl border bg-card p-4 shadow-2xs sm:p-6">
+            {sectionHeader("03", "Primary Admin Account Setup")}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={control}
+                name="admin_name"
+                label="ADMIN FULL NAME"
+                placeholder="e.g. Dr. Rajesh Sharma (Optional)"
+                className="sm:col-span-2"
+              />
+
+              <FormField
+                control={control}
+                name="admin_email"
+                label="ADMIN LOGIN EMAIL"
+                placeholder="e.g. admin@citycarehospital.com"
+                inputType="email"
+              />
+
+              <FormField
+                control={control}
+                name="admin_password"
+                label="ADMIN INITIAL PASSWORD"
+                placeholder="Auto-generated if left blank"
+                inputType="password"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              * If email or password is left empty, the system will automatically assign the hospital email and generate a secure password.
+            </p>
+          </div>
+        )}
       </form>
     </FormContainer>
   )
