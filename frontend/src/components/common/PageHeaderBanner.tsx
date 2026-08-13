@@ -70,7 +70,7 @@ export const PageHeaderBanner: React.FC<PageHeaderBannerProps> = ({
         <img
           src={imageSrc}
           alt={imageAlt}
-          className="pointer-events-none absolute top-1/2 right-36 hidden h-32 -translate-y-1/2 object-contain opacity-85 drop-shadow-sm xl:block"
+          className="pointer-events-none absolute top-1/2 right-12 hidden h-32 -translate-y-1/2 object-contain opacity-85 drop-shadow-sm xl:block"
         />
       )}
     </div>
