@@ -3,19 +3,14 @@ import { MetricCard } from "@/components/common/MetricCard"
 import {
   Users,
   FileCheck,
-  QrCode,
-  Stethoscope,
-  RefreshCw,
   Sparkles,
   HeartPulse,
 } from "lucide-react"
-import { useNavigate } from "react-router"
 import { useAuth } from "@/context/AuthContext"
 import { OpdQueueWidget } from "@/components/dashboard/OpdQueueWidget"
 import { AbdmComplianceWidget } from "@/components/dashboard/AbdmComplianceWidget"
 
 export const DashboardPage: React.FC = () => {
-  const navigate = useNavigate()
   const { user } = useAuth()
 
   // Get current time greeting

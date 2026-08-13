@@ -59,6 +59,9 @@ export async function apiClient<T>(
 
   const json = await response.json()
   if (json && typeof json === "object" && "data" in json && json.success === true) {
+    if ("meta" in json) {
+      return json as T
+    }
     return json.data as T
   }
 

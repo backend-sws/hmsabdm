@@ -33,8 +33,11 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         
         // Super Admin - Hospital Management
-        Route::post('/hospitals', [HospitalController::class, 'store']);
         Route::get('/hospitals', [HospitalController::class, 'index']);
+        Route::post('/hospitals', [HospitalController::class, 'store']);
+        Route::get('/hospitals/{hospital}', [HospitalController::class, 'show']);
+        Route::put('/hospitals/{hospital}', [HospitalController::class, 'update']);
+        Route::delete('/hospitals/{hospital}', [HospitalController::class, 'destroy']);
 
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'me']);

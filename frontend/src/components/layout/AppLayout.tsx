@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { Outlet } from "react-router"
 import { Button } from "@/components/ui/button"
 import { Search, X } from "lucide-react"
@@ -69,49 +70,55 @@ export const AppLayout: React.FC = () => {
         )}
 
         {/* Quick Search Modal / Overlay */}
-        {isSearchOpen && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 px-4 pt-20 backdrop-blur-sm">
-            <div className="w-full max-w-lg animate-in space-y-4 rounded-2xl border border-border/80 bg-card p-4 shadow-xl zoom-in-95 fade-in">
-              <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                  <Search className="h-4 w-4" /> Global ABDM Quick Search
+        {isSearchOpen &&
+          createPortal(
+            <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-background/80 px-4 pt-20 backdrop-blur-sm">
+              <div className="w-full max-w-lg animate-in space-y-4 rounded-2xl border border-border/80 bg-card p-4 shadow-xl zoom-in-95 fade-in">
+                <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <Search className="h-4 w-4" /> Global ABDM Quick Search
+                  </div>
+                  <button
+                    onClick={() => setIsSearchOpen(false)}
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-muted"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setIsSearchOpen(false)}
-                  className="rounded-lg p-1 text-muted-foreground hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Type patient name, ABHA number (e.g. 91-xxxx), mobile, or OPD token..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                />
+                <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
+                  <span>
+                    Press{" "}
+                    <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">
+                      ESC
+                    </kbd>{" "}
+                    to close
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsSearchOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
-              <input
-                type="text"
-                autoFocus
-                placeholder="Type patient name, ABHA number (e.g. 91-xxxx), mobile, or OPD token..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-              />
-              <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
-                <span>
-                  Press{" "}
-                  <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">
-                    ESC
-                  </kbd>{" "}
-                  to close
-                </span>
-                <Button size="sm" onClick={() => setIsSearchOpen(false)}>
-                  Done
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+            </div>,
+            document.body
+          )}
 
         {/* Route Outlet Main Area with Tech Mesh Pattern Overlay */}
         <main className="custom-scrollbar relative min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {/* Background Tech Grid Pattern with low opacity */}
           <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.04] dark:opacity-[0.07] mix-blend-overlay"
+            className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.04] mix-blend-overlay dark:opacity-[0.07]"
             style={{ backgroundImage: "url('/main_mesh_bg.png')" }}
           />
 

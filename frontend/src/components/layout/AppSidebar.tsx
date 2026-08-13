@@ -78,12 +78,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       icon: Building2,
       roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
     },
-    {
-      title: "Super Admin Hospitals",
-      path: "/hospitals",
-      icon: Building,
-      roles: ["SUPER_ADMIN"],
-    },
+
     {
       title: "Reports & Analytics",
       path: "/reports",

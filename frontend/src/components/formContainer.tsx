@@ -1,4 +1,5 @@
 import React from "react"
+import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 
 interface FormContainerProps {
@@ -30,8 +31,8 @@ export function FormContainer({
     xl: "max-w-4xl",
   }[size]
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
@@ -73,7 +74,8 @@ export function FormContainer({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

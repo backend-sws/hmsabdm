@@ -69,9 +69,95 @@ class HospitalController extends Controller
         tags: ["6. Hospitals & Admin"]
     )]
     #[OA\Response(response: 200, description: "List of Hospitals")]
-    public function index()
+    public function index(Request $request)
     {
-        $hospitals = Hospital::paginate(15);
+        $query = Hospital::query();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('city', 'like', "%{$search}%")
+                  ->orWhere('state', 'like', "%{$search}%")
+                  ->orWhere('abdm_hip_id', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = (int) $request->input('limit', $request->input('per_page', 15));
+        $hospitals = $query->latest()->paginate($perPage);
+
         return $this->paginatedResponse($hospitals, 'List of Hospitals');
+    }
+
+    #[OA\Get(
+        path: "/api/v1/hospitals/{id}",
+        summary: "Get specific Hospital details",
+        security: [["bearerAuth" => []]],
+        tags: ["6. Hospitals & Admin"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Hospital details")]
+    public function show($id)
+    {
+        $hospital = Hospital::find($id);
+        if (!$hospital) {
+            return $this->notFoundResponse('Hospital not found');
+        }
+        return $this->successResponse($hospital, 'Hospital details');
+    }
+
+    #[OA\Put(
+        path: "/api/v1/hospitals/{id}",
+        summary: "Update Hospital details",
+        security: [["bearerAuth" => []]],
+        tags: ["6. Hospitals & Admin"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Hospital updated successfully")]
+    public function update(Request $request, $id)
+    {
+        $hospital = Hospital::find($id);
+        if (!$hospital) {
+            return $this->notFoundResponse('Hospital not found');
+        }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'code' => 'nullable|string|max:50',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'pincode' => 'nullable|string|max:20',
+            'abdm_hip_id' => 'nullable|string|unique:hospitals,abdm_hip_id,' . $id,
+        ]);
+
+        $hospital->update($validated);
+
+        return $this->successResponse($hospital, 'Hospital updated successfully');
+    }
+
+    #[OA\Delete(
+        path: "/api/v1/hospitals/{id}",
+        summary: "Delete a Hospital",
+        security: [["bearerAuth" => []]],
+        tags: ["6. Hospitals & Admin"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Hospital deleted successfully")]
+    public function destroy($id)
+    {
+        $hospital = Hospital::find($id);
+        if (!$hospital) {
+            return $this->notFoundResponse('Hospital not found');
+        }
+
+        $hospital->delete();
+
+        return $this->successResponse(null, 'Hospital deleted successfully');
     }
 }
