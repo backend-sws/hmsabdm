@@ -106,10 +106,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       } ${isCollapsed ? "lg:w-20" : "lg:w-64"} relative w-64 overflow-hidden`}
     >
-      {/* Abstract Fiber-Optic Threads Pattern Overlay */}
+      {/* Seamless Medical Line-Art Pattern Background Overlay */}
       <div
-        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.12] mix-blend-overlay transition-opacity duration-300 dark:opacity-[0.25]"
-        style={{ backgroundImage: "url('/sidebar_threads_bg.png')" }}
+        className="pointer-events-none absolute inset-0 bg-top bg-repeat opacity-[0.04] mix-blend-multiply transition-opacity duration-300 dark:opacity-[0.12] dark:invert"
+        style={{ backgroundImage: "url('/medical_pattern.png')" }}
       />
 
       {/* Cybernetic Accent Glow Lines */}

@@ -116,10 +116,10 @@ export const AppLayout: React.FC = () => {
 
         {/* Route Outlet Main Area with Tech Mesh Pattern Overlay */}
         <main className="custom-scrollbar relative min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          {/* Background Tech Grid Pattern with low opacity */}
+          {/* Background Medical Doodle Line-Art Pattern Overlay */}
           <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.04] mix-blend-overlay dark:opacity-[0.07]"
-            style={{ backgroundImage: "url('/main_mesh_bg.png')" }}
+            className="pointer-events-none absolute inset-0 bg-[length:380px_380px] bg-top bg-repeat opacity-[0.05] mix-blend-multiply transition-opacity duration-300 dark:opacity-[0.08] dark:invert"
+            style={{ backgroundImage: "url('/medical_pattern.png')" }}
           />
 
           <div className="relative z-10 mx-auto max-w-[1600px]">

@@ -205,13 +205,13 @@ export function HospitalsPage() {
 
   return (
     <div className="space-y-6">
-      {/* <PageHeaderBanner
+      <PageHeaderBanner
         title="Super Admin – Hospital Facilities"
         badgeText="Super Admin Portal"
         subtitle="Onboard, manage, and authorize healthcare facilities registered with NHA ABDM registry."
         imageSrc="/hospital.png"
         imageAlt="Hospital Facility"
-      /> */}
+      />
 
       <StatCardsRow stats={stats} isLoading={isLoading} />
 
