@@ -38,13 +38,18 @@ class AbdmApiException extends RuntimeException
             $message = $firstString ?: 'ABDM Validation Error';
         }
 
-        $code = $response['code'] ?? $response['error']['code'] ?? '';
+        $code = (string) ($response['code'] ?? $response['error']['code'] ?? '');
+
+        // Add helpful context for confusing ABDM generic codes
+        if ($code === 'ABDM-1220' && $message === 'Sorry, Unable to process your request at this time. Please try again later.') {
+            $message = 'ABDM-1220: Unable to process request. This typically occurs when an ABHA Address is already assigned to this Aadhaar or the enrollment transaction has expired.';
+        }
 
         \Illuminate\Support\Facades\Log::error('ABDM API Error details:', ['response' => $response]);
 
         return new self(
             message: (string) $message,
-            abdmCode: (string) $code,
+            abdmCode: $code,
             context: $response,
         );
     }

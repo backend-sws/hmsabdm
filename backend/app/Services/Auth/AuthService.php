@@ -19,7 +19,7 @@ class AuthService implements AuthServiceInterface
     {
         if (!Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
-                'email' => ['Invalid email or password.'],
+                'login_id' => ['Invalid credentials. Please check your User ID / Email and password.'],
             ]);
         }
 

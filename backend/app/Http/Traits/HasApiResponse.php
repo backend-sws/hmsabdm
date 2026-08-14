@@ -59,4 +59,14 @@ trait HasApiResponse
             ]
         ], 200);
     }
+
+    protected function paginatedOrSuccessResponse(
+        mixed $data,
+        string $message = 'Success'
+    ): JsonResponse {
+        if ($data instanceof \Illuminate\Pagination\LengthAwarePaginator) {
+            return $this->paginatedResponse($data, $message);
+        }
+        return $this->successResponse($data, $message);
+    }
 }

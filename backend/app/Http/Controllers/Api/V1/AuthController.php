@@ -29,9 +29,11 @@ class AuthController extends Controller
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ["email", "password"],
+            required: ["password"],
             properties: [
-                new OA\Property(property: "email", type: "string", format: "email", example: "superadmin@hms.com"),
+                new OA\Property(property: "login_id", type: "string", example: "superadmin@hms.com or superadmin"),
+                new OA\Property(property: "email", type: "string", example: "superadmin@hms.com"),
+                new OA\Property(property: "username", type: "string", example: "superadmin"),
                 new OA\Property(property: "password", type: "string", format: "password", example: "password")
             ]
         )
@@ -40,10 +42,29 @@ class AuthController extends Controller
     #[OA\Response(response: 422, description: "Validation Error")]
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
+        // Support login_id, email, username, or userId
+        $loginId = $request->input('login_id')
+            ?? $request->input('email')
+            ?? $request->input('username')
+            ?? $request->input('userId')
+            ?? $request->input('user_id');
+
+        $request->merge(['login_id' => $loginId]);
+
+        $request->validate([
+            'login_id' => 'required|string',
+            'password' => 'required|string'
+        ], [
+            'login_id.required' => 'Please enter your email or username/user ID.',
+            'password.required' => 'Please enter your password.'
         ]);
+
+        $loginType = filter_var($loginId, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
+        $credentials = [
+            $loginType => $loginId,
+            'password' => $request->password
+        ];
 
         $data = $this->authService->login($credentials);
         

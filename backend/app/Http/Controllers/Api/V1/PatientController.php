@@ -24,14 +24,18 @@ class PatientController extends Controller
     #[OA\Get(
         path: "/api/v1/patients",
         summary: "Get all patients",
-        description: "Retrieves a list of all patients registered in the hospital.",
+        description: "Retrieves a list of all patients registered in the hospital. Supports search by name, mobile, ABHA number/address, and pagination.",
         tags: ["8. Patients"],
         security: [["bearerAuth" => []]]
     )]
+    #[OA\Parameter(name: "search", in: "query", description: "Search by patient name, mobile, email, ABHA number, or ABHA address", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "per_page", in: "query", description: "Number of items per page (default: 15)", required: false, schema: new OA\Schema(type: "integer", example: 15))]
+    #[OA\Parameter(name: "page", in: "query", description: "Page number", required: false, schema: new OA\Schema(type: "integer", example: 1))]
+    #[OA\Parameter(name: "sort", in: "query", description: "Sort by field (e.g., name, created_at, -created_at)", required: false, schema: new OA\Schema(type: "string", example: "-created_at"))]
     #[OA\Response(response: 200, description: "List of patients retrieved successfully")]
-    public function index()
+    public function index(Request $request)
     {
-        $patients = $this->patientService->getAllPatients();
+        $patients = $this->patientService->getAllPatients($request);
         $resource = PatientResource::collection($patients)->response()->getData(true);
         return $this->successResponse($resource, 'Patients retrieved successfully');
     }

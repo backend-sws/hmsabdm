@@ -4,7 +4,7 @@ namespace App\Services\Department;
 
 interface DepartmentServiceInterface
 {
-    public function getAll(int $hospitalId);
+    public function getAll(int $hospitalId, $request = null);
     
     public function create(int $hospitalId, array $data): array;
     

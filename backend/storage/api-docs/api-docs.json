@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "HMS ABDM Integration API",
-        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from the Super Admin down to the Doctor's consultation. \n\n## Phase 1: Onboarding & Setup (Super Admin & Admin)\n\n### Step 1.1: Super Admin Login & Hospital Creation\n1. **`POST /api/v1/login`**: Login using Super Admin credentials (e.g., `superadmin@hms.com`).\n2. **`POST /api/v1/hospitals`**: Register a new Hospital in the system. Note the returned Hospital ID.\n3. **`POST /api/v1/logout`**: Logout from the Super Admin account.\n\n### Step 1.2: Hospital Admin Setup\n1. **`POST /api/v1/login`**: Login using the newly created Hospital Admin credentials. (Pass `Authorization: Bearer <token>` in all next requests).\n2. **`POST /api/v1/departments`**: Create medical departments (e.g., Cardiology, Orthopedics).\n3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.\n4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup weekly working hours and patient limits for doctors.\n\n---\n\n## Phase 2: Patient Registration (Front Desk / Reception)\n\nWhen a patient arrives at the hospital, they must be registered before an OPD visit can be created. There are 3 ways to register a patient:\n\n### Option A: Standard Walk-in (No ABHA / Normal Patient)\nIf the patient does not have an ABHA ID or prefers not to use it:\n1. **`POST /api/v1/reception/register`**: Register the patient manually using their basic details (Name, Mobile, DOB, Gender). This is the simplest API for normal patients.\n\n### Option B: Patient already has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/generate-otp`**: Send the patient's mobile number.\n2. **`POST /api/v1/abha/verify-otp`**: Verify the OTP using `txnId`.\n3. **`GET /api/v1/abha/profile`**: Fetch patient's verified ABHA profile.\n4. **`POST /api/v1/reception/register`**: Save the patient in the hospital DB using the fetched details.\n\n### Option C: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`** → **`verify-aadhaar`**\n2. **`POST /api/v1/abha/enrol/mobile-otp`** → **`verify-mobile`**\n3. **`GET /api/v1/abha/enrol/suggest-address`** → **`create-address`**\n4. Follow up with **`POST /api/v1/reception/register`** to save to DB.\n\n---\n\n## Phase 3: Creating an OPD Visit (Appointment)\n\nOnce the patient is registered (via Option A, B, or C):\n1. **`GET /api/v1/reception/departments`**: Fetch active departments & available doctors.\n2. **`POST /api/v1/reception/visit`**: Create a direct OPD visit. This assigns a token number to the patient for that doctor's queue.\n\n### Alternative: Scan & Share (ABDM Fast-track)\nIf the patient bypasses the reception line and scans the Hospital's QR code using an ABHA App:\n1. A webhook (**`/webhook/abdm/v1/scan-and-share`**) automatically receives their data.\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views the incoming queue on their dashboard.\n3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Search specific token.\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: Receptionist maps the patient to a department/doctor, confirming the OPD visit in one click.\n\n---\n\n## Phase 4: Doctor's Panel (Consultation)\n\n1. **`GET /api/v1/opd/queue`**: Doctor views their patient queue for today.\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient in line.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes the consultation, entering the diagnosis and notes.",
+        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from Hospital Admin setup to Reception OPD Slip generation and Doctor consultation.\n\n---\n\n## 🏥 Phase 1: Onboarding & Setup (Hospital Admin)\n\n1. **`POST /api/v1/login`**: Login using Admin credentials (e.g., `admin@hms.com`). Note the `access_token` and pass `Authorization: Bearer <token>` in subsequent requests.\n2. **`POST /api/v1/departments`**: Create medical departments (e.g., General Medicine, Cardiology, Orthopedics).\n3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.\n4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup working schedule and patient limits for doctors.\n\n---\n\n## 📋 Phase 2: Patient Registration (Reception / Front Desk)\n\nWhen a patient arrives at the hospital, there are **3 ways** to verify/register them:\n\n### Option A: Standard Walk-in (No ABHA / Normal Patient)\n* **`POST /api/v1/reception/register`**: Register patient manually with Name, Mobile, DOB, and Gender. Returns `patient.id`.\n\n### Option B: Patient Already Has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/search`**: (Optional) Search ABHA records by mobile number.\n2. **`POST /api/v1/abha/generate-otp`**: Send OTP to patient's mobile (`{ \"mobile\": \"7049711475\" }`). Returns `txnId`.\n3. **`POST /api/v1/abha/verify-otp`**: Verify OTP (`{ \"txnId\": \"...\", \"otp\": \"...\" }`).\n   * **Note:** The response contains full verified KYC details (Name, DOB, Gender, ABHA Number, Photo) in the `accounts` array.\n4. **`POST /api/v1/reception/register`**: Auto-fill and save patient to hospital DB with the returned `abha_number` & `abha_address`. Returns `patient.id`.\n\n### Option C: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send OTP to Aadhaar-linked mobile. Returns `txnId`.\n2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP. Returns `token` (X-Token) & `hasExistingAbha`.\n3. *(If Aadhaar mobile is different)*: **`enrol/mobile-otp`** → **`enrol/verify-mobile`**\n4. *(If fresh enrolment)*: **`GET enrol/suggest-address`** → **`POST enrol/create-address`**\n5. **`GET /api/v1/abha/profile`**: Fetch full Aadhaar profile using `token`.\n6. **`GET /api/v1/abha/card`**: (Optional) Download official Govt ABHA Card (PDF/Image).\n7. **`POST /api/v1/reception/register`**: Save patient to hospital DB. Returns `patient.id`.\n\n---\n\n## 🎟️ Phase 3: OPD Slip Generation (Creating Appointment Visit)\n\nOPD Slip in dono mein se **kisi ek API** se banti hai:\n\n### Method 1: Standard OPD Visit (For Option A, B, and C)\nOnce the patient is registered and you have `patient_id`:\n1. **`GET /api/v1/reception/departments`**: Fetch active departments and available doctors.\n2. **`POST /api/v1/reception/visit`**: **Generate OPD Slip!**\n   * Body: `{ \"patient_id\": 1, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Assigns Queue Token (e.g. `OPD-042`), creates Visit in Doctor's queue, and generates printable OPD Slip.\n\n### Method 2: Scan & Share (ABDM QR Code Fast-Track)\nWhen a patient scans the Hospital Counter QR code using their ABHA App:\n1. ABDM Webhook (**`POST /api/webhook/abdm/v1/scan-and-share`**) automatically receives demographic data and queues the token (valid for 30 min).\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views waiting scanned patients.\n3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Look up specific 3-digit token (e.g. `TK-482`).\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: **Generate OPD Slip!**\n   * Body: `{ \"queue_id\": 5, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Confirms the queue, links doctor/department, and generates printable OPD Slip.\n\n---\n\n## 🩺 Phase 4: Doctor's Panel (Consultation)\n\n1. **`GET /api/v1/opd/queue`**: Doctor views their live OPD queue for today.\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient into the consultation room.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes consultation, adding diagnosis, notes, and prescription.",
         "version": "1.0.0"
     },
     "servers": [
@@ -337,16 +337,16 @@
         "/api/v1/abha/profile": {
             "get": {
                 "tags": [
-                    "2. ABHA — Mobile Login"
+                    "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step A3 — Profile Fetch करो",
-                "description": "Fetches full ABHA profile details (name, gender, dob, photo) using the X-Token from verify step.",
+                "summary": "Step B7 — Aadhaar Profile details Fetch karo",
+                "description": "Fetches full ABHA profile details (name, gender, dob, photo, address) using the X-Token from Aadhaar Enrolment verify step (Step B2).",
                 "operationId": "2f90c338f171c159c0a2da35a08df89c",
                 "parameters": [
                     {
                         "name": "token",
                         "in": "query",
-                        "description": "X-Token from verify step",
+                        "description": "X-Token from Step B2 (verify-aadhaar)",
                         "required": true,
                         "schema": {
                             "type": "string"
@@ -370,8 +370,8 @@
                 "tags": [
                     "2. ABHA — Mobile Login"
                 ],
-                "summary": "Mobile से ABHA खोजो",
-                "description": "Searches for ABHA records linked to a specific mobile number.",
+                "summary": "Step A0 — Mobile से ABHA खोजो",
+                "description": "Searches for ABHA records linked to a specific mobile number before sending login OTP.",
                 "operationId": "68bcef4eda81b64001a262aeab22b648",
                 "requestBody": {
                     "required": true,
@@ -404,15 +404,16 @@
         "/api/v1/abha/card": {
             "get": {
                 "tags": [
-                    "2. ABHA — Mobile Login"
+                    "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "ABHA Card (PDF) Download करो",
+                "summary": "Step B8 — ABHA Card (PDF/Image) Download karo",
+                "description": "Downloads the official ABHA card base64 image/PDF using the X-Token from Step B2.",
                 "operationId": "f7b0871ac2119a2d7832f516d77718d3",
                 "parameters": [
                     {
                         "name": "token",
                         "in": "query",
-                        "description": "X-Token from verify step",
+                        "description": "X-Token from Step B2 (verify-aadhaar)",
                         "required": true,
                         "schema": {
                             "type": "string"
@@ -434,15 +435,16 @@
         "/api/v1/abha/qr-code": {
             "get": {
                 "tags": [
-                    "2. ABHA — Mobile Login"
+                    "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "ABHA QR Code Download करो",
+                "summary": "Step B9 — ABHA QR Code Download karo",
+                "description": "Downloads the ABHA QR Code image using the X-Token from Step B2.",
                 "operationId": "dfaa64c5b9b31833887b4a13b539bb14",
                 "parameters": [
                     {
                         "name": "token",
                         "in": "query",
-                        "description": "X-Token from verify step",
+                        "description": "X-Token from Step B2 (verify-aadhaar)",
                         "required": true,
                         "schema": {
                             "type": "string"
@@ -474,14 +476,13 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "email",
+                                    "login_id",
                                     "password"
                                 ],
                                 "properties": {
-                                    "email": {
+                                    "login_id": {
                                         "type": "string",
-                                        "format": "email",
-                                        "example": "superadmin@hms.com"
+                                        "example": "superadmin@hms.com or DR-SMITH-001"
                                     },
                                     "password": {
                                         "type": "string",
@@ -548,8 +549,58 @@
                     "7. Departments & Doctors"
                 ],
                 "summary": "List all departments in the hospital",
-                "description": "Retrieves a paginated list of all medical departments configured for the current hospital.",
+                "description": "Retrieves a list of all medical departments. Supports search, filtering, and ?all=true for dropdowns.",
                 "operationId": "149f8ee66a43550287b8c706fccbb9fd",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by department name, code, or description",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Filter by active status (true/false)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "description": "Set to true to fetch all departments without pagination (for form dropdowns)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": true
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of departments"
@@ -699,8 +750,67 @@
                     "7. Departments & Doctors"
                 ],
                 "summary": "List all doctors in the hospital",
-                "description": "Retrieves a paginated list of all registered doctors across all departments.",
+                "description": "Retrieves a list of all registered doctors across all departments. Supports search, department filter, active status filter, and ?all=true for dropdowns.",
                 "operationId": "1ff2acc28425ccb6474cd7925c28ddd9",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by doctor name, email, phone, specialization, or username",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "department_id",
+                        "in": "query",
+                        "description": "Filter doctors by department ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Filter by active status (true/false)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "description": "Set to true to fetch all doctors without pagination (for form dropdowns)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": true
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of doctors"
@@ -729,9 +839,14 @@
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "user_id": {
-                                        "type": "integer",
-                                        "example": 2
+                                    "username": {
+                                        "type": "string",
+                                        "example": "DR-SMITH-001"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
                                     },
                                     "name": {
                                         "type": "string",
@@ -790,8 +905,58 @@
                     "7. Departments & Doctors"
                 ],
                 "summary": "List doctors available today",
-                "description": "Fetches a list of doctors who have an active schedule for the current day of the week.",
+                "description": "Fetches a list of doctors who have an active schedule for the current day of the week. Supports search and department filtering.",
                 "operationId": "d88e0cb4cfe658f97f23883a3f71612d",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by doctor name, specialization, or phone",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "department_id",
+                        "in": "query",
+                        "description": "Filter doctors by department ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "description": "Set to true to fetch all available doctors without pagination (for dropdowns)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": true
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of doctors available today"
@@ -832,9 +997,14 @@
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "user_id": {
-                                        "type": "integer",
-                                        "example": 2
+                                    "username": {
+                                        "type": "string",
+                                        "example": "DR-SMITH-001"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
                                     },
                                     "name": {
                                         "type": "string",
@@ -1013,8 +1183,8 @@
                 "tags": [
                     "6. Hospitals & Admin"
                 ],
-                "summary": "Register a new Hospital",
-                "description": "Super Admin API to onboard a new hospital into the system. ABDM HIP ID is optional but recommended.",
+                "summary": "Register a new Hospital & create default Admin",
+                "description": "Super Admin API to onboard a new hospital into the system and set up its initial Admin account.",
                 "operationId": "2e53ae79f3d5f8006da137bc174c751d",
                 "requestBody": {
                     "required": true,
@@ -1058,6 +1228,20 @@
                                     "abdm_hip_id": {
                                         "type": "string",
                                         "example": "HIP-9999"
+                                    },
+                                    "admin_name": {
+                                        "type": "string",
+                                        "example": "Dr. Admin"
+                                    },
+                                    "admin_email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@citycare.com"
+                                    },
+                                    "admin_password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "AdminPass123!"
                                     }
                                 },
                                 "type": "object"
@@ -1067,7 +1251,90 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Hospital created successfully"
+                        "description": "Hospital registered and Admin account created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hospitals/{id}": {
+            "get": {
+                "tags": [
+                    "6. Hospitals & Admin"
+                ],
+                "summary": "Get specific Hospital details",
+                "operationId": "978f234bf487cdc9c878ce520ce5917c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hospital details"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "6. Hospitals & Admin"
+                ],
+                "summary": "Update Hospital details",
+                "operationId": "471d2ffdb43decb5c8e3fd5e283cdb85",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hospital updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "6. Hospitals & Admin"
+                ],
+                "summary": "Delete a Hospital",
+                "operationId": "1813cf095b22d4aaab318814a11f973a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hospital deleted successfully"
                     }
                 },
                 "security": [
@@ -1083,15 +1350,66 @@
                     "5. OPD (Doctor)"
                 ],
                 "summary": "Get today's OPD queue for a doctor",
-                "description": "Fetches the list of all patients assigned to a specific doctor for today's date.",
+                "description": "Fetches the list of all patients assigned to a specific doctor for today's date. Supports status filtering and patient search.",
                 "operationId": "ea861ba2b44df830811d9d2645bc77ac",
                 "parameters": [
                     {
                         "name": "doctor_id",
                         "in": "query",
+                        "description": "ID of the doctor",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status: waiting, called, in_consultation, done, cancelled, or all",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "waiting"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by patient name, mobile, ABHA number, or token",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "description": "Set to true to fetch full queue without pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": false
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
@@ -1213,8 +1531,49 @@
                     "8. Patients"
                 ],
                 "summary": "Get all patients",
-                "description": "Retrieves a list of all patients registered in the hospital.",
+                "description": "Retrieves a list of all patients registered in the hospital. Supports search by name, mobile, ABHA number/address, and pagination.",
                 "operationId": "6747f925788f494507252b8889e09dd1",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by patient name, mobile, email, ABHA number, or ABHA address",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Sort by field (e.g., name, created_at, -created_at)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "-created_at"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of patients retrieved successfully"
@@ -1315,8 +1674,49 @@
                     "4. Reception"
                 ],
                 "summary": "List all patients waiting in queue from Scan & Share",
-                "description": "Fetches a list of patients who have scanned the hospital's QR code and are waiting to be registered.",
+                "description": "Fetches a list of patients who have scanned the hospital's QR code and are waiting to be registered. Supports patient search.",
                 "operationId": "ec0d3a2ce96d83833028d8408a4f3f92",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by patient name, mobile, or token",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "description": "Set to true to fetch all queue records without pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": false
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of waiting queues"
@@ -1371,8 +1771,47 @@
                     "4. Reception"
                 ],
                 "summary": "Get all departments with active doctors",
-                "description": "Used in the reception dropdowns to select a department and doctor for assigning an OPD visit.",
+                "description": "Used in the reception dropdowns to select a department and doctor for assigning an OPD visit. Returns all active records by default for easy dropdown selection.",
                 "operationId": "572004aa8bcf257a8b0eeb72a7580205",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by department name or code",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "description": "Set to true to fetch all departments without pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": true
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page (if paginating)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Departments and doctors list"

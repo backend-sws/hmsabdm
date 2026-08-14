@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
                 ['email' => 'reception@demo.com'],
                 [
                     'name' => 'Front Desk',
+                    'username' => 'reception',
                     'password' => Hash::make('password'),
                     'hospital_id' => $hospital->id
                 ]

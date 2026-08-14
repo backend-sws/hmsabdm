@@ -3,25 +3,50 @@
 namespace App\Services\Opd;
 
 use App\Models\OpdVisit;
+use App\Http\Traits\CanFilterAndPaginate;
 use Illuminate\Support\Facades\DB;
 
 class OpdService implements OpdServiceInterface
 {
-    public function getTodayQueue(int $hospitalId, int $doctorId)
+    use CanFilterAndPaginate;
+
+    public function getTodayQueue(int $hospitalId, int $doctorId, $request = null)
     {
-        return OpdVisit::where('hospital_id', $hospitalId)
-            ->where('doctor_id', $doctorId)
+        $req = $request ?? request();
+
+        $query = OpdVisit::where('doctor_id', $doctorId)
             ->whereDate('visit_date', today())
-            ->whereIn('status', ['waiting', 'called', 'in_consultation'])
-            ->with('patient')
-            ->orderBy('queue_token', 'asc')
-            ->paginate(15);
+            ->with(['patient', 'department', 'doctor']);
+
+        if ($req && $req->filled('status')) {
+            $status = $req->query('status');
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+        } else {
+            $query->whereIn('status', ['waiting', 'called', 'in_consultation']);
+        }
+
+        if ($req && $req->filled('search')) {
+            $search = $req->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('queue_token', 'like', "%{$search}%")
+                  ->orWhereHas('patient', function ($pq) use ($search) {
+                      $pq->where('name', 'ilike', "%{$search}%")
+                         ->orWhere('mobile', 'ilike', "%{$search}%")
+                         ->orWhere('abha_number', 'ilike', "%{$search}%");
+                  });
+            });
+        }
+
+        $query->orderBy('queue_token', 'asc');
+
+        return $this->applyPaginationOrAll($query, $req);
     }
 
     public function callPatient(int $hospitalId, int $doctorId, int $visitId): array
     {
-        $visit = OpdVisit::where('hospital_id', $hospitalId)
-            ->where('doctor_id', $doctorId)
+        $visit = OpdVisit::where('doctor_id', $doctorId)
             ->findOrFail($visitId);
 
         if ($visit->status === 'done' || $visit->status === 'cancelled') {
@@ -38,8 +63,7 @@ class OpdService implements OpdServiceInterface
 
     public function completeConsultation(int $hospitalId, int $doctorId, int $visitId, array $data): array
     {
-        $visit = OpdVisit::where('hospital_id', $hospitalId)
-            ->where('doctor_id', $doctorId)
+        $visit = OpdVisit::where('doctor_id', $doctorId)
             ->findOrFail($visitId);
 
         if ($visit->status === 'done') {

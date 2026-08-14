@@ -33,6 +33,7 @@ class SuperAdminSeeder extends Seeder
             ['email' => 'superadmin@company.com'],
             [
                 'name' => 'Company Super Admin',
+                'username' => 'company_admin',
                 'password' => Hash::make('password'),
                 'hospital_id' => null,
             ]
@@ -43,6 +44,7 @@ class SuperAdminSeeder extends Seeder
             ['email' => 'superadmin@hms.com'],
             [
                 'name' => 'HMS Super Admin',
+                'username' => 'superadmin',
                 'password' => Hash::make('password'),
                 'hospital_id' => null,
             ]
@@ -62,6 +64,7 @@ class SuperAdminSeeder extends Seeder
             ['email' => 'admin@demo.com'],
             [
                 'name' => 'Demo Admin',
+                'username' => 'admin',
                 'password' => Hash::make('password'),
                 'hospital_id' => $hospital->id,
             ]

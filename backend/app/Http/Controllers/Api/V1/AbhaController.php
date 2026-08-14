@@ -273,12 +273,12 @@ class AbhaController extends Controller
 
     #[OA\Get(
         path: "/api/v1/abha/profile",
-        summary: "Step A3 — Profile Fetch करो",
-        description: "Fetches full ABHA profile details (name, gender, dob, photo) using the X-Token from verify step.",
+        summary: "Step B7 — Aadhaar Profile details Fetch karo",
+        description: "Fetches full ABHA profile details (name, gender, dob, photo, address) using the X-Token from Aadhaar Enrolment verify step (Step B2).",
         security: [["bearerAuth" => []]],
-        tags: ["2. ABHA — Mobile Login"]
+        tags: ["3. ABHA — Aadhaar Enrolment"]
     )]
-    #[OA\Parameter(name: "token", in: "query", required: true, schema: new OA\Schema(type: "string"), description: "X-Token from verify step")]
+    #[OA\Parameter(name: "token", in: "query", required: true, schema: new OA\Schema(type: "string"), description: "X-Token from Step B2 (verify-aadhaar)")]
     #[OA\Response(response: 200, description: "Profile details")]
     public function getProfile(Request $request)
     {
@@ -293,8 +293,8 @@ class AbhaController extends Controller
 
     #[OA\Post(
         path: "/api/v1/abha/search",
-        summary: "Mobile से ABHA खोजो",
-        description: "Searches for ABHA records linked to a specific mobile number.",
+        summary: "Step A0 — Mobile से ABHA खोजो",
+        description: "Searches for ABHA records linked to a specific mobile number before sending login OTP.",
         security: [["bearerAuth" => []]],
         tags: ["2. ABHA — Mobile Login"]
     )]
@@ -320,11 +320,12 @@ class AbhaController extends Controller
 
     #[OA\Get(
         path: "/api/v1/abha/card",
-        summary: "ABHA Card (PDF) Download करो",
+        summary: "Step B8 — ABHA Card (PDF/Image) Download karo",
+        description: "Downloads the official ABHA card base64 image/PDF using the X-Token from Step B2.",
         security: [["bearerAuth" => []]],
-        tags: ["2. ABHA — Mobile Login"]
+        tags: ["3. ABHA — Aadhaar Enrolment"]
     )]
-    #[OA\Parameter(name: "token", in: "query", required: true, schema: new OA\Schema(type: "string"), description: "X-Token from verify step")]
+    #[OA\Parameter(name: "token", in: "query", required: true, schema: new OA\Schema(type: "string"), description: "X-Token from Step B2 (verify-aadhaar)")]
     #[OA\Response(response: 200, description: "Card downloaded")]
     public function downloadCard(Request $request)
     {
@@ -339,11 +340,12 @@ class AbhaController extends Controller
 
     #[OA\Get(
         path: "/api/v1/abha/qr-code",
-        summary: "ABHA QR Code Download करो",
+        summary: "Step B9 — ABHA QR Code Download karo",
+        description: "Downloads the ABHA QR Code image using the X-Token from Step B2.",
         security: [["bearerAuth" => []]],
-        tags: ["2. ABHA — Mobile Login"]
+        tags: ["3. ABHA — Aadhaar Enrolment"]
     )]
-    #[OA\Parameter(name: "token", in: "query", required: true, schema: new OA\Schema(type: "string"), description: "X-Token from verify step")]
+    #[OA\Parameter(name: "token", in: "query", required: true, schema: new OA\Schema(type: "string"), description: "X-Token from Step B2 (verify-aadhaar)")]
     #[OA\Response(response: 200, description: "QR Code downloaded")]
     public function downloadQrCode(Request $request)
     {

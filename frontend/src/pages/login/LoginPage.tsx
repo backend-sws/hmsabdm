@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { FormInput } from "@/components/common/FormInput"
 import { brandName } from "@/constants/appConstants"
 import {
-  Mail,
+  User as UserIcon,
   Lock,
   ArrowRight,
   AlertCircle,
@@ -21,7 +21,7 @@ import {
 
 // Zod Form Validation Schema
 const loginSchema = z.object({
-  email: z.string().min(1, "Please enter your email or username"),
+  login_id: z.string().min(1, "Please enter your User ID or Email"),
   password: z.string().min(1, "Please enter your password"),
   rememberMe: z.boolean().optional(),
 })
@@ -40,11 +40,12 @@ export const LoginPage: React.FC = () => {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "superadmin@hms.com",
+      login_id: "superadmin@hms.com",
       password: "password",
       // rememberMe: true,
     },
@@ -55,14 +56,16 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login({
-        email: data.email,
+        login_id: data.login_id,
+        email: data.login_id,
+        username: data.login_id,
         password: data.password,
         rememberMe: data.rememberMe,
       })
       navigate(from, { replace: true })
     } catch (err: any) {
       setErrorMessage(
-        err?.message || "Invalid email or password. Please try again."
+        err?.message || "Invalid User ID/Email or password. Please try again."
       )
     }
   }
@@ -240,17 +243,17 @@ export const LoginPage: React.FC = () => {
                 onSubmit={handleSubmit(onSubmit)}
                 className="mt-6 space-y-4"
               >
-                {/* Email or Username */}
+                {/* User ID or Email */}
                 <FormInput
-                  id="email"
-                  label="Email or Username"
+                  id="login_id"
+                  label="User ID or Email"
                   type="text"
-                  placeholder="Enter your email or username"
-                  startIcon={<Mail className="h-4 w-4 text-slate-400" />}
+                  placeholder="Enter User ID or Email (e.g. superadmin or admin@demo.com)"
+                  startIcon={<UserIcon className="h-4 w-4 text-slate-400" />}
                   required
-                  error={errors.email?.message}
+                  error={errors.login_id?.message}
                   inputClassName="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-2 focus-visible:ring-[#0D9488]"
-                  {...register("email")}
+                  {...register("login_id")}
                 />
 
                 {/* Password */}
@@ -287,8 +290,47 @@ export const LoginPage: React.FC = () => {
                   )}
                 </Button>
 
+                {/* Demo Quick Logins */}
+                <div className="pt-2">
+                  <p className="mb-2 text-center text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                    Quick Fill Demo Accounts:
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("login_id", "superadmin", { shouldValidate: true })
+                        setValue("password", "password", { shouldValidate: true })
+                      }}
+                      className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50/80 px-2 py-1.5 text-center text-[11px] font-medium text-slate-700 transition hover:border-[#0D9488] hover:bg-teal-50/50 hover:text-[#0D9488] dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
+                    >
+                      Super Admin
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("login_id", "admin", { shouldValidate: true })
+                        setValue("password", "password", { shouldValidate: true })
+                      }}
+                      className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50/80 px-2 py-1.5 text-center text-[11px] font-medium text-slate-700 transition hover:border-[#0D9488] hover:bg-teal-50/50 hover:text-[#0D9488] dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
+                    >
+                      Hospital Admin
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("login_id", "reception", { shouldValidate: true })
+                        setValue("password", "password", { shouldValidate: true })
+                      }}
+                      className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50/80 px-2 py-1.5 text-center text-[11px] font-medium text-slate-700 transition hover:border-[#0D9488] hover:bg-teal-50/50 hover:text-[#0D9488] dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
+                    >
+                      Receptionist
+                    </button>
+                  </div>
+                </div>
+
                 {/* Data Security Footer Badge */}
-                <div className="flex items-center justify-center gap-1.5 pt-3 text-xs font-medium text-slate-400 dark:text-slate-500">
+                <div className="flex items-center justify-center gap-1.5 pt-2 text-xs font-medium text-slate-400 dark:text-slate-500">
                   <Lock className="h-3.5 w-3.5 text-slate-400" />
                   <span>Your data is secure</span>
                 </div>

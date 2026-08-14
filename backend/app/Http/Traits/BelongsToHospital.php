@@ -18,16 +18,51 @@ trait BelongsToHospital
     }
 
     /**
-     * Boot the trait to apply the global scope anonymously.
+     * Resolve the active hospital ID from auth user, request header, or request parameter.
+     */
+    public static function getActiveHospitalId(): ?int
+    {
+        if (Auth::hasUser()) {
+            $user = Auth::user();
+            if (!empty($user->hospital_id)) {
+                return (int) $user->hospital_id;
+            }
+        }
+
+        if (function_exists('request') && request()) {
+            $reqHospitalId = request()->user()?->hospital_id 
+                ?? request()->header('X-Hospital-ID')
+                ?? request()->query('hospital_id')
+                ?? request()->input('hospital_id');
+
+            if (!empty($reqHospitalId)) {
+                return (int) $reqHospitalId;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Boot the trait to apply the global scope and auto-inject hospital_id on creation.
      */
     protected static function bootBelongsToHospital(): void
     {
-        static::addGlobalScope('tenant', function (Builder $builder) {
-            if (Auth::hasUser()) {
-                $user = Auth::user();
-                if ($user->hospital_id) {
-                    $builder->where($builder->getModel()->getTable() . '.hospital_id', $user->hospital_id);
+        // 1. Auto-inject hospital_id on model creation if not explicitly set
+        static::creating(function ($model) {
+            if (empty($model->hospital_id)) {
+                $activeHospitalId = static::getActiveHospitalId();
+                if ($activeHospitalId) {
+                    $model->hospital_id = $activeHospitalId;
                 }
+            }
+        });
+
+        // 2. Apply multi-tenant global scope on queries
+        static::addGlobalScope('tenant', function (Builder $builder) {
+            $activeHospitalId = static::getActiveHospitalId();
+            if ($activeHospitalId) {
+                $builder->where($builder->getModel()->getTable() . '.hospital_id', $activeHospitalId);
             }
         });
     }

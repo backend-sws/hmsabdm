@@ -25,16 +25,21 @@ class DepartmentController extends Controller
     #[OA\Get(
         path: "/api/v1/departments",
         summary: "List all departments in the hospital",
-        description: "Retrieves a paginated list of all medical departments configured for the current hospital.",
+        description: "Retrieves a list of all medical departments. Supports search, filtering, and ?all=true for dropdowns.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
+    #[OA\Parameter(name: "search", in: "query", description: "Search by department name, code, or description", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "is_active", in: "query", description: "Filter by active status (true/false)", required: false, schema: new OA\Schema(type: "boolean"))]
+    #[OA\Parameter(name: "all", in: "query", description: "Set to true to fetch all departments without pagination (for form dropdowns)", required: false, schema: new OA\Schema(type: "boolean", example: true))]
+    #[OA\Parameter(name: "per_page", in: "query", description: "Number of items per page (default: 15)", required: false, schema: new OA\Schema(type: "integer", example: 15))]
+    #[OA\Parameter(name: "page", in: "query", description: "Page number", required: false, schema: new OA\Schema(type: "integer", example: 1))]
     #[OA\Response(response: 200, description: "List of departments")]
     public function index(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
-        $departments = $this->departmentService->getAll($hospitalId);
-        return $this->paginatedResponse($departments, 'List of departments');
+        $departments = $this->departmentService->getAll($hospitalId, $request);
+        return $this->paginatedOrSuccessResponse($departments, 'List of departments');
     }
 
     #[OA\Post(

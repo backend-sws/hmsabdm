@@ -25,11 +25,16 @@ class OpdController extends Controller
     #[OA\Get(
         path: "/api/v1/opd/queue",
         summary: "Get today's OPD queue for a doctor",
-        description: "Fetches the list of all patients assigned to a specific doctor for today's date.",
+        description: "Fetches the list of all patients assigned to a specific doctor for today's date. Supports status filtering and patient search.",
         security: [["bearerAuth" => []]],
         tags: ["5. OPD (Doctor)"]
     )]
-    #[OA\Parameter(name: "doctor_id", in: "query", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "doctor_id", in: "query", description: "ID of the doctor", required: true, schema: new OA\Schema(type: "integer", example: 1))]
+    #[OA\Parameter(name: "status", in: "query", description: "Filter by status: waiting, called, in_consultation, done, cancelled, or all", required: false, schema: new OA\Schema(type: "string", example: "waiting"))]
+    #[OA\Parameter(name: "search", in: "query", description: "Search by patient name, mobile, ABHA number, or token", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "all", in: "query", description: "Set to true to fetch full queue without pagination", required: false, schema: new OA\Schema(type: "boolean", example: false))]
+    #[OA\Parameter(name: "per_page", in: "query", description: "Number of items per page (default: 15)", required: false, schema: new OA\Schema(type: "integer", example: 15))]
+    #[OA\Parameter(name: "page", in: "query", description: "Page number", required: false, schema: new OA\Schema(type: "integer", example: 1))]
     #[OA\Response(response: 200, description: "List of patients in today's queue")]
     public function todayQueue(Request $request)
     {
@@ -38,9 +43,9 @@ class OpdController extends Controller
         ]);
 
         $hospitalId = $this->getHospitalId($request);
-        $queue = $this->opdService->getTodayQueue($hospitalId, $request->doctor_id);
+        $queue = $this->opdService->getTodayQueue($hospitalId, $request->doctor_id, $request);
         
-        return $this->paginatedResponse($queue, 'Today\'s OPD Queue');
+        return $this->paginatedOrSuccessResponse($queue, 'Today\'s OPD Queue');
     }
 
     #[OA\Post(
