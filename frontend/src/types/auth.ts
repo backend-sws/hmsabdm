@@ -10,6 +10,7 @@ export interface User {
   id: string | number
   name: string
   email: string
+  username?: string
   role?: UserRole
   roles?: string[]
   hospital_id?: string | number | null
@@ -20,7 +21,10 @@ export interface User {
 }
 
 export interface LoginCredentials {
-  email: string
+  login_id?: string
+  email?: string
+  username?: string
+  userId?: string
   password: string
   role?: UserRole
   rememberMe?: boolean

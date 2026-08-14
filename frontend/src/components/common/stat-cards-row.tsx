@@ -6,7 +6,7 @@ export interface StatItem {
   value: string | number
   description?: string
   icon?: React.ReactNode
-  colorScheme?: "blue" | "emerald" | "purple" | "rose" | "cyan"
+  colorScheme?: "blue" | "emerald" | "purple" | "rose" | "cyan" | "amber"
 }
 
 interface StatCardsRowProps {
@@ -41,6 +41,7 @@ export const StatCardsRow: React.FC<StatCardsRowProps> = ({
       "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
     rose: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400",
     cyan: "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400",
+    amber: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
   }
 
   return (

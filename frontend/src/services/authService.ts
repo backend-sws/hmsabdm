@@ -32,6 +32,7 @@ function normalizeUser(rawUser: any): User {
     id: rawUser.id,
     name: rawUser.name || "User",
     email: rawUser.email,
+    username: rawUser.username,
     role: primaryRole,
     roles: rolesArray,
     hospitalId: rawUser.hospital_id || rawUser.hospitalId || null,
@@ -40,10 +41,13 @@ function normalizeUser(rawUser: any): User {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    const loginId = credentials.login_id || credentials.username || credentials.userId || credentials.email || ""
     const response = await apiClient<any>("/login", {
       method: "POST",
       body: JSON.stringify({
-        email: credentials.email,
+        login_id: loginId,
+        email: loginId,
+        username: loginId,
         password: credentials.password,
       }),
     })
