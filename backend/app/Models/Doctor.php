@@ -19,6 +19,13 @@ class Doctor extends Model
         'created_at', 'updated_at', 'user_id', 'hpr_id'
     ];
 
+    protected $appends = ['username'];
+
+    public function getUsernameAttribute()
+    {
+        return $this->user?->username;
+    }
+
     public function department()
     {
         return $this->belongsTo(Department::class);

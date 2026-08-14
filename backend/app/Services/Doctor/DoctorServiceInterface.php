@@ -4,9 +4,9 @@ namespace App\Services\Doctor;
 
 interface DoctorServiceInterface
 {
-    public function getAll(int $hospitalId);
+    public function getAll(int $hospitalId, $request = null);
     
-    public function getAvailableToday(int $hospitalId);
+    public function getAvailableToday(int $hospitalId, $request = null);
 
     public function create(int $hospitalId, array $data): array;
     

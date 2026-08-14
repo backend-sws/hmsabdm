@@ -29,9 +29,9 @@ class AuthController extends Controller
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ["email", "password"],
+            required: ["login_id", "password"],
             properties: [
-                new OA\Property(property: "email", type: "string", format: "email", example: "superadmin@hms.com"),
+                new OA\Property(property: "login_id", type: "string", example: "superadmin@hms.com or DR-SMITH-001"),
                 new OA\Property(property: "password", type: "string", format: "password", example: "password")
             ]
         )
@@ -40,10 +40,17 @@ class AuthController extends Controller
     #[OA\Response(response: 422, description: "Validation Error")]
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
+        $request->validate([
+            'login_id' => 'required|string',
             'password' => 'required'
         ]);
+
+        $loginType = filter_var($request->login_id, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
+        $credentials = [
+            $loginType => $request->login_id,
+            'password' => $request->password
+        ];
 
         $data = $this->authService->login($credentials);
         

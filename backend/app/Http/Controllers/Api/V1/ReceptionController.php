@@ -29,16 +29,20 @@ class ReceptionController extends Controller
     #[OA\Get(
         path: "/api/v1/reception/scan-and-share/queues",
         summary: "List all patients waiting in queue from Scan & Share",
-        description: "Fetches a list of patients who have scanned the hospital's QR code and are waiting to be registered.",
+        description: "Fetches a list of patients who have scanned the hospital's QR code and are waiting to be registered. Supports patient search.",
         security: [["bearerAuth" => []]],
         tags: ["4. Reception"]
     )]
+    #[OA\Parameter(name: "search", in: "query", description: "Search by patient name, mobile, or token", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "all", in: "query", description: "Set to true to fetch all queue records without pagination", required: false, schema: new OA\Schema(type: "boolean", example: false))]
+    #[OA\Parameter(name: "per_page", in: "query", description: "Number of items per page (default: 15)", required: false, schema: new OA\Schema(type: "integer", example: 15))]
+    #[OA\Parameter(name: "page", in: "query", description: "Page number", required: false, schema: new OA\Schema(type: "integer", example: 1))]
     #[OA\Response(response: 200, description: "List of waiting queues")]
     public function getWaitingQueues(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
-        $queues = $this->receptionService->getWaitingQueues($hospitalId);
-        return $this->paginatedResponse($queues, 'List of waiting queues');
+        $queues = $this->receptionService->getWaitingQueues($hospitalId, $request);
+        return $this->paginatedOrSuccessResponse($queues, 'List of waiting queues');
     }
 
     #[OA\Post(
@@ -73,16 +77,20 @@ class ReceptionController extends Controller
     #[OA\Get(
         path: "/api/v1/reception/departments",
         summary: "Get all departments with active doctors",
-        description: "Used in the reception dropdowns to select a department and doctor for assigning an OPD visit.",
+        description: "Used in the reception dropdowns to select a department and doctor for assigning an OPD visit. Returns all active records by default for easy dropdown selection.",
         security: [["bearerAuth" => []]],
         tags: ["4. Reception"]
     )]
+    #[OA\Parameter(name: "search", in: "query", description: "Search by department name or code", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "all", in: "query", description: "Set to true to fetch all departments without pagination", required: false, schema: new OA\Schema(type: "boolean", example: true))]
+    #[OA\Parameter(name: "per_page", in: "query", description: "Number of items per page (if paginating)", required: false, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "page", in: "query", description: "Page number", required: false, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Departments and doctors list")]
     public function getDepartments(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
-        $departments = $this->receptionService->getDepartmentsWithDoctors($hospitalId);
-        return $this->paginatedResponse($departments, 'Departments and doctors list');
+        $departments = $this->receptionService->getDepartmentsWithDoctors($hospitalId, $request);
+        return $this->paginatedOrSuccessResponse($departments, 'Departments and doctors list');
     }
 
     #[OA\Post(

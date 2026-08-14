@@ -7,7 +7,7 @@ interface ReceptionServiceInterface
     /**
      * Get active counter queues waiting for confirmation (Scan & Share)
      */
-    public function getWaitingQueues(int $hospitalId);
+    public function getWaitingQueues(int $hospitalId, $request = null);
 
     /**
      * Find a specific queue entry by its link token
@@ -17,7 +17,7 @@ interface ReceptionServiceInterface
     /**
      * Get all active departments with their active doctors
      */
-    public function getDepartmentsWithDoctors(int $hospitalId);
+    public function getDepartmentsWithDoctors(int $hospitalId, $request = null);
 
     /**
      * Register a patient manually (without ABHA or if ABHA creation failed)

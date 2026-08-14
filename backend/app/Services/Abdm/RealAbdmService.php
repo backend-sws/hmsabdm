@@ -281,19 +281,39 @@ class RealAbdmService implements AbdmServiceInterface
             throw AbdmApiException::fromResponse($responseData ?? ['message' => 'Failed to verify Aadhaar OTP']);
         }
 
+        // Check if ABDM returned an already enrolled ABHA user
+        $jwtToken = $responseData['token'] ?? $responseData['jwtResponse'] ?? null;
+        if ($jwtToken) {
+            $jwtPayload = $this->decodeJwtPayload($jwtToken);
+            if ($jwtPayload) {
+                $responseData['hasExistingAbha'] = !empty($jwtPayload['preferredAbhaAddress']);
+                $responseData['preferredAbhaAddress'] = $jwtPayload['preferredAbhaAddress'] ?? null;
+                $responseData['abhaNumber'] = $jwtPayload['abhaNumber'] ?? null;
+            }
+        }
+
         return $responseData;
     }
 
     public function getProfile(string $token): array
     {
-        $response = Http::withToken($token)
-            ->withHeaders([
-                'X-CM-ID' => 'sbx'
-            ])
-            ->get("{$this->abhaUrl}/v3/profile/account");
+        $headers = $this->getGatewayHeaders();
+        $bearerToken = str_starts_with($token, 'Bearer ') ? $token : "Bearer {$token}";
+        $headers['X-Token'] = $bearerToken;
+        $headers['X-token'] = $bearerToken;
+        $headers['T-Token'] = $bearerToken;
+        $headers['T-token'] = $bearerToken;
 
-        if ($response->failed()) {
-            throw AbdmApiException::fromResponse($response->json() ?? ['message' => 'Failed to fetch profile']);
+        try {
+            $response = $this->httpClient()
+                ->withHeaders($headers)
+                ->get("{$this->abhaUrl}/v3/profile/account");
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+        }
+
+        if (!$response || $response->failed()) {
+            throw AbdmApiException::fromResponse($response ? $response->json() : ['message' => 'Failed to fetch profile']);
         }
 
         return $response->json();
@@ -311,6 +331,7 @@ class RealAbdmService implements AbdmServiceInterface
             $response = $this->httpClient()
                 ->withHeaders($this->getGatewayHeaders())
                 ->post("{$this->abhaUrl}/v3/enrollment/request/otp", [
+                    'txnId' => $txnId,
                     'scope' => $scopes,
                     'loginHint' => 'mobile',
                     'loginId' => $this->encryptData($mobile),
@@ -343,7 +364,7 @@ class RealAbdmService implements AbdmServiceInterface
         try {
             $response = $this->httpClient()
                 ->withHeaders($this->getGatewayHeaders())
-                ->post("{$this->abhaUrl}/v3/enrollment/enrol/auth/byAbdm", $payload);
+                ->post("{$this->abhaUrl}/v3/enrollment/auth/byAbdm", $payload);
         } catch (\Illuminate\Http\Client\RequestException $e) {
             $response = $e->response;
         }
@@ -359,6 +380,9 @@ class RealAbdmService implements AbdmServiceInterface
     {
         $headers = $this->getGatewayHeaders();
         $headers['X-Token'] = "Bearer {$token}";
+        $headers['Transaction_Id'] = $txnId;
+
+        $jwtPayload = $this->decodeJwtPayload($token);
 
         try {
             $response = $this->httpClient()
@@ -368,11 +392,29 @@ class RealAbdmService implements AbdmServiceInterface
             $response = $e->response;
         }
 
-        if ($response->failed()) {
-            throw AbdmApiException::fromResponse($response->json() ?? ['message' => 'Failed to fetch suggestions']);
+        if ($response && $response->successful()) {
+            return $response->json();
         }
 
-        return $response->json();
+        // Edge Case: If ABDM returns error (e.g. ABDM-1220) because ABHA already exists,
+        // extract the existing preferred address from the transaction JWT so frontend receives it seamlessly.
+        if (!empty($jwtPayload['preferredAbhaAddress'])) {
+            \Illuminate\Support\Facades\Log::info('ABDM Suggestion: User already has existing ABHA address.', [
+                'preferredAbhaAddress' => $jwtPayload['preferredAbhaAddress']
+            ]);
+
+            return [
+                'txnId' => $txnId,
+                'abhaAddressList' => [$jwtPayload['preferredAbhaAddress']],
+                'preferredAbhaAddress' => $jwtPayload['preferredAbhaAddress'],
+                'abhaNumber' => $jwtPayload['abhaNumber'] ?? null,
+                'hasExistingAbha' => true,
+                'message' => 'ABHA address already exists for this Aadhaar'
+            ];
+        }
+
+        $errorData = $response ? $response->json() : ['message' => 'Failed to fetch suggestions'];
+        throw AbdmApiException::fromResponse($errorData);
     }
 
     public function createAbhaAddress(string $txnId, string $abhaAddress, string $token): array
@@ -380,22 +422,36 @@ class RealAbdmService implements AbdmServiceInterface
         $headers = $this->getGatewayHeaders();
         $headers['X-Token'] = "Bearer {$token}";
 
+        $jwtPayload = $this->decodeJwtPayload($token);
+
         try {
             $response = $this->httpClient()
                 ->withHeaders($headers)
                 ->post("{$this->abhaUrl}/v3/enrollment/enrol/abha-address", [
-                    'transactionId' => $txnId,
-                    'abhaAddress' => $abhaAddress
+                    'txnId' => $txnId,
+                    'abhaAddress' => $abhaAddress,
+                    'preferred' => 1
                 ]);
         } catch (\Illuminate\Http\Client\RequestException $e) {
             $response = $e->response;
         }
 
-        if ($response->failed()) {
-            throw AbdmApiException::fromResponse($response->json() ?? ['message' => 'Failed to create ABHA Address']);
+        if ($response && $response->successful()) {
+            return $response->json();
         }
 
-        return $response->json();
+        // Edge Case: If already created with this address
+        if (!empty($jwtPayload['preferredAbhaAddress']) && $jwtPayload['preferredAbhaAddress'] === $abhaAddress) {
+            return [
+                'txnId' => $txnId,
+                'abhaAddress' => $abhaAddress,
+                'alreadyAssigned' => true,
+                'message' => 'ABHA address is already assigned to this account'
+            ];
+        }
+
+        $errorData = $response ? $response->json() : ['message' => 'Failed to create ABHA Address'];
+        throw AbdmApiException::fromResponse($errorData);
     }
 
     public function searchAbha(string $mobile): array
@@ -417,14 +473,22 @@ class RealAbdmService implements AbdmServiceInterface
     public function downloadAbhaCard(string $token): array
     {
         $headers = $this->getGatewayHeaders();
-        $headers['X-Token'] = "Bearer {$token}";
+        $bearerToken = str_starts_with($token, 'Bearer ') ? $token : "Bearer {$token}";
+        $headers['X-Token'] = $bearerToken;
+        $headers['X-token'] = $bearerToken;
+        $headers['T-Token'] = $bearerToken;
+        $headers['T-token'] = $bearerToken;
 
-        $response = $this->httpClient()
-            ->withHeaders($headers)
-            ->get("{$this->abhaUrl}/v3/profile/account/abha-card");
+        try {
+            $response = $this->httpClient()
+                ->withHeaders($headers)
+                ->get("{$this->abhaUrl}/v3/profile/account/abha-card");
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+        }
 
-        if ($response->failed()) {
-            throw AbdmApiException::fromResponse($response->json() ?? ['message' => 'Failed to download ABHA card']);
+        if (!$response || $response->failed()) {
+            throw AbdmApiException::fromResponse($response ? $response->json() : ['message' => 'Failed to download ABHA card']);
         }
 
         return ['data' => base64_encode($response->body())];
@@ -433,16 +497,37 @@ class RealAbdmService implements AbdmServiceInterface
     public function downloadQrCode(string $token): array
     {
         $headers = $this->getGatewayHeaders();
-        $headers['X-Token'] = "Bearer {$token}";
+        $bearerToken = str_starts_with($token, 'Bearer ') ? $token : "Bearer {$token}";
+        $headers['X-Token'] = $bearerToken;
+        $headers['X-token'] = $bearerToken;
+        $headers['T-Token'] = $bearerToken;
+        $headers['T-token'] = $bearerToken;
 
-        $response = $this->httpClient()
-            ->withHeaders($headers)
-            ->get("{$this->abhaUrl}/v3/profile/account/qr-code");
+        try {
+            $response = $this->httpClient()
+                ->withHeaders($headers)
+                ->get("{$this->abhaUrl}/v3/profile/account/qr-code");
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+        }
 
-        if ($response->failed()) {
-            throw AbdmApiException::fromResponse($response->json() ?? ['message' => 'Failed to download QR code']);
+        if (!$response || $response->failed()) {
+            throw AbdmApiException::fromResponse($response ? $response->json() : ['message' => 'Failed to download QR code']);
         }
 
         return ['data' => base64_encode($response->body())];
+    }
+
+    /**
+     * Decode JWT Payload without cryptographic verification to extract enrollment state
+     */
+    protected function decodeJwtPayload(string $jwt): ?array
+    {
+        $parts = explode('.', $jwt);
+        if (count($parts) >= 2) {
+            $payload = base64_decode(strtr($parts[1], '-_', '+/'));
+            return json_decode($payload, true);
+        }
+        return null;
     }
 }

@@ -6,24 +6,38 @@ use App\Models\CounterQueue;
 use App\Models\Department;
 use App\Models\OpdVisit;
 use App\Models\Patient;
+use App\Http\Traits\CanFilterAndPaginate;
 use Illuminate\Support\Facades\DB;
 
 class ReceptionService implements ReceptionServiceInterface
 {
-    public function getWaitingQueues(int $hospitalId)
+    use CanFilterAndPaginate;
+
+    public function getWaitingQueues(int $hospitalId, $request = null)
     {
-        return CounterQueue::where('hospital_id', $hospitalId)
-            ->where('status', 'waiting_confirmation')
+        $req = $request ?? request();
+        $query = CounterQueue::where('status', 'waiting_confirmation')
             ->where('expires_at', '>', now())
             ->with('patient')
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->orderBy('created_at', 'desc');
+
+        if ($req && $req->filled('search')) {
+            $search = $req->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('link_token', 'like', "%{$search}%")
+                  ->orWhereHas('patient', function ($pq) use ($search) {
+                      $pq->where('name', 'ilike', "%{$search}%")
+                         ->orWhere('mobile', 'ilike', "%{$search}%");
+                  });
+            });
+        }
+
+        return $this->applyPaginationOrAll($query, $req);
     }
 
     public function getQueueByToken(int $hospitalId, string $token): array
     {
-        $queue = CounterQueue::where('hospital_id', $hospitalId)
-            ->where('link_token', $token)
+        $queue = CounterQueue::where('link_token', $token)
             ->with('patient')
             ->first();
 
@@ -39,27 +53,42 @@ class ReceptionService implements ReceptionServiceInterface
         return $queue->toArray();
     }
 
-    public function getDepartmentsWithDoctors(int $hospitalId)
+    public function getDepartmentsWithDoctors(int $hospitalId, $request = null)
     {
-        return Department::where('hospital_id', $hospitalId)
-            ->where('is_active', true)
+        $req = $request ?? request();
+        $query = Department::where('is_active', true)
             ->with(['doctors' => function ($q) {
                 $q->where('is_active', true);
-            }])
-            ->paginate(15);
+            }]);
+
+        if ($req && $req->filled('search')) {
+            $search = $req->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('code', 'ilike', "%{$search}%");
+            });
+        }
+
+        // Dropdowns for departments+doctors typically want all records unless paginated explicitly
+        if ($req && !$req->has('page') && !$req->has('per_page')) {
+            return $query->get();
+        }
+
+        return $this->applyPaginationOrAll($query, $req);
     }
 
     public function registerPatient(int $hospitalId, array $data): array
     {
-        $data['hospital_id'] = $hospitalId;
+        if (empty($data['hospital_id']) && $hospitalId) {
+            $data['hospital_id'] = $hospitalId;
+        }
         return Patient::create($data)->toArray();
     }
 
     public function confirmQueue(int $hospitalId, int $queueId, int $doctorId, int $departmentId, ?int $appointmentTypeId = null): array
     {
         return DB::transaction(function () use ($hospitalId, $queueId, $doctorId, $departmentId, $appointmentTypeId) {
-            $queue = CounterQueue::where('hospital_id', $hospitalId)
-                ->where('id', $queueId)
+            $queue = CounterQueue::where('id', $queueId)
                 ->where('status', 'waiting_confirmation')
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -90,15 +119,13 @@ class ReceptionService implements ReceptionServiceInterface
         $date = now()->toDateString();
         
         // Calculate next queue token for the doctor on this date
-        $lastToken = OpdVisit::where('hospital_id', $hospitalId)
-            ->where('doctor_id', $data['doctor_id'])
+        $lastToken = OpdVisit::where('doctor_id', $data['doctor_id'])
             ->where('visit_date', $date)
             ->max('queue_token');
 
         $nextToken = $lastToken ? $lastToken + 1 : 1;
 
-        $visit = OpdVisit::create([
-            'hospital_id' => $hospitalId,
+        $payload = [
             'patient_id' => $data['patient_id'],
             'doctor_id' => $data['doctor_id'],
             'department_id' => $data['department_id'],
@@ -107,7 +134,13 @@ class ReceptionService implements ReceptionServiceInterface
             'queue_token' => $nextToken,
             'status' => 'waiting',
             'chief_complaint' => $data['chief_complaint'] ?? null,
-        ]);
+        ];
+
+        if (!empty($data['hospital_id']) || $hospitalId) {
+            $payload['hospital_id'] = $data['hospital_id'] ?? $hospitalId;
+        }
+
+        $visit = OpdVisit::create($payload);
 
         return $visit->toArray();
     }

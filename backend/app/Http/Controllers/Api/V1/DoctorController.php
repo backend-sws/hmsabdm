@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Traits\HasApiResponse;
 use App\Services\Doctor\DoctorServiceInterface;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use App\Models\Doctor;
 
 use OpenApi\Attributes as OA;
 
@@ -25,31 +27,42 @@ class DoctorController extends Controller
     #[OA\Get(
         path: "/api/v1/doctors",
         summary: "List all doctors in the hospital",
-        description: "Retrieves a paginated list of all registered doctors across all departments.",
+        description: "Retrieves a list of all registered doctors across all departments. Supports search, department filter, active status filter, and ?all=true for dropdowns.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
+    #[OA\Parameter(name: "search", in: "query", description: "Search by doctor name, email, phone, specialization, or username", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "department_id", in: "query", description: "Filter doctors by department ID", required: false, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "is_active", in: "query", description: "Filter by active status (true/false)", required: false, schema: new OA\Schema(type: "boolean"))]
+    #[OA\Parameter(name: "all", in: "query", description: "Set to true to fetch all doctors without pagination (for form dropdowns)", required: false, schema: new OA\Schema(type: "boolean", example: true))]
+    #[OA\Parameter(name: "per_page", in: "query", description: "Number of items per page (default: 15)", required: false, schema: new OA\Schema(type: "integer", example: 15))]
+    #[OA\Parameter(name: "page", in: "query", description: "Page number", required: false, schema: new OA\Schema(type: "integer", example: 1))]
     #[OA\Response(response: 200, description: "List of doctors")]
     public function index(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
-        $doctors = $this->doctorService->getAll($hospitalId);
-        return $this->paginatedResponse($doctors, 'List of doctors');
+        $doctors = $this->doctorService->getAll($hospitalId, $request);
+        return $this->paginatedOrSuccessResponse($doctors, 'List of doctors');
     }
 
     #[OA\Get(
         path: "/api/v1/doctors/available-today",
         summary: "List doctors available today",
-        description: "Fetches a list of doctors who have an active schedule for the current day of the week.",
+        description: "Fetches a list of doctors who have an active schedule for the current day of the week. Supports search and department filtering.",
         security: [["bearerAuth" => []]],
         tags: ["7. Departments & Doctors"]
     )]
+    #[OA\Parameter(name: "search", in: "query", description: "Search by doctor name, specialization, or phone", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "department_id", in: "query", description: "Filter doctors by department ID", required: false, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "all", in: "query", description: "Set to true to fetch all available doctors without pagination (for dropdowns)", required: false, schema: new OA\Schema(type: "boolean", example: true))]
+    #[OA\Parameter(name: "per_page", in: "query", description: "Number of items per page (default: 15)", required: false, schema: new OA\Schema(type: "integer", example: 15))]
+    #[OA\Parameter(name: "page", in: "query", description: "Page number", required: false, schema: new OA\Schema(type: "integer", example: 1))]
     #[OA\Response(response: 200, description: "List of doctors available today")]
     public function availableToday(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
-        $doctors = $this->doctorService->getAvailableToday($hospitalId);
-        return $this->paginatedResponse($doctors, 'List of doctors available today');
+        $doctors = $this->doctorService->getAvailableToday($hospitalId, $request);
+        return $this->paginatedOrSuccessResponse($doctors, 'List of doctors available today');
     }
 
     #[OA\Post(
@@ -64,7 +77,8 @@ class DoctorController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "department_id", type: "integer", example: 1),
-                new OA\Property(property: "user_id", type: "integer", example: 2),
+                new OA\Property(property: "username", type: "string", example: "DR-SMITH-001"),
+                new OA\Property(property: "password", type: "string", format: "password", example: "password123"),
                 new OA\Property(property: "name", type: "string", example: "Dr. Smith"),
                 new OA\Property(property: "specialization", type: "string", example: "Cardiologist"),
                 new OA\Property(property: "qualification", type: "string", example: "MBBS, MD"),
@@ -81,12 +95,13 @@ class DoctorController extends Controller
     {
         $validated = $request->validate([
             'department_id' => 'required|integer|exists:departments,id',
-            'user_id' => 'nullable|integer|exists:users,id',
+            'username' => 'nullable|string|max:255|unique:users,username',
+            'password' => 'required|string|min:6',
             'name' => 'required|string|max:255',
             'specialization' => 'nullable|string|max:255',
             'qualification' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:15',
-            'email' => 'nullable|email|max:255',
+            'email' => 'nullable|email|max:255|unique:users,email',
             'hpr_id' => 'nullable|string|max:50',
             'consultation_time' => 'integer',
             'is_active' => 'boolean',
@@ -111,7 +126,8 @@ class DoctorController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "department_id", type: "integer", example: 1),
-                new OA\Property(property: "user_id", type: "integer", example: 2),
+                new OA\Property(property: "username", type: "string", example: "DR-SMITH-001"),
+                new OA\Property(property: "password", type: "string", format: "password", example: "password123"),
                 new OA\Property(property: "name", type: "string", example: "Dr. Smith"),
                 new OA\Property(property: "specialization", type: "string", example: "Cardiologist"),
                 new OA\Property(property: "qualification", type: "string", example: "MBBS, MD"),
@@ -126,20 +142,23 @@ class DoctorController extends Controller
     #[OA\Response(response: 200, description: "Doctor updated")]
     public function update(Request $request, $id)
     {
+        $hospitalId = $this->getHospitalId($request);
+        $doctor = Doctor::where('hospital_id', $hospitalId)->findOrFail($id);
+
         $validated = $request->validate([
             'department_id' => 'sometimes|integer|exists:departments,id',
-            'user_id' => 'nullable|integer|exists:users,id',
+            'username' => ['nullable', 'string', 'max:255', Rule::unique('users', 'username')->ignore($doctor->user_id)],
+            'password' => 'nullable|string|min:6',
             'name' => 'sometimes|string|max:255',
             'specialization' => 'nullable|string|max:255',
             'qualification' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:15',
-            'email' => 'nullable|email|max:255',
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($doctor->user_id)],
             'hpr_id' => 'nullable|string|max:50',
             'consultation_time' => 'integer',
             'is_active' => 'boolean',
         ]);
 
-        $hospitalId = $this->getHospitalId($request);
         $doctor = $this->doctorService->update($hospitalId, $id, $validated);
         
         return $this->successResponse($doctor, 'Doctor updated successfully');

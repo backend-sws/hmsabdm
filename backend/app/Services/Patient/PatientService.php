@@ -3,25 +3,41 @@
 namespace App\Services\Patient;
 
 use App\Models\Patient;
-use Illuminate\Database\Eloquent\Collection;
+use App\Http\Traits\CanFilterAndPaginate;
 use Spatie\QueryBuilder\QueryBuilder;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Spatie\QueryBuilder\AllowedFilter;
 
 class PatientService implements PatientServiceInterface
 {
+    use CanFilterAndPaginate;
+
     /**
      * Get a list of all patients with sorting, filtering, and pagination.
-     *
-     * @return LengthAwarePaginator|Collection
      */
-    public function getAllPatients()
+    public function getAllPatients($request = null)
     {
-        return QueryBuilder::for(Patient::class)
-            ->allowedFilters('name', 'phone', 'abha_number')
-            ->allowedSorts('name', 'created_at')
-            ->defaultSort('-created_at')
-            ->paginate(request()->query('per_page', 15))
-            ->appends(request()->query());
+        $req = $request ?? request();
+
+        $query = QueryBuilder::for(Patient::class)
+            ->allowedFilters([
+                'name', 'mobile', 'email', 'abha_number', 'abha_address', 'gender',
+                AllowedFilter::partial('search', 'name') // fallback
+            ])
+            ->allowedSorts('name', 'created_at', 'dob')
+            ->defaultSort('-created_at');
+
+        if ($req && $req->filled('search')) {
+            $search = $req->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('mobile', 'ilike', "%{$search}%")
+                  ->orWhere('email', 'ilike', "%{$search}%")
+                  ->orWhere('abha_number', 'ilike', "%{$search}%")
+                  ->orWhere('abha_address', 'ilike', "%{$search}%");
+            });
+        }
+
+        return $this->applyPaginationOrAll($query, $req);
     }
 
     /**
