@@ -291,7 +291,7 @@ export const LoginPage: React.FC = () => {
                 </Button>
 
                 {/* Demo Quick Logins */}
-                <div className="pt-2">
+                {/* <div className="pt-2">
                   <p className="mb-2 text-center text-[11px] font-medium text-slate-400 dark:text-slate-500">
                     Quick Fill Demo Accounts:
                   </p>
@@ -299,8 +299,12 @@ export const LoginPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        setValue("login_id", "superadmin", { shouldValidate: true })
-                        setValue("password", "password", { shouldValidate: true })
+                        setValue("login_id", "superadmin", {
+                          shouldValidate: true,
+                        })
+                        setValue("password", "password", {
+                          shouldValidate: true,
+                        })
                       }}
                       className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50/80 px-2 py-1.5 text-center text-[11px] font-medium text-slate-700 transition hover:border-[#0D9488] hover:bg-teal-50/50 hover:text-[#0D9488] dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
                     >
@@ -310,7 +314,9 @@ export const LoginPage: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setValue("login_id", "admin", { shouldValidate: true })
-                        setValue("password", "password", { shouldValidate: true })
+                        setValue("password", "password", {
+                          shouldValidate: true,
+                        })
                       }}
                       className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50/80 px-2 py-1.5 text-center text-[11px] font-medium text-slate-700 transition hover:border-[#0D9488] hover:bg-teal-50/50 hover:text-[#0D9488] dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
                     >
@@ -319,15 +325,19 @@ export const LoginPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        setValue("login_id", "reception", { shouldValidate: true })
-                        setValue("password", "password", { shouldValidate: true })
+                        setValue("login_id", "reception", {
+                          shouldValidate: true,
+                        })
+                        setValue("password", "password", {
+                          shouldValidate: true,
+                        })
                       }}
                       className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50/80 px-2 py-1.5 text-center text-[11px] font-medium text-slate-700 transition hover:border-[#0D9488] hover:bg-teal-50/50 hover:text-[#0D9488] dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
                     >
                       Receptionist
                     </button>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Data Security Footer Badge */}
                 <div className="flex items-center justify-center gap-1.5 pt-2 text-xs font-medium text-slate-400 dark:text-slate-500">
