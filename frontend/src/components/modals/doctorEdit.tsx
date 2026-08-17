@@ -182,8 +182,8 @@ export default function DoctorEdit({ open, onClose, doctor }: DoctorEditProps) {
       queryClient.invalidateQueries({ queryKey: queryKeys.doctors.all })
       onClose(false)
     },
-    onError: (err: any) => {
-      toast.error(err.message || "Failed to save doctor details")
+    meta: {
+      errorTitle: "Failed to save doctor details",
     },
   })
 

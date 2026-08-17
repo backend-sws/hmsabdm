@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query"
+import { Toaster } from "sonner"
+import { toastApiError } from "@/lib/errorHandler"
 import { AuthProvider } from "@/context/AuthContext"
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute"
 import { AppLayout } from "@/components/layout/AppLayout"
@@ -20,11 +22,30 @@ const queryClient = new QueryClient({
       retry: 1,
     },
   },
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      // Auto-toast query errors only if opted-in via meta config
+      if (query.meta?.showToast) {
+        toastApiError(error, (query.meta?.errorTitle as string) || "Failed to load data")
+      }
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, variables, context, mutation) => {
+      // Auto-toast mutation errors by default unless marked silent
+      if (mutation.meta?.silent) {
+        return
+      }
+      const errorTitle = (mutation.meta?.errorTitle as string) || "Operation failed"
+      toastApiError(error, errorTitle)
+    },
+  }),
 })
 
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster richColors position="top-right" closeButton />
       <AuthProvider>
         <BrowserRouter>
           <Routes>

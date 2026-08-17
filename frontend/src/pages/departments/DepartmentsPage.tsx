@@ -50,8 +50,8 @@ export function DepartmentsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.departments.all })
       deleteDisclosure.onClose()
     },
-    onError: (err: any) => {
-      toast.error(err.message || "Failed to delete department")
+    meta: {
+      errorTitle: "Failed to delete department",
     },
   })
 

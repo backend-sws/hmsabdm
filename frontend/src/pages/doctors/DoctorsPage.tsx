@@ -73,8 +73,8 @@ export function DoctorsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.doctors.all })
       deleteDisclosure.onClose()
     },
-    onError: (err: any) => {
-      toast.error(err.message || "Failed to delete doctor profile")
+    meta: {
+      errorTitle: "Failed to delete doctor profile",
     },
   })
 
