@@ -67,21 +67,34 @@ class AbdmWebhookController extends Controller
                 return response()->json(['error' => 'Invalid payload'], 400);
             }
 
-            // Find or Create Patient based on ABHA
-            // Using a system default hospital ID for webhook parsing, or extracting from payload
-            $hospitalId = 1; // Assuming Tenant Middleware or payload contains counter mapping
+            // Resolve Hospital dynamically from incoming hipCode / abdm_hip_id
+            $hipCode = $request->input('hipCode') ?? $request->input('hip_id') ?? $request->input('facilityId');
+            $hospital = null;
+            if ($hipCode) {
+                $hospital = \App\Models\Hospital::where('abdm_hip_id', $hipCode)
+                    ->orWhere('code', $hipCode)
+                    ->first();
+            }
+            if (!$hospital) {
+                $hospital = \App\Models\Hospital::first();
+            }
+            $hospitalId = $hospital?->id ?? 1;
 
-            $patient = Patient::where('abha_number', $abhaNumber)->first();
+            $patient = Patient::where('abha_number', $abhaNumber)
+                ->where('hospital_id', $hospitalId)
+                ->first();
             
             if (!$patient) {
                 $patient = Patient::create([
-                    'hospital_id' => $hospitalId,
-                    'name' => $payload['name'] ?? 'Unknown',
-                    'mobile' => $mobile,
-                    'abha_number' => $abhaNumber,
+                    'hospital_id'  => $hospitalId,
+                    'name'         => $payload['name'] ?? 'Unknown',
+                    'mobile'       => $mobile,
+                    'abha_number'  => $abhaNumber,
                     'abha_address' => $abhaAddress,
-                    'gender' => isset($payload['gender']) ? strtoupper(substr($payload['gender'], 0, 1)) : 'O',
-                    'dob' => isset($payload['yearOfBirth']) ? "{$payload['yearOfBirth']}-01-01" : null,
+                    'gender'       => isset($payload['gender']) ? strtoupper(substr($payload['gender'], 0, 1)) : 'O',
+                    'dob'          => isset($payload['yearOfBirth']) ? "{$payload['yearOfBirth']}-01-01" : null,
+                    'address'      => $payload['address'] ?? null,
+                    'pincode'      => $payload['pincode'] ?? null,
                 ]);
             }
 

@@ -1170,7 +1170,7 @@
         "/api/v1/hospitals": {
             "get": {
                 "tags": [
-                    "7. Hospitals & Admin"
+                    "8. Super Admin (Platform)"
                 ],
                 "summary": "List all registered Hospitals",
                 "description": "Super Admin API to retrieve a paginated list of all hospitals currently onboarded to the system.",
@@ -1188,7 +1188,7 @@
             },
             "post": {
                 "tags": [
-                    "7. Hospitals & Admin"
+                    "8. Super Admin (Platform)"
                 ],
                 "summary": "Register a new Hospital & create default Admin",
                 "description": "Super Admin API to onboard a new hospital into the system and set up its initial Admin account.",
@@ -1271,7 +1271,7 @@
         "/api/v1/hospitals/{id}": {
             "get": {
                 "tags": [
-                    "7. Hospitals & Admin"
+                    "8. Super Admin (Platform)"
                 ],
                 "summary": "Get specific Hospital details",
                 "operationId": "978f234bf487cdc9c878ce520ce5917c",
@@ -1298,7 +1298,7 @@
             },
             "put": {
                 "tags": [
-                    "7. Hospitals & Admin"
+                    "8. Super Admin (Platform)"
                 ],
                 "summary": "Update Hospital details",
                 "operationId": "471d2ffdb43decb5c8e3fd5e283cdb85",
@@ -1325,7 +1325,7 @@
             },
             "delete": {
                 "tags": [
-                    "7. Hospitals & Admin"
+                    "8. Super Admin (Platform)"
                 ],
                 "summary": "Delete a Hospital",
                 "operationId": "1813cf095b22d4aaab318814a11f973a",
@@ -1342,6 +1342,164 @@
                 "responses": {
                     "200": {
                         "description": "Hospital deleted successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hospital/settings/uhid": {
+            "get": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Get hospital UHID sequence format and settings",
+                "description": "Hospital Admin API: Retrieves the hospital's configured UHID format, prefix, sequence padding, reset rules, and live preview sample.",
+                "operationId": "2c20dfa98ce0082ae266a057d5c07345",
+                "responses": {
+                    "200": {
+                        "description": "UHID configuration details"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Update hospital UHID sequence format and settings",
+                "description": "Hospital Admin API: Customize patient UHID format, prefix, padding, reset frequency, and starting sequence.",
+                "operationId": "bd3ad8e1920c08317ff8bc1156b11da2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "uhid_prefix": {
+                                        "description": "Prefix string (e.g. UHID, HOSP, PAT, CITY)",
+                                        "type": "string",
+                                        "example": "CITY"
+                                    },
+                                    "uhid_format": {
+                                        "description": "Format pattern using placeholders",
+                                        "type": "string",
+                                        "example": "{PREFIX}-{YEAR}-{SEQ}"
+                                    },
+                                    "uhid_padding": {
+                                        "description": "Number of digits for sequence (3 to 10)",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "uhid_sequence_reset": {
+                                        "type": "string",
+                                        "example": "yearly",
+                                        "enum": [
+                                            "yearly",
+                                            "monthly",
+                                            "never"
+                                        ]
+                                    },
+                                    "uhid_next_sequence": {
+                                        "description": "Next sequence starting number",
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "UHID Configuration updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hospital/settings": {
+            "get": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Get hospital settings by group",
+                "description": "Hospital Admin API: Retrieves key-value settings for the hospital (e.g. general, billing, opd, notifications, print_template).",
+                "operationId": "e5d4e0749679f6888a4bfd23353972fe",
+                "parameters": [
+                    {
+                        "name": "group",
+                        "in": "query",
+                        "description": "Settings group name (e.g. uhid, general, billing, opd, notifications)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "general"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hospital settings"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Save key-value settings for hospital",
+                "description": "Hospital Admin API: Stores or updates arbitrary key-value settings under a specified group (general, billing, notifications, etc.).",
+                "operationId": "d0f5e30078efc803706e471547e2dfd6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "group",
+                                    "settings"
+                                ],
+                                "properties": {
+                                    "group": {
+                                        "type": "string",
+                                        "example": "general"
+                                    },
+                                    "settings": {
+                                        "type": "object",
+                                        "example": {
+                                            "hospital_tagline": "Care with Compassion",
+                                            "emergency_contact": "102",
+                                            "currency": "INR",
+                                            "sms_enabled": true
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Settings saved"
                     }
                 },
                 "security": [
@@ -2014,7 +2172,7 @@
         "/api/v1/storage/upload-url": {
             "post": {
                 "tags": [
-                    "11. Storage"
+                    "12. Storage"
                 ],
                 "summary": "Generate a presigned URL for direct file upload to Cloudflare R2 / S3",
                 "description": "Returns a presigned URL. The frontend should make a PUT request to this URL with the raw file data (binary) to upload it directly to cloud storage without passing through the backend.",
@@ -2063,7 +2221,7 @@
         "/api/v1/storage/view-url": {
             "get": {
                 "tags": [
-                    "11. Storage"
+                    "12. Storage"
                 ],
                 "summary": "Generate a time-limited presigned URL to view a private file",
                 "description": "Returns a temporary URL (usually valid for 5-15 mins) that allows the frontend to display or download a privately stored file (like a PDF report or image).",
@@ -2701,19 +2859,23 @@
             "description": "Doctor Panel — Today's OPD Queue Management"
         },
         {
-            "name": "7. Hospitals & Admin",
-            "description": "Super Admin — Hospital Management"
+            "name": "7. Hospital Settings (Hospital Admin)",
+            "description": "Hospital Admin Panel — Configure Hospital Settings (UHID Format, General, Billing, OPD, Notifications)"
+        },
+        {
+            "name": "8. Super Admin (Platform)",
+            "description": "Super Admin Platform Management — Hospital Onboarding, Activation & Global Controls"
         },
         {
             "name": "8. Departments & Doctors",
-            "description": "Admin — Department & Doctor Setup"
+            "description": "Hospital Admin — Department & Doctor Setup"
         },
         {
             "name": "9. Patients",
             "description": "Patient Records Management"
         },
         {
-            "name": "11. Storage",
+            "name": "12. Storage",
             "description": "File Upload/Download via R2/S3"
         },
         {

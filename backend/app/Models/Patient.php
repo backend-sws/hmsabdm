@@ -11,9 +11,28 @@ class Patient extends Model
     use HasFactory, BelongsToHospital;
 
     protected $fillable = [
-        'hospital_id', 'name', 'mobile', 'abha_number', 'abha_address',
-        'dob', 'gender', 'blood_group', 'address', 'city', 'pincode'
+        'hospital_id',
+        'uhid',
+        'name',
+        'mobile',
+        'abha_number',
+        'abha_address',
+        'dob',
+        'gender',
+        'blood_group',
+        'address',
+        'city',
+        'pincode'
     ];
+
+    protected static function booted()
+    {
+        static::creating(function (Patient $patient) {
+            if (empty($patient->uhid) && !empty($patient->hospital_id)) {
+                $patient->uhid = Hospital::generateNextUhid($patient->hospital_id);
+            }
+        });
+    }
 
     public function vitals()
     {

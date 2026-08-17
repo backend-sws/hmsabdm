@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-
 use App\Http\Traits\HasApiResponse;
 use App\Models\Hospital;
 use App\Models\User;
@@ -12,12 +11,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
-
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(
-    name: "6. Hospitals & Admin",
-    description: "Super Admin — Hospital Management"
+    name: "8. Super Admin (Platform)",
+    description: "Super Admin Platform Management — Hospital Onboarding, Activation & Global Controls"
 )]
 class HospitalController extends Controller
 {
@@ -28,7 +26,7 @@ class HospitalController extends Controller
         summary: "Register a new Hospital & create default Admin",
         description: "Super Admin API to onboard a new hospital into the system and set up its initial Admin account.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Hospitals & Admin"]
+        tags: ["8. Super Admin (Platform)"]
     )]
     #[OA\RequestBody(
         required: true,
@@ -68,44 +66,56 @@ class HospitalController extends Controller
         ]);
 
         $hospital = DB::transaction(function () use ($request, $validated) {
-            $hospitalData = collect($validated)->except(['admin_name', 'admin_email', 'admin_password'])->toArray();
-            $createdHospital = Hospital::create($hospitalData);
-
-            $adminName = $request->input('admin_name') ?: ($createdHospital->name . ' Admin');
-            $adminEmail = $request->input('admin_email') ?: ($createdHospital->email ?: ('admin_' . $createdHospital->id . '@hospital.com'));
-            $plainPassword = $request->input('admin_password') ?: Str::random(10);
-
-            // Scope Spatie permission team context to new hospital
-            setPermissionsTeamId($createdHospital->id);
-
-            // Ensure Admin role exists for this hospital
-            $adminRole = Role::firstOrCreate([
-                'name' => 'Admin',
-                'guard_name' => 'sanctum',
-                'hospital_id' => $createdHospital->id,
-            ]);
-
-            // Create Hospital Admin user
-            $adminUser = User::create([
-                'name' => $adminName,
-                'email' => $adminEmail,
-                'password' => Hash::make($plainPassword),
-                'hospital_id' => $createdHospital->id,
-            ]);
-
-            $adminUser->assignRole($adminRole);
-
-            $createdHospital->admin_credentials = [
-                'id' => $adminUser->id,
-                'name' => $adminUser->name,
-                'email' => $adminUser->email,
-                'password' => $plainPassword,
+            $hospitalData = [
+                'name' => $validated['name'],
+                'code' => $validated['code'] ?? Str::upper(Str::slug($validated['name'])),
+                'address' => $validated['address'] ?? null,
+                'city' => $validated['city'] ?? null,
+                'state' => $validated['state'] ?? null,
+                'pincode' => $validated['pincode'] ?? null,
+                'abdm_hip_id' => $validated['abdm_hip_id'] ?? null,
             ];
 
-            return $createdHospital;
+            $hospital = Hospital::create($hospitalData);
+
+            if (!empty($validated['admin_email'])) {
+                $username = strtolower(explode('@', $validated['admin_email'])[0]);
+                if (User::where('username', $username)->exists()) {
+                    $username .= '_' . Str::lower(Str::random(4));
+                }
+
+                $adminUser = User::create([
+                    'hospital_id' => $hospital->id,
+                    'name' => $validated['admin_name'] ?? ($hospital->name . ' Admin'),
+                    'username' => $username,
+                    'email' => $validated['admin_email'],
+                    'password' => Hash::make($validated['admin_password'] ?? 'Admin@1234'),
+                ]);
+
+                // Create Hospital Admin Role for this specific hospital team
+                setPermissionsTeamId($hospital->id);
+                $adminRole = Role::firstOrCreate([
+                    'name' => 'Hospital Admin',
+                    'guard_name' => 'sanctum',
+                    'hospital_id' => $hospital->id
+                ]);
+
+                $adminUser->assignRole($adminRole);
+            }
+
+            return $hospital;
         });
 
-        return $this->successResponse($hospital, 'Hospital registered and Admin account created successfully', 201);
+        $responseData = $hospital->toArray();
+        if (!empty($validated['admin_email'])) {
+            $responseData['admin_credentials'] = [
+                'name'     => $validated['admin_name'] ?? ($hospital->name . ' Admin'),
+                'email'    => $validated['admin_email'],
+                'password' => $validated['admin_password'] ?? 'Admin@1234',
+            ];
+        }
+
+        return $this->createdResponse($responseData, 'Hospital registered and Admin account created successfully');
     }
 
     #[OA\Get(
@@ -113,37 +123,34 @@ class HospitalController extends Controller
         summary: "List all registered Hospitals",
         description: "Super Admin API to retrieve a paginated list of all hospitals currently onboarded to the system.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Hospitals & Admin"]
+        tags: ["8. Super Admin (Platform)"]
     )]
     #[OA\Response(response: 200, description: "List of Hospitals")]
     public function index(Request $request)
     {
+        $perPage = $request->input('per_page', 15);
+        $search = $request->input('search');
+
         $query = Hospital::query();
 
-        if ($request->filled('search')) {
-            $search = $request->input('search');
+        if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('city', 'like', "%{$search}%")
-                  ->orWhere('state', 'like', "%{$search}%")
-                  ->orWhere('abdm_hip_id', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                  ->orWhere('abdm_hip_id', 'like', "%{$search}%");
             });
         }
 
-        $perPage = (int) $request->input('limit', $request->input('per_page', 15));
-        $hospitals = $query->latest()->paginate($perPage);
+        $hospitals = $query->paginate($perPage);
 
-        return $this->paginatedResponse($hospitals, 'List of Hospitals');
+        return $this->paginatedResponse($hospitals, 'Hospitals retrieved successfully');
     }
 
     #[OA\Get(
         path: "/api/v1/hospitals/{id}",
         summary: "Get specific Hospital details",
         security: [["bearerAuth" => []]],
-        tags: ["7. Hospitals & Admin"]
+        tags: ["8. Super Admin (Platform)"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Hospital details")]
@@ -153,14 +160,15 @@ class HospitalController extends Controller
         if (!$hospital) {
             return $this->notFoundResponse('Hospital not found');
         }
-        return $this->successResponse($hospital, 'Hospital details');
+
+        return $this->successResponse($hospital, 'Hospital retrieved successfully');
     }
 
     #[OA\Put(
         path: "/api/v1/hospitals/{id}",
         summary: "Update Hospital details",
         security: [["bearerAuth" => []]],
-        tags: ["7. Hospitals & Admin"]
+        tags: ["8. Super Admin (Platform)"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Hospital updated successfully")]
@@ -173,14 +181,12 @@ class HospitalController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'code' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string',
-            'city' => 'nullable|string|max:100',
-            'state' => 'nullable|string|max:100',
-            'pincode' => 'nullable|string|max:20',
-            'abdm_hip_id' => 'nullable|string|unique:hospitals,abdm_hip_id,' . $id,
+            'code' => 'sometimes|nullable|string|max:50',
+            'address' => 'sometimes|nullable|string',
+            'city' => 'sometimes|nullable|string|max:100',
+            'state' => 'sometimes|nullable|string|max:100',
+            'pincode' => 'sometimes|nullable|string|max:20',
+            'abdm_hip_id' => 'sometimes|nullable|string|unique:hospitals,abdm_hip_id,' . $id,
         ]);
 
         $hospital->update($validated);
@@ -192,7 +198,7 @@ class HospitalController extends Controller
         path: "/api/v1/hospitals/{id}",
         summary: "Delete a Hospital",
         security: [["bearerAuth" => []]],
-        tags: ["7. Hospitals & Admin"]
+        tags: ["8. Super Admin (Platform)"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Hospital deleted successfully")]
