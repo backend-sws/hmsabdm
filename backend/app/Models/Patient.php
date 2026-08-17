@@ -25,6 +25,10 @@ class Patient extends Model
         'pincode'
     ];
 
+    protected $casts = [
+        'dob' => 'date',
+    ];
+
     protected static function booted()
     {
         static::creating(function (Patient $patient) {

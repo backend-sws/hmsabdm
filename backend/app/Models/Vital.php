@@ -14,6 +14,8 @@ class Vital extends Model
         'hospital_id',
         'patient_id',
         'opd_visit_id',
+        'ipd_admission_id',
+        'encounter_type',
         'recorded_by',
         'recorded_at',
         'temperature',
@@ -54,6 +56,11 @@ class Vital extends Model
     public function opdVisit()
     {
         return $this->belongsTo(OpdVisit::class);
+    }
+
+    public function ipdAdmission()
+    {
+        return $this->belongsTo(IpdAdmission::class);
     }
 
     public function recordedByUser()

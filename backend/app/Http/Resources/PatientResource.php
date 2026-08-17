@@ -21,7 +21,7 @@ class PatientResource extends JsonResource
             'mobile'       => $this->mobile,
             'abha_number'  => $this->abha_number,
             'abha_address' => $this->abha_address,
-            'dob'          => $this->dob ? $this->dob->format('Y-m-d') : null,
+            'dob'          => $this->dob instanceof \DateTimeInterface ? $this->dob->format('Y-m-d') : ($this->dob ?: null),
             'gender'       => $this->gender,
             'blood_group'  => $this->blood_group,
             'address'      => $this->address,
@@ -29,7 +29,7 @@ class PatientResource extends JsonResource
             'pincode'      => $this->pincode,
             'hospital_id'  => $this->hospital_id,
             'latest_vital' => $this->whenLoaded('latestVital'),
-            'created_at'   => $this->created_at?->toIso8601String(),
+            'created_at'   => $this->created_at instanceof \DateTimeInterface ? $this->created_at->toIso8601String() : ($this->created_at ?: null),
         ];
     }
 }

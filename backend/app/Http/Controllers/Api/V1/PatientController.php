@@ -90,4 +90,85 @@ class PatientController extends Controller
 
         return $this->createdResponse(new PatientResource($patient), 'Patient registered successfully');
     }
+
+    #[OA\Get(
+        path: "/api/v1/patients/{id}",
+        summary: "Get specific Patient details by ID",
+        description: "Retrieves complete demographic and latest vitals details of a patient.",
+        tags: ["9. Patients"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Patient details retrieved successfully")]
+    #[OA\Response(response: 404, description: "Patient not found")]
+    public function show($id)
+    {
+        $patient = $this->patientService->getPatientById($id);
+        return $this->successResponse(new PatientResource($patient->load('latestVital')), 'Patient details retrieved successfully');
+    }
+
+    #[OA\Put(
+        path: "/api/v1/patients/{id}",
+        summary: "Update patient demographic information",
+        description: "Updates an existing patient's details such as name, contact, address, DOB, gender, blood group, or ABHA details.",
+        tags: ["9. Patients"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "name", type: "string", example: "John Doe Updated"),
+                new OA\Property(property: "mobile", type: "string", example: "9876543210"),
+                new OA\Property(property: "abha_number", type: "string", example: "12-3456-7890-1234"),
+                new OA\Property(property: "email", type: "string", format: "email", example: "john@example.com"),
+                new OA\Property(property: "abha_address", type: "string", example: "johndoe@abdm"),
+                new OA\Property(property: "dob", type: "string", format: "date", example: "1990-05-25"),
+                new OA\Property(property: "gender", type: "string", example: "M"),
+                new OA\Property(property: "blood_group", type: "string", example: "O+"),
+                new OA\Property(property: "address", type: "string", example: "123 Main St, Appt 4B"),
+                new OA\Property(property: "city", type: "string", example: "New Delhi"),
+                new OA\Property(property: "pincode", type: "string", example: "110001")
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: "Patient updated successfully")]
+    #[OA\Response(response: 422, description: "Validation Error")]
+    #[OA\Response(response: 404, description: "Patient not found")]
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'name'         => 'sometimes|required|string|max:255',
+            'mobile'       => 'nullable|string|max:15',
+            'abha_number'  => 'nullable|string|unique:patients,abha_number,' . $id,
+            'email'        => 'nullable|email|unique:patients,email,' . $id,
+            'abha_address' => 'nullable|string|max:255',
+            'dob'          => 'nullable|date',
+            'gender'       => 'nullable|string|in:M,F,O',
+            'blood_group'  => 'nullable|string|max:5',
+            'address'      => 'nullable|string',
+            'city'         => 'nullable|string|max:100',
+            'pincode'      => 'nullable|string|max:20',
+        ]);
+
+        $patient = $this->patientService->updatePatient((int) $id, $validated);
+
+        return $this->successResponse(new PatientResource($patient), 'Patient updated successfully');
+    }
+
+    #[OA\Delete(
+        path: "/api/v1/patients/{id}",
+        summary: "Delete a Patient record",
+        tags: ["9. Patients"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Patient deleted successfully")]
+    #[OA\Response(response: 404, description: "Patient not found")]
+    public function destroy($id)
+    {
+        $this->patientService->deletePatient((int) $id);
+        return $this->successResponse(null, 'Patient deleted successfully');
+    }
 }

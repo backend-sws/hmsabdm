@@ -34,6 +34,11 @@ interface VitalServiceInterface
     public function getVisitVitals(int $hospitalId, int $visitId): Collection;
 
     /**
+     * Get all vitals recorded for a specific IPD admission (chronological for clinical chart)
+     */
+    public function getIpdAdmissionVitals(int $hospitalId, int $ipdAdmissionId): Collection;
+
+    /**
      * Delete a vital entry
      */
     public function deleteVital(int $hospitalId, int $id): bool;

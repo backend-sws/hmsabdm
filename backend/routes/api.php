@@ -54,9 +54,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [AuthController::class, 'me']);
         
-        // Patients
-        Route::get('/patients', [PatientController::class, 'index']);
-        Route::post('/patients', [PatientController::class, 'store']);
+        // Patients (CRUD)
+        Route::apiResource('patients', PatientController::class);
         
         // Storage (R2 / S3 Presigned URLs)
         Route::post('/storage/upload-url', [StorageController::class, 'generateUploadUrl']);
@@ -114,9 +113,11 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{id}', [VitalController::class, 'destroy']);
             Route::get('/patient/{patientId}', [VitalController::class, 'patientVitals']);
             Route::get('/visit/{visitId}', [VitalController::class, 'visitVitals']);
+            Route::get('/ipd/{admissionId}', [VitalController::class, 'ipdAdmissionVitals']);
         });
         Route::get('/patients/{patientId}/vitals', [VitalController::class, 'patientVitals']);
         Route::get('/opd/visit/{visitId}/vitals', [VitalController::class, 'visitVitals']);
+        Route::get('/ipd/admissions/{admissionId}/vitals', [VitalController::class, 'ipdAdmissionVitals']);
 
         // OPD / Doctor's Panel
         Route::prefix('opd')->group(function () {

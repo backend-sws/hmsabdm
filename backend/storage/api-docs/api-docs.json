@@ -1833,6 +1833,161 @@
                 ]
             }
         },
+        "/api/v1/patients/{id}": {
+            "get": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Get specific Patient details by ID",
+                "description": "Retrieves complete demographic and latest vitals details of a patient.",
+                "operationId": "054f2ccead52a541c84d2434da85858d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient details retrieved successfully"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Update patient demographic information",
+                "description": "Updates an existing patient's details such as name, contact, address, DOB, gender, blood group, or ABHA details.",
+                "operationId": "3b8d0a85cd7984d11ab97dea48582496",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe Updated"
+                                    },
+                                    "mobile": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "abha_number": {
+                                        "type": "string",
+                                        "example": "12-3456-7890-1234"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "abha_address": {
+                                        "type": "string",
+                                        "example": "johndoe@abdm"
+                                    },
+                                    "dob": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1990-05-25"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "M"
+                                    },
+                                    "blood_group": {
+                                        "type": "string",
+                                        "example": "O+"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "123 Main St, Appt 4B"
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "example": "New Delhi"
+                                    },
+                                    "pincode": {
+                                        "type": "string",
+                                        "example": "110001"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Delete a Patient record",
+                "operationId": "593eda9a73fd98782af771e44d1adef6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient deleted successfully"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/reception/scan-and-share/queues": {
             "get": {
                 "tags": [
@@ -2255,7 +2410,7 @@
                     "5. Triage & Vitals (Nurse)"
                 ],
                 "summary": "Get list of recorded vitals",
-                "description": "Fetches recorded vitals filtered by patient_id, opd_visit_id, date, or patient search.",
+                "description": "Fetches recorded vitals filtered by patient_id, opd_visit_id, ipd_admission_id, encounter_type, date, or patient search.",
                 "operationId": "ca104f7cda33acd02549a0971a803e74",
                 "parameters": [
                     {
@@ -2274,6 +2429,29 @@
                         "required": false,
                         "schema": {
                             "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "ipd_admission_id",
+                        "in": "query",
+                        "description": "Filter by IPD Admission ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "encounter_type",
+                        "in": "query",
+                        "description": "Filter by encounter type (opd, ipd, emergency)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "opd",
+                                "ipd",
+                                "emergency"
+                            ]
                         }
                     },
                     {
@@ -2354,14 +2532,29 @@
                                 ],
                                 "properties": {
                                     "patient_id": {
-                                        "description": "ID of the patient",
+                                        "description": "Patient ID",
                                         "type": "integer",
                                         "example": 1
                                     },
                                     "opd_visit_id": {
-                                        "description": "Optional ID of current OPD Visit / Token",
+                                        "description": "Optional ID of OPD Visit / Token",
                                         "type": "integer",
                                         "example": 1
+                                    },
+                                    "ipd_admission_id": {
+                                        "description": "Optional ID of IPD Inpatient Admission",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "encounter_type": {
+                                        "description": "Encounter context",
+                                        "type": "string",
+                                        "example": "opd",
+                                        "enum": [
+                                            "opd",
+                                            "ipd",
+                                            "emergency"
+                                        ]
                                     },
                                     "temperature": {
                                         "description": "Body temperature",
@@ -2467,8 +2660,7 @@
                 "tags": [
                     "5. Triage & Vitals (Nurse)"
                 ],
-                "summary": "Get vital details by ID",
-                "description": "Fetches specific vital reading details.",
+                "summary": "Get single vital record details",
                 "operationId": "9f07e792aeb4830c3b666b97105fde00",
                 "parameters": [
                     {
@@ -2571,6 +2763,36 @@
                 "responses": {
                     "200": {
                         "description": "Visit vitals"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/vitals/ipd/{admissionId}": {
+            "get": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Get vitals history for an IPD Admission",
+                "description": "Fetches chronological vitals history (rounding chart / flowsheet) for an admitted IPD inpatient.",
+                "operationId": "b0fa20e60d228659e1859554c1c7d5c9",
+                "parameters": [
+                    {
+                        "name": "admissionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "IPD Admission vitals chart"
                     }
                 },
                 "security": [

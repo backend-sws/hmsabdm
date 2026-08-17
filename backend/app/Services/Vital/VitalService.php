@@ -24,6 +24,11 @@ class VitalService implements VitalServiceInterface
         $data['recorded_at'] = $data['recorded_at'] ?? now();
         $data['temperature_unit'] = $data['temperature_unit'] ?? 'F';
 
+        // Auto-assign encounter_type if not provided
+        if (empty($data['encounter_type'])) {
+            $data['encounter_type'] = !empty($data['ipd_admission_id']) ? 'ipd' : 'opd';
+        }
+
         // Ensure custom_vitals is cleanly formatted array if provided
         if (isset($data['custom_vitals']) && is_array($data['custom_vitals'])) {
             $data['custom_vitals'] = array_filter($data['custom_vitals'], fn($v) => $v !== null && $v !== '');
@@ -34,7 +39,8 @@ class VitalService implements VitalServiceInterface
         return $vital->load([
             'recordedByUser:id,name,username',
             'patient:id,name,mobile,dob,gender',
-            'opdVisit:id,queue_token,status'
+            'opdVisit:id,queue_token,status',
+            'ipdAdmission'
         ]);
     }
 
@@ -46,7 +52,8 @@ class VitalService implements VitalServiceInterface
             ->with([
                 'recordedByUser:id,name,username',
                 'patient:id,name,mobile,dob,gender',
-                'opdVisit:id,queue_token,status'
+                'opdVisit:id,queue_token,status',
+                'ipdAdmission'
             ])
             ->orderBy('recorded_at', 'desc');
 
@@ -58,6 +65,14 @@ class VitalService implements VitalServiceInterface
             $query->where('opd_visit_id', $req->opd_visit_id);
         }
 
+        if ($req && $req->filled('ipd_admission_id')) {
+            $query->where('ipd_admission_id', $req->ipd_admission_id);
+        }
+
+        if ($req && $req->filled('encounter_type')) {
+            $query->where('encounter_type', $req->encounter_type);
+        }
+
         if ($req && $req->filled('date')) {
             $query->whereDate('recorded_at', $req->date);
         }
@@ -65,9 +80,9 @@ class VitalService implements VitalServiceInterface
         if ($req && $req->filled('search')) {
             $search = $req->query('search');
             $query->whereHas('patient', function ($pq) use ($search) {
-                $pq->where('name', 'ilike', "%{$search}%")
-                   ->orWhere('mobile', 'ilike', "%{$search}%")
-                   ->orWhere('abha_number', 'ilike', "%{$search}%");
+                $pq->where('name', 'like', "%{$search}%")
+                   ->orWhere('mobile', 'like', "%{$search}%")
+                   ->orWhere('abha_number', 'like', "%{$search}%");
             });
         }
 
@@ -80,7 +95,8 @@ class VitalService implements VitalServiceInterface
             ->with([
                 'recordedByUser:id,name,username',
                 'patient',
-                'opdVisit'
+                'opdVisit',
+                'ipdAdmission'
             ])
             ->findOrFail($id);
     }
@@ -91,7 +107,8 @@ class VitalService implements VitalServiceInterface
             ->where('patient_id', $patientId)
             ->with([
                 'recordedByUser:id,name,username',
-                'opdVisit:id,queue_token,status'
+                'opdVisit:id,queue_token,status',
+                'ipdAdmission'
             ])
             ->orderBy('recorded_at', 'desc')
             ->get();
@@ -106,6 +123,18 @@ class VitalService implements VitalServiceInterface
                 'patient:id,name,mobile,dob,gender'
             ])
             ->orderBy('recorded_at', 'desc')
+            ->get();
+    }
+
+    public function getIpdAdmissionVitals(int $hospitalId, int $ipdAdmissionId): Collection
+    {
+        return Vital::where('hospital_id', $hospitalId)
+            ->where('ipd_admission_id', $ipdAdmissionId)
+            ->with([
+                'recordedByUser:id,name,username',
+                'patient:id,name,mobile,dob,gender'
+            ])
+            ->orderBy('recorded_at', 'asc') // Chronological rounding chart
             ->get();
     }
 

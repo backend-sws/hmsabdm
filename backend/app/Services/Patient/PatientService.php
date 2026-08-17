@@ -18,23 +18,29 @@ class PatientService implements PatientServiceInterface
     {
         $req = $request ?? request();
 
-        $query = QueryBuilder::for(Patient::class)
-            ->allowedFilters([
+        $hospitalId = $req->user()?->hospital_id ?? $req->query('hospital_id');
+        $patientQuery = Patient::query();
+        if ($hospitalId) {
+            $patientQuery->where('hospital_id', $hospitalId);
+        }
+
+        $query = QueryBuilder::for($patientQuery)
+            ->allowedFilters(
                 'uhid', 'name', 'mobile', 'email', 'abha_number', 'abha_address', 'gender',
-                AllowedFilter::partial('search', 'name') // fallback
-            ])
+                AllowedFilter::partial('search', 'name')
+            )
             ->allowedSorts('name', 'created_at', 'dob')
             ->defaultSort('-created_at');
 
         if ($req && $req->filled('search')) {
             $search = $req->query('search');
             $query->where(function ($q) use ($search) {
-                $q->where('uhid', 'ilike', "%{$search}%")
-                  ->orWhere('name', 'ilike', "%{$search}%")
-                  ->orWhere('mobile', 'ilike', "%{$search}%")
-                  ->orWhere('email', 'ilike', "%{$search}%")
-                  ->orWhere('abha_number', 'ilike', "%{$search}%")
-                  ->orWhere('abha_address', 'ilike', "%{$search}%");
+                $q->where('uhid', 'like', "%{$search}%")
+                  ->orWhere('name', 'like', "%{$search}%")
+                  ->orWhere('mobile', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('abha_number', 'like', "%{$search}%")
+                  ->orWhere('abha_address', 'like', "%{$search}%");
             });
         }
 
@@ -61,5 +67,18 @@ class PatientService implements PatientServiceInterface
     public function getPatientById(int $id): Patient
     {
         return Patient::findOrFail($id);
+    }
+
+    public function updatePatient(int $id, array $data): Patient
+    {
+        $patient = Patient::findOrFail($id);
+        $patient->update($data);
+        return $patient->fresh();
+    }
+
+    public function deletePatient(int $id): bool
+    {
+        $patient = Patient::findOrFail($id);
+        return (bool) $patient->delete();
     }
 }
