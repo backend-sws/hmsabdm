@@ -25,7 +25,7 @@ class PatientController extends Controller
         path: "/api/v1/patients",
         summary: "Get all patients",
         description: "Retrieves a list of all patients registered in the hospital. Supports search by name, mobile, ABHA number/address, and pagination.",
-        tags: ["8. Patients"],
+        tags: ["9. Patients"],
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(name: "search", in: "query", description: "Search by patient name, mobile, email, ABHA number, or ABHA address", required: false, schema: new OA\Schema(type: "string"))]
@@ -44,7 +44,7 @@ class PatientController extends Controller
         path: "/api/v1/patients",
         summary: "Register a new patient",
         description: "Manually registers a new patient with their ABHA number. Useful for manual data entry.",
-        tags: ["8. Patients"],
+        tags: ["9. Patients"],
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(

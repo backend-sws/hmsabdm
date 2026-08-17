@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\ReceptionController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\DoctorController;
 use App\Http\Controllers\Api\V1\OpdController;
+use App\Http\Controllers\Api\V1\VitalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -88,6 +89,25 @@ Route::prefix('v1')->group(function () {
             Route::post('/register', [ReceptionController::class, 'registerWithoutAbha']);
             Route::post('/visit', [ReceptionController::class, 'createVisit']);
         });
+
+        // Triage / Nurse Station — Patient Vitals & Hospital Dynamic Field Configs
+        Route::prefix('vitals')->group(function () {
+            // Dynamic Vital Field Configurations (Hospital Admin)
+            Route::get('/configs', [VitalController::class, 'getConfigs']);
+            Route::post('/configs', [VitalController::class, 'createConfig']);
+            Route::put('/configs/{id}', [VitalController::class, 'updateConfig']);
+            Route::delete('/configs/{id}', [VitalController::class, 'deleteConfig']);
+
+            // Patient Vitals Recording & History (Nurse / Doctor)
+            Route::get('/', [VitalController::class, 'index']);
+            Route::post('/', [VitalController::class, 'store']);
+            Route::get('/{id}', [VitalController::class, 'show']);
+            Route::delete('/{id}', [VitalController::class, 'destroy']);
+            Route::get('/patient/{patientId}', [VitalController::class, 'patientVitals']);
+            Route::get('/visit/{visitId}', [VitalController::class, 'visitVitals']);
+        });
+        Route::get('/patients/{patientId}/vitals', [VitalController::class, 'patientVitals']);
+        Route::get('/opd/visit/{visitId}/vitals', [VitalController::class, 'visitVitals']);
 
         // OPD / Doctor's Panel
         Route::prefix('opd')->group(function () {

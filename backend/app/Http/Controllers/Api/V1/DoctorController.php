@@ -29,7 +29,7 @@ class DoctorController extends Controller
         summary: "List all doctors in the hospital",
         description: "Retrieves a list of all registered doctors across all departments. Supports search, department filter, active status filter, and ?all=true for dropdowns.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\Parameter(name: "search", in: "query", description: "Search by doctor name, email, phone, specialization, or username", required: false, schema: new OA\Schema(type: "string"))]
     #[OA\Parameter(name: "department_id", in: "query", description: "Filter doctors by department ID", required: false, schema: new OA\Schema(type: "integer"))]
@@ -50,7 +50,7 @@ class DoctorController extends Controller
         summary: "List doctors available today",
         description: "Fetches a list of doctors who have an active schedule for the current day of the week. Supports search and department filtering.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\Parameter(name: "search", in: "query", description: "Search by doctor name, specialization, or phone", required: false, schema: new OA\Schema(type: "string"))]
     #[OA\Parameter(name: "department_id", in: "query", description: "Filter doctors by department ID", required: false, schema: new OA\Schema(type: "integer"))]
@@ -70,7 +70,7 @@ class DoctorController extends Controller
         summary: "Create a new doctor",
         description: "Registers a new doctor and assigns them to a specific department.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\RequestBody(
         required: true,
@@ -118,7 +118,7 @@ class DoctorController extends Controller
         summary: "Update a doctor",
         description: "Updates the basic profile details of an existing doctor.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\RequestBody(
@@ -169,7 +169,7 @@ class DoctorController extends Controller
         summary: "Update doctor schedule",
         description: "Updates the weekly availability of a doctor. Time must be in 24-hour HH:MM format (e.g., '09:00', '17:30'). Day of week: 0=Sun, 1=Mon, ..., 6=Sat.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\RequestBody(
@@ -213,7 +213,7 @@ class DoctorController extends Controller
         summary: "Delete a doctor",
         description: "Deactivates or deletes a doctor record from the hospital.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Doctor deleted")]

@@ -70,9 +70,20 @@ When a patient scans the Hospital Counter QR code using their ABHA App:
 
 ---
 
-## 🩺 Phase 4: Doctor's Panel (Consultation)
+## 🩺 Phase 4: Triage & Nurse Station (Vitals Recording)
 
-1. **`GET /api/v1/opd/queue`**: Doctor views their live OPD queue for today.
+Once the OPD token slip is generated, the Nurse / Triage Station notes the patient's vitals before doctor consultation:
+1. **`POST /api/v1/vitals`**: **Record Patient Vitals** (BP, Pulse, Temperature, SpO2, Height, Weight, Blood Glucose).
+   * Body: `{ "patient_id": 1, "opd_visit_id": 1, "temperature": 98.6, "blood_pressure_sys": 120, "blood_pressure_dia": 80, "pulse_rate": 72, "weight": 68.5, "height": 172.0 }`
+   * **Result:** Saves vitals, auto-calculates BMI ($23.15$), and links to visit/patient.
+2. **`GET /api/v1/vitals/visit/{visitId}`**: View vitals recorded for this specific visit.
+3. **`GET /api/v1/patients/{patientId}/vitals`**: View entire vitals history for a patient.
+
+---
+
+## 👨‍⚕️ Phase 5: Doctor's Panel (Consultation)
+
+1. **`GET /api/v1/opd/queue`**: Doctor views their live OPD queue for today (includes patient details & latest recorded vitals).
 2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient into the consultation room.
 3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes consultation, adding diagnosis, notes, and prescription.
 EOT
@@ -103,12 +114,13 @@ EOT
 #[OA\Tag(name: "2. ABHA — Mobile Login", description: "Flow A — मरीज़ के पास ABHA पहले से है (Mobile OTP से verify)")]
 #[OA\Tag(name: "3. ABHA — Aadhaar Enrolment", description: "Flow B — नया ABHA बनाना (Aadhaar OTP से enrolment)")]
 #[OA\Tag(name: "4. Reception", description: "Flow C & D — Walk-in Registration, Departments, OPD Visit, Scan & Share Queue")]
-#[OA\Tag(name: "5. OPD (Doctor)", description: "Doctor Panel — Today's OPD Queue Management")]
-#[OA\Tag(name: "6. Hospitals & Admin", description: "Super Admin — Hospital Management")]
-#[OA\Tag(name: "7. Departments & Doctors", description: "Admin — Department & Doctor Setup")]
-#[OA\Tag(name: "8. Patients", description: "Patient Records Management")]
-#[OA\Tag(name: "9. ABDM Webhooks", description: "Incoming Webhooks from ABDM (Scan & Share)")]
-#[OA\Tag(name: "10. Storage", description: "File Upload/Download via R2/S3")]
+#[OA\Tag(name: "5. Triage & Vitals (Nurse)", description: "Nurse Station — Recording and managing patient vitals before doctor consultation")]
+#[OA\Tag(name: "6. OPD (Doctor)", description: "Doctor Panel — Today's OPD Queue Management & Consultation")]
+#[OA\Tag(name: "7. Hospitals & Admin", description: "Super Admin — Hospital Management")]
+#[OA\Tag(name: "8. Departments & Doctors", description: "Admin — Department & Doctor Setup")]
+#[OA\Tag(name: "9. Patients", description: "Patient Records Management")]
+#[OA\Tag(name: "10. ABDM Webhooks", description: "Incoming Webhooks from ABDM (Scan & Share)")]
+#[OA\Tag(name: "11. Storage", description: "File Upload/Download via R2/S3")]
 
 abstract class Controller
 {

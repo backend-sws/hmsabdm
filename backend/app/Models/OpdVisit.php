@@ -35,4 +35,14 @@ class OpdVisit extends Model
     {
         return $this->belongsTo(Department::class);
     }
+
+    public function vitals()
+    {
+        return $this->hasMany(Vital::class);
+    }
+
+    public function latestVital()
+    {
+        return $this->hasOne(Vital::class)->latestOfMany();
+    }
 }

@@ -14,4 +14,14 @@ class Patient extends Model
         'hospital_id', 'name', 'mobile', 'abha_number', 'abha_address',
         'dob', 'gender', 'blood_group', 'address', 'city', 'pincode'
     ];
+
+    public function vitals()
+    {
+        return $this->hasMany(Vital::class);
+    }
+
+    public function latestVital()
+    {
+        return $this->hasOne(Vital::class)->latestOfMany();
+    }
 }
