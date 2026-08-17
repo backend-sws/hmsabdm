@@ -20,7 +20,7 @@ class PatientService implements PatientServiceInterface
 
         $query = QueryBuilder::for(Patient::class)
             ->allowedFilters([
-                'name', 'mobile', 'email', 'abha_number', 'abha_address', 'gender',
+                'uhid', 'name', 'mobile', 'email', 'abha_number', 'abha_address', 'gender',
                 AllowedFilter::partial('search', 'name') // fallback
             ])
             ->allowedSorts('name', 'created_at', 'dob')
@@ -29,7 +29,8 @@ class PatientService implements PatientServiceInterface
         if ($req && $req->filled('search')) {
             $search = $req->query('search');
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
+                $q->where('uhid', 'ilike', "%{$search}%")
+                  ->orWhere('name', 'ilike', "%{$search}%")
                   ->orWhere('mobile', 'ilike', "%{$search}%")
                   ->orWhere('email', 'ilike', "%{$search}%")
                   ->orWhere('abha_number', 'ilike', "%{$search}%")

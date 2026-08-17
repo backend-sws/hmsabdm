@@ -84,6 +84,8 @@ class PatientController extends Controller
             'pincode' => 'nullable|string|max:20',
         ]);
 
+        $data['hospital_id'] = $this->getHospitalId($request);
+
         $patient = $this->patientService->registerPatient($data);
 
         return $this->createdResponse(new PatientResource($patient), 'Patient registered successfully');

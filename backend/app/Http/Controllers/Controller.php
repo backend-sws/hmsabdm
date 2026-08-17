@@ -116,11 +116,12 @@ EOT
 #[OA\Tag(name: "4. Reception", description: "Flow C & D — Walk-in Registration, Departments, OPD Visit, Scan & Share Queue")]
 #[OA\Tag(name: "5. Triage & Vitals (Nurse)", description: "Nurse Station — Recording and managing patient vitals before doctor consultation")]
 #[OA\Tag(name: "6. OPD (Doctor)", description: "Doctor Panel — Today's OPD Queue Management & Consultation")]
-#[OA\Tag(name: "7. Hospitals & Admin", description: "Super Admin — Hospital Management")]
-#[OA\Tag(name: "8. Departments & Doctors", description: "Admin — Department & Doctor Setup")]
+#[OA\Tag(name: "7. Hospital Settings (Hospital Admin)", description: "Hospital Admin Panel — Manage Hospital-level Settings (UHID Format, General, Billing, Notifications)")]
+#[OA\Tag(name: "8. Super Admin (Platform)", description: "Super Admin Platform Management — Hospital Onboarding & Platform Controls")]
+#[OA\Tag(name: "8. Departments & Doctors", description: "Hospital Admin — Department & Doctor Setup")]
 #[OA\Tag(name: "9. Patients", description: "Patient Records Management")]
-#[OA\Tag(name: "10. ABDM Webhooks", description: "Incoming Webhooks from ABDM (Scan & Share)")]
-#[OA\Tag(name: "11. Storage", description: "File Upload/Download via R2/S3")]
+#[OA\Tag(name: "11. ABDM Webhooks", description: "Incoming Webhooks from ABDM (Scan & Share)")]
+#[OA\Tag(name: "12. Storage", description: "File Upload/Download via R2/S3")]
 
 abstract class Controller
 {

@@ -23,23 +23,51 @@ class AbdmWebhookController extends Controller
         protected AbdmServiceInterface $abdmService
     ) {}
 
-    /**
-     * @OA\Post(
-     *     path="/api/webhook/abdm/v1/scan-and-share",
-     *     summary="Receive Scan & Share Demographic Data",
-     *     tags={"ABDM Webhooks"},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             type="object"
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=202,
-     *         description="Accepted callback"
-     *     )
-     * )
-     */
+    #[OA\Post(
+        path: "/api/webhook/abdm/v1/scan-and-share",
+        summary: "ABDM Webhook — Receive Scan & Share Demographic Data",
+        description: "Public Webhook hit by ABDM Gateway when a patient scans the hospital QR code in their ABHA App. Creates patient, auto-assigns UHID, and generates a 3-digit queue token.",
+        tags: ["11. ABDM Webhooks"]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "hipCode", type: "string", example: "BRIDGE-TEST-HIP", description: "Hospital HIP ID"),
+                new OA\Property(
+                    property: "profile",
+                    type: "object",
+                    properties: [
+                        new OA\Property(
+                            property: "patient",
+                            type: "object",
+                            properties: [
+                                new OA\Property(property: "name", type: "string", example: "Aarav Sharma"),
+                                new OA\Property(property: "gender", type: "string", example: "M"),
+                                new OA\Property(property: "yearOfBirth", type: "string", example: "1994"),
+                                new OA\Property(property: "mobile", type: "string", example: "9876543210"),
+                                new OA\Property(property: "abhaNumber", type: "string", example: "91-2461-6423-7108"),
+                                new OA\Property(property: "abhaAddress", type: "string", example: "aarav94@sbx"),
+                                new OA\Property(property: "address", type: "string", example: "Flat 402, Green Valley Apartments"),
+                                new OA\Property(property: "pincode", type: "string", example: "110001")
+                            ]
+                        )
+                    ]
+                )
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 202,
+        description: "Token generated successfully and returned to ABDM Gateway",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Token generated"),
+                new OA\Property(property: "token", type: "string", example: "482")
+            ]
+        )
+    )]
     public function handleScanAndShare(Request $request)
     {
         Log::info('ABDM Scan and Share Webhook received', $request->all());
@@ -67,21 +95,34 @@ class AbdmWebhookController extends Controller
                 return response()->json(['error' => 'Invalid payload'], 400);
             }
 
-            // Find or Create Patient based on ABHA
-            // Using a system default hospital ID for webhook parsing, or extracting from payload
-            $hospitalId = 1; // Assuming Tenant Middleware or payload contains counter mapping
+            // Resolve Hospital dynamically from incoming hipCode / abdm_hip_id
+            $hipCode = $request->input('hipCode') ?? $request->input('hip_id') ?? $request->input('facilityId');
+            $hospital = null;
+            if ($hipCode) {
+                $hospital = \App\Models\Hospital::where('abdm_hip_id', $hipCode)
+                    ->orWhere('code', $hipCode)
+                    ->first();
+            }
+            if (!$hospital) {
+                $hospital = \App\Models\Hospital::first();
+            }
+            $hospitalId = $hospital?->id ?? 1;
 
-            $patient = Patient::where('abha_number', $abhaNumber)->first();
+            $patient = Patient::where('abha_number', $abhaNumber)
+                ->where('hospital_id', $hospitalId)
+                ->first();
             
             if (!$patient) {
                 $patient = Patient::create([
-                    'hospital_id' => $hospitalId,
-                    'name' => $payload['name'] ?? 'Unknown',
-                    'mobile' => $mobile,
-                    'abha_number' => $abhaNumber,
+                    'hospital_id'  => $hospitalId,
+                    'name'         => $payload['name'] ?? 'Unknown',
+                    'mobile'       => $mobile,
+                    'abha_number'  => $abhaNumber,
                     'abha_address' => $abhaAddress,
-                    'gender' => isset($payload['gender']) ? strtoupper(substr($payload['gender'], 0, 1)) : 'O',
-                    'dob' => isset($payload['yearOfBirth']) ? "{$payload['yearOfBirth']}-01-01" : null,
+                    'gender'       => isset($payload['gender']) ? strtoupper(substr($payload['gender'], 0, 1)) : 'O',
+                    'dob'          => isset($payload['yearOfBirth']) ? "{$payload['yearOfBirth']}-01-01" : null,
+                    'address'      => $payload['address'] ?? null,
+                    'pincode'      => $payload['pincode'] ?? null,
                 ]);
             }
 

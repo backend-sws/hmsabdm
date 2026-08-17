@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\StorageController;
 use App\Http\Controllers\Api\V1\AbdmWebhookController;
 use App\Http\Controllers\Api\V1\AbhaController;
 use App\Http\Controllers\Api\V1\HospitalController;
+use App\Http\Controllers\Api\V1\HospitalSettingController;
 use App\Http\Controllers\Api\V1\ReceptionController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\DoctorController;
@@ -33,12 +34,20 @@ Route::prefix('v1')->group(function () {
     // Protected Routes
     Route::middleware('auth:sanctum')->group(function () {
         
-        // Super Admin - Hospital Management
+        // Super Admin (Platform) - Hospital Management
         Route::get('/hospitals', [HospitalController::class, 'index']);
         Route::post('/hospitals', [HospitalController::class, 'store']);
         Route::get('/hospitals/{hospital}', [HospitalController::class, 'show']);
         Route::put('/hospitals/{hospital}', [HospitalController::class, 'update']);
         Route::delete('/hospitals/{hospital}', [HospitalController::class, 'destroy']);
+
+        // Hospital Admin - Hospital-level Configuration & Key-Value Settings
+        Route::prefix('hospital/settings')->group(function () {
+            Route::get('/', [HospitalSettingController::class, 'getSettings']);
+            Route::post('/', [HospitalSettingController::class, 'saveSettings']);
+            Route::get('/uhid', [HospitalSettingController::class, 'getUhidConfig']);
+            Route::put('/uhid', [HospitalSettingController::class, 'updateUhidConfig']);
+        });
 
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'me']);

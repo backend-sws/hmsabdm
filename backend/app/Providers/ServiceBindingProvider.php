@@ -60,6 +60,11 @@ class ServiceBindingProvider extends ServiceProvider
             \App\Services\Vital\VitalServiceInterface::class,
             \App\Services\Vital\VitalService::class
         );
+
+        $this->app->bind(
+            \App\Services\HospitalSetting\HospitalSettingServiceInterface::class,
+            \App\Services\HospitalSetting\HospitalSettingService::class
+        );
     }
 
     /**
