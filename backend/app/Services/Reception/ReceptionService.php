@@ -125,15 +125,48 @@ class ReceptionService implements ReceptionServiceInterface
 
         $nextToken = $lastToken ? $lastToken + 1 : 1;
 
+        $feeCharged = (float) ($data['fee_charged'] ?? 0);
+        $discount   = (float) ($data['discount'] ?? 0);
+        $amountPaid = (float) ($data['amount_paid'] ?? 0);
+        $netPayable = max(0, $feeCharged - $discount);
+
+        $paymentBreakdown = $data['payment_breakdown'] ?? null;
+        if (!empty($paymentBreakdown) && is_array($paymentBreakdown)) {
+            if (!isset($data['amount_paid'])) {
+                $amountPaid = (float) array_sum(array_column($paymentBreakdown, 'amount'));
+            }
+            $paymentMethod = count($paymentBreakdown) > 1 ? 'split' : ($paymentBreakdown[0]['method'] ?? 'cash');
+        } else {
+            $paymentMethod = $data['payment_method'] ?? ($amountPaid > 0 ? 'cash' : null);
+        }
+
+        // Determine payment status
+        if (!empty($data['payment_status'])) {
+            $paymentStatus = $data['payment_status'];
+        } elseif ($feeCharged == 0 || $amountPaid >= $netPayable) {
+            $paymentStatus = ($feeCharged > 0 || $amountPaid > 0) ? 'paid' : 'pending';
+        } elseif ($amountPaid > 0 && $amountPaid < $netPayable) {
+            $paymentStatus = 'partial';
+        } else {
+            $paymentStatus = 'pending';
+        }
+
         $payload = [
-            'patient_id' => $data['patient_id'],
-            'doctor_id' => $data['doctor_id'],
-            'department_id' => $data['department_id'],
+            'patient_id'          => $data['patient_id'],
+            'doctor_id'           => $data['doctor_id'],
+            'department_id'       => $data['department_id'],
             'appointment_type_id' => $data['appointment_type_id'] ?? null,
-            'visit_date' => $date,
-            'queue_token' => $nextToken,
-            'status' => 'waiting',
-            'chief_complaint' => $data['chief_complaint'] ?? null,
+            'visit_date'          => $date,
+            'queue_token'         => $nextToken,
+            'status'              => 'waiting',
+            'chief_complaint'     => $data['chief_complaint'] ?? null,
+            'fee_charged'         => $feeCharged,
+            'discount'            => $discount,
+            'amount_paid'         => $amountPaid,
+            'payment_status'      => $paymentStatus,
+            'payment_method'      => $paymentMethod,
+            'payment_ref'         => $data['payment_ref'] ?? null,
+            'payment_breakdown'   => $paymentBreakdown,
         ];
 
         if (!empty($data['hospital_id']) || $hospitalId) {
@@ -142,6 +175,6 @@ class ReceptionService implements ReceptionServiceInterface
 
         $visit = OpdVisit::create($payload);
 
-        return $visit->toArray();
+        return $visit->load(['patient', 'doctor', 'department'])->toArray();
     }
 }

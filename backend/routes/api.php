@@ -47,6 +47,19 @@ Route::prefix('v1')->group(function () {
             Route::post('/', [HospitalSettingController::class, 'saveSettings']);
             Route::get('/uhid', [HospitalSettingController::class, 'getUhidConfig']);
             Route::put('/uhid', [HospitalSettingController::class, 'updateUhidConfig']);
+            Route::get('/opd-number', [HospitalSettingController::class, 'getOpdConfig']);
+            Route::put('/opd-number', [HospitalSettingController::class, 'updateOpdConfig']);
+            Route::get('/ipd-number', [HospitalSettingController::class, 'getIpdConfig']);
+            Route::put('/ipd-number', [HospitalSettingController::class, 'updateIpdConfig']);
+            Route::get('/numbering', [HospitalSettingController::class, 'getNumberingOverview']);
+        });
+
+        // Hospital Admin - Dynamic Custom Patient Registration Fields
+        Route::prefix('patient-fields')->group(function () {
+            Route::get('/configs', [\App\Http\Controllers\Api\V1\PatientFieldConfigController::class, 'getConfigs']);
+            Route::post('/configs', [\App\Http\Controllers\Api\V1\PatientFieldConfigController::class, 'createConfig']);
+            Route::put('/configs/{id}', [\App\Http\Controllers\Api\V1\PatientFieldConfigController::class, 'updateConfig']);
+            Route::delete('/configs/{id}', [\App\Http\Controllers\Api\V1\PatientFieldConfigController::class, 'deleteConfig']);
         });
 
         Route::post('/logout', [AuthController::class, 'logout']);

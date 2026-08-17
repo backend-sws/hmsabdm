@@ -53,6 +53,9 @@ class PatientController extends Controller
             required: ["name"],
             properties: [
                 new OA\Property(property: "name", type: "string", example: "John Doe"),
+                new OA\Property(property: "guardian_name", type: "string", example: "Robert Doe", description: "Father / Mother / Spouse / Guardian Name"),
+                new OA\Property(property: "guardian_relation", type: "string", example: "Father", description: "Relation (Father, Mother, Spouse, etc.)"),
+                new OA\Property(property: "guardian_phone", type: "string", example: "9876500000"),
                 new OA\Property(property: "mobile", type: "string", example: "9876543210"),
                 new OA\Property(property: "abha_number", type: "string", example: "12-3456-7890-1234"),
                 new OA\Property(property: "email", type: "string", format: "email", example: "john@example.com"),
@@ -62,7 +65,16 @@ class PatientController extends Controller
                 new OA\Property(property: "blood_group", type: "string", example: "O+"),
                 new OA\Property(property: "address", type: "string", example: "123 Main St, Appt 4B"),
                 new OA\Property(property: "city", type: "string", example: "New Delhi"),
-                new OA\Property(property: "pincode", type: "string", example: "110001")
+                new OA\Property(property: "district", type: "string", example: "Central Delhi"),
+                new OA\Property(property: "state", type: "string", example: "Delhi"),
+                new OA\Property(property: "pincode", type: "string", example: "110001"),
+                new OA\Property(property: "photo", type: "string", example: "data:image/jpeg;base64,..."),
+                new OA\Property(
+                    property: "custom_fields",
+                    type: "object",
+                    description: "Dynamic custom fields configured by the hospital",
+                    example: ["marital_status" => "Married", "occupation" => "Engineer", "emergency_contact_name" => "Jane Doe"]
+                )
             ]
         )
     )]
@@ -71,17 +83,25 @@ class PatientController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'mobile' => 'nullable|string|max:15',
-            'abha_number' => 'nullable|string|unique:patients,abha_number',
-            'email' => 'nullable|email|unique:patients,email',
-            'abha_address' => 'nullable|string|max:255',
-            'dob' => 'nullable|date',
-            'gender' => 'nullable|string|in:M,F,O',
-            'blood_group' => 'nullable|string|max:5',
-            'address' => 'nullable|string',
-            'city' => 'nullable|string|max:100',
-            'pincode' => 'nullable|string|max:20',
+            'name'              => 'required|string|max:255',
+            'guardian_name'     => 'nullable|string|max:255',
+            'guardian_relation' => 'nullable|string|max:50',
+            'guardian_phone'    => 'nullable|string|max:20',
+            'mobile'            => 'nullable|string|max:15',
+            'abha_number'       => 'nullable|string|unique:patients,abha_number',
+            'email'             => 'nullable|email|unique:patients,email',
+            'abha_address'      => 'nullable|string|max:255',
+            'dob'               => 'nullable|date',
+            'gender'            => 'nullable|string|in:M,F,O',
+            'blood_group'       => 'nullable|string|max:5',
+            'address'           => 'nullable|string',
+            'city'              => 'nullable|string|max:100',
+            'district'          => 'nullable|string|max:100',
+            'state'             => 'nullable|string|max:100',
+            'pincode'           => 'nullable|string|max:20',
+            'photo'             => 'nullable|string',
+            'kyc_verified'      => 'nullable|boolean',
+            'custom_fields'     => 'nullable|array',
         ]);
 
         $data['hospital_id'] = $this->getHospitalId($request);
@@ -110,7 +130,7 @@ class PatientController extends Controller
     #[OA\Put(
         path: "/api/v1/patients/{id}",
         summary: "Update patient demographic information",
-        description: "Updates an existing patient's details such as name, contact, address, DOB, gender, blood group, or ABHA details.",
+        description: "Updates an existing patient's details such as name, guardian, contact, address, DOB, gender, blood group, ABHA, or custom fields.",
         tags: ["9. Patients"],
         security: [["bearerAuth" => []]]
     )]
@@ -120,6 +140,9 @@ class PatientController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "name", type: "string", example: "John Doe Updated"),
+                new OA\Property(property: "guardian_name", type: "string", example: "Robert Doe"),
+                new OA\Property(property: "guardian_relation", type: "string", example: "Father"),
+                new OA\Property(property: "guardian_phone", type: "string", example: "9876500000"),
                 new OA\Property(property: "mobile", type: "string", example: "9876543210"),
                 new OA\Property(property: "abha_number", type: "string", example: "12-3456-7890-1234"),
                 new OA\Property(property: "email", type: "string", format: "email", example: "john@example.com"),
@@ -129,7 +152,16 @@ class PatientController extends Controller
                 new OA\Property(property: "blood_group", type: "string", example: "O+"),
                 new OA\Property(property: "address", type: "string", example: "123 Main St, Appt 4B"),
                 new OA\Property(property: "city", type: "string", example: "New Delhi"),
-                new OA\Property(property: "pincode", type: "string", example: "110001")
+                new OA\Property(property: "district", type: "string", example: "Central Delhi"),
+                new OA\Property(property: "state", type: "string", example: "Delhi"),
+                new OA\Property(property: "pincode", type: "string", example: "110001"),
+                new OA\Property(property: "photo", type: "string", example: "data:image/jpeg;base64,..."),
+                new OA\Property(
+                    property: "custom_fields",
+                    type: "object",
+                    description: "Dynamic custom fields configured by the hospital",
+                    example: ["marital_status" => "Married", "occupation" => "Engineer"]
+                )
             ]
         )
     )]
@@ -139,17 +171,25 @@ class PatientController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'name'         => 'sometimes|required|string|max:255',
-            'mobile'       => 'nullable|string|max:15',
-            'abha_number'  => 'nullable|string|unique:patients,abha_number,' . $id,
-            'email'        => 'nullable|email|unique:patients,email,' . $id,
-            'abha_address' => 'nullable|string|max:255',
-            'dob'          => 'nullable|date',
-            'gender'       => 'nullable|string|in:M,F,O',
-            'blood_group'  => 'nullable|string|max:5',
-            'address'      => 'nullable|string',
-            'city'         => 'nullable|string|max:100',
-            'pincode'      => 'nullable|string|max:20',
+            'name'              => 'sometimes|required|string|max:255',
+            'guardian_name'     => 'nullable|string|max:255',
+            'guardian_relation' => 'nullable|string|max:50',
+            'guardian_phone'    => 'nullable|string|max:20',
+            'mobile'            => 'nullable|string|max:15',
+            'abha_number'       => 'nullable|string|unique:patients,abha_number,' . $id,
+            'email'             => 'nullable|email|unique:patients,email,' . $id,
+            'abha_address'      => 'nullable|string|max:255',
+            'dob'               => 'nullable|date',
+            'gender'            => 'nullable|string|in:M,F,O',
+            'blood_group'       => 'nullable|string|max:5',
+            'address'           => 'nullable|string',
+            'city'              => 'nullable|string|max:100',
+            'district'          => 'nullable|string|max:100',
+            'state'             => 'nullable|string|max:100',
+            'pincode'           => 'nullable|string|max:20',
+            'photo'             => 'nullable|string',
+            'kyc_verified'      => 'nullable|boolean',
+            'custom_fields'     => 'nullable|array',
         ]);
 
         $patient = $this->patientService->updatePatient((int) $id, $validated);

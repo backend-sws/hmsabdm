@@ -11,14 +11,29 @@ class OpdVisit extends Model
     use HasFactory, BelongsToHospital;
 
     protected $fillable = [
-        'hospital_id', 'patient_id', 'doctor_id', 'department_id', 'appointment_type_id',
-        'visit_date', 'queue_token', 'status', 'chief_complaint', 'notes', 'diagnosis', 'called_at', 'completed_at'
+        'hospital_id', 'opd_number', 'patient_id', 'doctor_id', 'department_id', 'appointment_type_id',
+        'visit_date', 'queue_token', 'status', 'chief_complaint', 'notes', 'diagnosis',
+        'fee_charged', 'discount', 'amount_paid', 'payment_status', 'payment_method', 'payment_ref', 'payment_breakdown',
+        'called_at', 'completed_at'
     ];
 
+    protected static function booted()
+    {
+        static::creating(function (OpdVisit $visit) {
+            if (empty($visit->opd_number) && !empty($visit->hospital_id)) {
+                $visit->opd_number = Hospital::generateNextOpdNumber($visit->hospital_id);
+            }
+        });
+    }
+
     protected $casts = [
-        'visit_date' => 'date',
-        'called_at' => 'datetime',
-        'completed_at' => 'datetime',
+        'visit_date'        => 'date',
+        'fee_charged'       => 'float',
+        'discount'          => 'float',
+        'amount_paid'       => 'float',
+        'payment_breakdown' => 'array',
+        'called_at'         => 'datetime',
+        'completed_at'      => 'datetime',
     ];
 
     public function patient()

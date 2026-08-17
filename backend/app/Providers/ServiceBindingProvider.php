@@ -65,6 +65,11 @@ class ServiceBindingProvider extends ServiceProvider
             \App\Services\HospitalSetting\HospitalSettingServiceInterface::class,
             \App\Services\HospitalSetting\HospitalSettingService::class
         );
+
+        $this->app->bind(
+            \App\Services\PatientField\PatientFieldConfigServiceInterface::class,
+            \App\Services\PatientField\PatientFieldConfigService::class
+        );
     }
 
     /**

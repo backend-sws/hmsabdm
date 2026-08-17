@@ -1430,6 +1430,185 @@
                 ]
             }
         },
+        "/api/v1/hospital/settings/opd-number": {
+            "get": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Get OPD Number configuration, format templates & live sample preview",
+                "description": "Hospital Admin API: Fetches OPD Visit numbering format, auto-increment sequence, daily/monthly/yearly reset rules, and live preview.",
+                "operationId": "646fc2513009a071aed869977276caaa",
+                "responses": {
+                    "200": {
+                        "description": "OPD Number configuration"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Update OPD Number format and sequence rules",
+                "description": "Hospital Admin API: Configures prefix, pattern format, digit padding, reset rules (daily, monthly, yearly, never), and sequence start.",
+                "operationId": "954e723fdf2d2dd69940bb151b8b77c0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "opd_prefix": {
+                                        "description": "Prefix string (e.g. OPD, CLINIC, CITY-OPD)",
+                                        "type": "string",
+                                        "example": "OPD"
+                                    },
+                                    "opd_format": {
+                                        "description": "Format pattern using placeholders",
+                                        "type": "string",
+                                        "example": "{PREFIX}-{YEAR}-{SEQ}"
+                                    },
+                                    "opd_padding": {
+                                        "description": "Number of digits for sequence (3 to 10)",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "opd_sequence_reset": {
+                                        "type": "string",
+                                        "example": "yearly",
+                                        "enum": [
+                                            "daily",
+                                            "monthly",
+                                            "yearly",
+                                            "never"
+                                        ]
+                                    },
+                                    "opd_next_sequence": {
+                                        "description": "Next sequence starting number",
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OPD Number Configuration updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hospital/settings/ipd-number": {
+            "get": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Get IPD Number configuration, format templates & live sample preview",
+                "description": "Hospital Admin API: Fetches IPD Inpatient Admission numbering format, auto-increment sequence, reset rules, and live preview.",
+                "operationId": "2ec089a2d7e22dd345b63e4ae1af4449",
+                "responses": {
+                    "200": {
+                        "description": "IPD Number configuration"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Update IPD Number format and sequence rules",
+                "description": "Hospital Admin API: Configures prefix, pattern format, digit padding, reset rules (monthly, yearly, never), and sequence start.",
+                "operationId": "26f0dd7ecce66a8c8397b14ab9b005dd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "ipd_prefix": {
+                                        "description": "Prefix string (e.g. IPD, ADM, HOSP-IPD)",
+                                        "type": "string",
+                                        "example": "IPD"
+                                    },
+                                    "ipd_format": {
+                                        "description": "Format pattern using placeholders",
+                                        "type": "string",
+                                        "example": "{PREFIX}-{YEAR}-{SEQ}"
+                                    },
+                                    "ipd_padding": {
+                                        "description": "Number of digits for sequence (3 to 10)",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "ipd_sequence_reset": {
+                                        "type": "string",
+                                        "example": "yearly",
+                                        "enum": [
+                                            "monthly",
+                                            "yearly",
+                                            "never"
+                                        ]
+                                    },
+                                    "ipd_next_sequence": {
+                                        "description": "Next sequence starting number",
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "IPD Number Configuration updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hospital/settings/numbering": {
+            "get": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Get unified Hospital Numbering overview (UHID + OPD + IPD)",
+                "description": "Hospital Admin API: Returns UHID, OPD Number, and IPD Number configurations, formats, reset rules, and live previews in a single call.",
+                "operationId": "2e5fe945190e82d5230cfc3120d56e49",
+                "responses": {
+                    "200": {
+                        "description": "Unified Numbering settings"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/hospital/settings": {
             "get": {
                 "tags": [
@@ -1770,6 +1949,20 @@
                                         "type": "string",
                                         "example": "John Doe"
                                     },
+                                    "guardian_name": {
+                                        "description": "Father / Mother / Spouse / Guardian Name",
+                                        "type": "string",
+                                        "example": "Robert Doe"
+                                    },
+                                    "guardian_relation": {
+                                        "description": "Relation (Father, Mother, Spouse, etc.)",
+                                        "type": "string",
+                                        "example": "Father"
+                                    },
+                                    "guardian_phone": {
+                                        "type": "string",
+                                        "example": "9876500000"
+                                    },
                                     "mobile": {
                                         "type": "string",
                                         "example": "9876543210"
@@ -1808,9 +2001,30 @@
                                         "type": "string",
                                         "example": "New Delhi"
                                     },
+                                    "district": {
+                                        "type": "string",
+                                        "example": "Central Delhi"
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "example": "Delhi"
+                                    },
                                     "pincode": {
                                         "type": "string",
                                         "example": "110001"
+                                    },
+                                    "photo": {
+                                        "type": "string",
+                                        "example": "data:image/jpeg;base64,..."
+                                    },
+                                    "custom_fields": {
+                                        "description": "Dynamic custom fields configured by the hospital",
+                                        "type": "object",
+                                        "example": {
+                                            "marital_status": "Married",
+                                            "occupation": "Engineer",
+                                            "emergency_contact_name": "Jane Doe"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -1870,7 +2084,7 @@
                     "9. Patients"
                 ],
                 "summary": "Update patient demographic information",
-                "description": "Updates an existing patient's details such as name, contact, address, DOB, gender, blood group, or ABHA details.",
+                "description": "Updates an existing patient's details such as name, guardian, contact, address, DOB, gender, blood group, ABHA, or custom fields.",
                 "operationId": "3b8d0a85cd7984d11ab97dea48582496",
                 "parameters": [
                     {
@@ -1891,6 +2105,18 @@
                                     "name": {
                                         "type": "string",
                                         "example": "John Doe Updated"
+                                    },
+                                    "guardian_name": {
+                                        "type": "string",
+                                        "example": "Robert Doe"
+                                    },
+                                    "guardian_relation": {
+                                        "type": "string",
+                                        "example": "Father"
+                                    },
+                                    "guardian_phone": {
+                                        "type": "string",
+                                        "example": "9876500000"
                                     },
                                     "mobile": {
                                         "type": "string",
@@ -1930,9 +2156,29 @@
                                         "type": "string",
                                         "example": "New Delhi"
                                     },
+                                    "district": {
+                                        "type": "string",
+                                        "example": "Central Delhi"
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "example": "Delhi"
+                                    },
                                     "pincode": {
                                         "type": "string",
                                         "example": "110001"
+                                    },
+                                    "photo": {
+                                        "type": "string",
+                                        "example": "data:image/jpeg;base64,..."
+                                    },
+                                    "custom_fields": {
+                                        "description": "Dynamic custom fields configured by the hospital",
+                                        "type": "object",
+                                        "example": {
+                                            "marital_status": "Married",
+                                            "occupation": "Engineer"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -1979,6 +2225,232 @@
                     },
                     "404": {
                         "description": "Patient not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/patient-fields/configs": {
+            "get": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Get list of dynamic custom patient fields",
+                "description": "Hospital Admin API: Retrieves the list of custom demographic/registration fields configured for the hospital (e.g. Marital Status, Occupation, Emergency Contact).",
+                "operationId": "f00a386f9ff665b0e43ad7cf396389ef",
+                "parameters": [
+                    {
+                        "name": "active_only",
+                        "in": "query",
+                        "description": "Fetch only active fields (default: true)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of configured patient fields"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Create a new custom patient field",
+                "description": "Hospital Admin API: Defines a new custom registration field for the hospital.",
+                "operationId": "1af6f2ac42747c1d73c29da6dfa53a93",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "label"
+                                ],
+                                "properties": {
+                                    "label": {
+                                        "description": "Human readable label",
+                                        "type": "string",
+                                        "example": "Marital Status"
+                                    },
+                                    "field_key": {
+                                        "description": "Identifier key (snake_case)",
+                                        "type": "string",
+                                        "example": "marital_status"
+                                    },
+                                    "category": {
+                                        "description": "Category (general, demographic, emergency, insurance)",
+                                        "type": "string",
+                                        "example": "demographic"
+                                    },
+                                    "input_type": {
+                                        "type": "string",
+                                        "example": "select",
+                                        "enum": [
+                                            "text",
+                                            "number",
+                                            "select",
+                                            "date",
+                                            "boolean",
+                                            "textarea"
+                                        ]
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "Single",
+                                            "Married",
+                                            "Divorced",
+                                            "Widowed"
+                                        ]
+                                    },
+                                    "placeholder": {
+                                        "type": "string",
+                                        "example": "Select status"
+                                    },
+                                    "is_required": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "sort_order": {
+                                        "type": "integer",
+                                        "example": 10
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Custom patient field created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/patient-fields/configs/{id}": {
+            "put": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Update an existing custom patient field",
+                "operationId": "9b32a187242e2275e736c91b7b33e9d8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "label": {
+                                        "type": "string",
+                                        "example": "Marital Status"
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "demographic"
+                                    },
+                                    "input_type": {
+                                        "type": "string",
+                                        "example": "select"
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "Single",
+                                            "Married"
+                                        ]
+                                    },
+                                    "placeholder": {
+                                        "type": "string",
+                                        "example": "Select"
+                                    },
+                                    "is_required": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "sort_order": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Custom patient field updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "7. Hospital Settings (Hospital Admin)"
+                ],
+                "summary": "Delete custom patient field configuration",
+                "operationId": "1b9da7459c74ac5059d9efd2c3f705a4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Field configuration deleted successfully"
                     }
                 },
                 "security": [
@@ -2149,18 +2621,34 @@
                 "tags": [
                     "4. Reception"
                 ],
-                "summary": "Register a patient without ABHA",
-                "description": "Registers a normal walk-in patient. Date of birth (dob) must be in YYYY-MM-DD format.",
+                "summary": "Manual Patient Registration (Without ABHA)",
+                "description": "Registers a walk-in patient who does not have an ABHA card or chooses manual registration.",
                 "operationId": "d51d8bd9ded2d49ef40f173965474cf5",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "name"
+                                ],
                                 "properties": {
                                     "name": {
                                         "type": "string",
-                                        "example": "Rajesh Kumar"
+                                        "example": "Jane Doe"
+                                    },
+                                    "guardian_name": {
+                                        "description": "Father / Mother / Spouse Name",
+                                        "type": "string",
+                                        "example": "Robert Doe"
+                                    },
+                                    "guardian_relation": {
+                                        "type": "string",
+                                        "example": "Father"
+                                    },
+                                    "guardian_phone": {
+                                        "type": "string",
+                                        "example": "9876500000"
                                     },
                                     "mobile": {
                                         "type": "string",
@@ -2168,12 +2656,12 @@
                                     },
                                     "gender": {
                                         "type": "string",
-                                        "example": "M"
+                                        "example": "F"
                                     },
                                     "dob": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "1985-08-15"
+                                        "example": "1995-08-15"
                                     },
                                     "blood_group": {
                                         "type": "string",
@@ -2181,15 +2669,30 @@
                                     },
                                     "address": {
                                         "type": "string",
-                                        "example": "House 4, Sector 12"
+                                        "example": "45 Park Street"
                                     },
                                     "city": {
                                         "type": "string",
-                                        "example": "Gurgaon"
+                                        "example": "Mumbai"
+                                    },
+                                    "district": {
+                                        "type": "string",
+                                        "example": "Mumbai Suburban"
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "example": "Maharashtra"
                                     },
                                     "pincode": {
                                         "type": "string",
-                                        "example": "122001"
+                                        "example": "400001"
+                                    },
+                                    "custom_fields": {
+                                        "type": "object",
+                                        "example": {
+                                            "marital_status": "Single",
+                                            "occupation": "Engineer"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -2259,8 +2762,8 @@
                 "tags": [
                     "4. Reception"
                 ],
-                "summary": "Create direct OPD visit for registered patient",
-                "description": "Creates an OPD appointment (visit) for a patient who is already registered in the hospital.",
+                "summary": "Create OPD visit (Parcha) with Split / Multi-Mode Payment support",
+                "description": "Creates an OPD registration slip (visit) with multi-mode payment, split payments, and fee discounts.",
                 "operationId": "4967224240e61aaab31bc6b879441331",
                 "requestBody": {
                     "required": true,
@@ -2287,24 +2790,80 @@
                                     },
                                     "chief_complaint": {
                                         "type": "string",
-                                        "example": "Fever and cold"
+                                        "example": "Fever and headache"
                                     },
                                     "fee_charged": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 300
+                                        "example": 500
+                                    },
+                                    "discount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50
+                                    },
+                                    "amount_paid": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 450
                                     },
                                     "payment_status": {
                                         "type": "string",
-                                        "example": "paid"
+                                        "example": "paid",
+                                        "enum": [
+                                            "pending",
+                                            "paid",
+                                            "partial",
+                                            "waived"
+                                        ]
                                     },
                                     "payment_method": {
                                         "type": "string",
-                                        "example": "upi"
+                                        "example": "split",
+                                        "enum": [
+                                            "cash",
+                                            "card",
+                                            "upi",
+                                            "insurance",
+                                            "split",
+                                            "cheque",
+                                            "other"
+                                        ]
                                     },
                                     "payment_ref": {
                                         "type": "string",
-                                        "example": "UPI123456789"
+                                        "example": "REF12345"
+                                    },
+                                    "payment_breakdown": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "method": {
+                                                    "type": "string",
+                                                    "example": "cash"
+                                                },
+                                                "amount": {
+                                                    "type": "number",
+                                                    "example": 250
+                                                },
+                                                "ref": {
+                                                    "type": "string",
+                                                    "example": null
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "example": [
+                                            {
+                                                "method": "cash",
+                                                "amount": 250
+                                            },
+                                            {
+                                                "method": "upi",
+                                                "amount": 200,
+                                                "ref": "UPI987654321"
+                                            }
+                                        ]
                                     }
                                 },
                                 "type": "object"
