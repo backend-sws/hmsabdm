@@ -61,8 +61,8 @@ export default function DepartmentEdit({ open, onClose, department }: Department
       reset()
       onClose(false)
     },
-    onError: (err: any) => {
-      toast.error(err.message || "Failed to save department record")
+    meta: {
+      errorTitle: "Failed to save department record",
     },
   })
 

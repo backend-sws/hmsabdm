@@ -104,7 +104,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     <aside
       className={`fixed top-16 bottom-0 left-0 z-30 flex h-[calc(100vh-4rem)] shrink-0 flex-col justify-between border-r border-border/80 bg-card/95 backdrop-blur-md transition-all duration-300 ease-in-out lg:relative lg:top-0 lg:z-auto lg:translate-x-0 ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      } ${isCollapsed ? "lg:w-20" : "lg:w-64"} relative w-64 overflow-hidden`}
+      } ${isCollapsed ? "lg:w-20" : "lg:w-64"} w-64 overflow-hidden`}
     >
       {/* Seamless Medical Line-Art Pattern Background Overlay */}
       <div

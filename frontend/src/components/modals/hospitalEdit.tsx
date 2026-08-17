@@ -73,8 +73,8 @@ export default function HospitalEdit({ open, onClose, hospital }: HospitalEditPr
       reset()
       onClose(false)
     },
-    onError: (err: any) => {
-      toast.error(err.message || "Failed to save hospital record")
+    meta: {
+      errorTitle: "Failed to save hospital record",
     },
   })
 

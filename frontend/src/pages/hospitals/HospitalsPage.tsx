@@ -48,6 +48,9 @@ export function HospitalsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.hospitals.all })
       deleteDisclosure.onClose()
     },
+    meta: {
+      errorTitle: "Failed to delete hospital",
+    },
   })
 
   const handleFilterChange = useCallback(
