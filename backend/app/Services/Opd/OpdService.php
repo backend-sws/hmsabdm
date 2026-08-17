@@ -16,7 +16,7 @@ class OpdService implements OpdServiceInterface
 
         $query = OpdVisit::where('doctor_id', $doctorId)
             ->whereDate('visit_date', today())
-            ->with(['patient', 'department', 'doctor']);
+            ->with(['patient.latestVital', 'department', 'doctor', 'latestVital']);
 
         if ($req && $req->filled('status')) {
             $status = $req->query('status');

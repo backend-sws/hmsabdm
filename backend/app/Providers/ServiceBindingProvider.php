@@ -55,6 +55,11 @@ class ServiceBindingProvider extends ServiceProvider
             \App\Services\Opd\OpdServiceInterface::class,
             \App\Services\Opd\OpdService::class
         );
+
+        $this->app->bind(
+            \App\Services\Vital\VitalServiceInterface::class,
+            \App\Services\Vital\VitalService::class
+        );
     }
 
     /**

@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "HMS ABDM Integration API",
-        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from Hospital Admin setup to Reception OPD Slip generation and Doctor consultation.\n\n---\n\n## 🏥 Phase 1: Onboarding & Setup (Hospital Admin)\n\n1. **`POST /api/v1/login`**: Login using Admin credentials (e.g., `admin@hms.com`). Note the `access_token` and pass `Authorization: Bearer <token>` in subsequent requests.\n2. **`POST /api/v1/departments`**: Create medical departments (e.g., General Medicine, Cardiology, Orthopedics).\n3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.\n4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup working schedule and patient limits for doctors.\n\n---\n\n## 📋 Phase 2: Patient Registration (Reception / Front Desk)\n\nWhen a patient arrives at the hospital, there are **3 ways** to verify/register them:\n\n### Option A: Standard Walk-in (No ABHA / Normal Patient)\n* **`POST /api/v1/reception/register`**: Register patient manually with Name, Mobile, DOB, and Gender. Returns `patient.id`.\n\n### Option B: Patient Already Has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/search`**: (Optional) Search ABHA records by mobile number.\n2. **`POST /api/v1/abha/generate-otp`**: Send OTP to patient's mobile (`{ \"mobile\": \"7049711475\" }`). Returns `txnId`.\n3. **`POST /api/v1/abha/verify-otp`**: Verify OTP (`{ \"txnId\": \"...\", \"otp\": \"...\" }`).\n   * **Note:** The response contains full verified KYC details (Name, DOB, Gender, ABHA Number, Photo) in the `accounts` array.\n4. **`POST /api/v1/reception/register`**: Auto-fill and save patient to hospital DB with the returned `abha_number` & `abha_address`. Returns `patient.id`.\n\n### Option C: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send OTP to Aadhaar-linked mobile. Returns `txnId`.\n2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP. Returns `token` (X-Token) & `hasExistingAbha`.\n3. *(If Aadhaar mobile is different)*: **`enrol/mobile-otp`** → **`enrol/verify-mobile`**\n4. *(If fresh enrolment)*: **`GET enrol/suggest-address`** → **`POST enrol/create-address`**\n5. **`GET /api/v1/abha/profile`**: Fetch full Aadhaar profile using `token`.\n6. **`GET /api/v1/abha/card`**: (Optional) Download official Govt ABHA Card (PDF/Image).\n7. **`POST /api/v1/reception/register`**: Save patient to hospital DB. Returns `patient.id`.\n\n---\n\n## 🎟️ Phase 3: OPD Slip Generation (Creating Appointment Visit)\n\nOPD Slip in dono mein se **kisi ek API** se banti hai:\n\n### Method 1: Standard OPD Visit (For Option A, B, and C)\nOnce the patient is registered and you have `patient_id`:\n1. **`GET /api/v1/reception/departments`**: Fetch active departments and available doctors.\n2. **`POST /api/v1/reception/visit`**: **Generate OPD Slip!**\n   * Body: `{ \"patient_id\": 1, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Assigns Queue Token (e.g. `OPD-042`), creates Visit in Doctor's queue, and generates printable OPD Slip.\n\n### Method 2: Scan & Share (ABDM QR Code Fast-Track)\nWhen a patient scans the Hospital Counter QR code using their ABHA App:\n1. ABDM Webhook (**`POST /api/webhook/abdm/v1/scan-and-share`**) automatically receives demographic data and queues the token (valid for 30 min).\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views waiting scanned patients.\n3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Look up specific 3-digit token (e.g. `TK-482`).\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: **Generate OPD Slip!**\n   * Body: `{ \"queue_id\": 5, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Confirms the queue, links doctor/department, and generates printable OPD Slip.\n\n---\n\n## 🩺 Phase 4: Doctor's Panel (Consultation)\n\n1. **`GET /api/v1/opd/queue`**: Doctor views their live OPD queue for today.\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient into the consultation room.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes consultation, adding diagnosis, notes, and prescription.",
+        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from Hospital Admin setup to Reception OPD Slip generation and Doctor consultation.\n\n---\n\n## 🏥 Phase 1: Onboarding & Setup (Hospital Admin)\n\n1. **`POST /api/v1/login`**: Login using Admin credentials (e.g., `admin@hms.com`). Note the `access_token` and pass `Authorization: Bearer <token>` in subsequent requests.\n2. **`POST /api/v1/departments`**: Create medical departments (e.g., General Medicine, Cardiology, Orthopedics).\n3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.\n4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup working schedule and patient limits for doctors.\n\n---\n\n## 📋 Phase 2: Patient Registration (Reception / Front Desk)\n\nWhen a patient arrives at the hospital, there are **3 ways** to verify/register them:\n\n### Option A: Standard Walk-in (No ABHA / Normal Patient)\n* **`POST /api/v1/reception/register`**: Register patient manually with Name, Mobile, DOB, and Gender. Returns `patient.id`.\n\n### Option B: Patient Already Has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/search`**: (Optional) Search ABHA records by mobile number.\n2. **`POST /api/v1/abha/generate-otp`**: Send OTP to patient's mobile (`{ \"mobile\": \"7049711475\" }`). Returns `txnId`.\n3. **`POST /api/v1/abha/verify-otp`**: Verify OTP (`{ \"txnId\": \"...\", \"otp\": \"...\" }`).\n   * **Note:** The response contains full verified KYC details (Name, DOB, Gender, ABHA Number, Photo) in the `accounts` array.\n4. **`POST /api/v1/reception/register`**: Auto-fill and save patient to hospital DB with the returned `abha_number` & `abha_address`. Returns `patient.id`.\n\n### Option C: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send OTP to Aadhaar-linked mobile. Returns `txnId`.\n2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP. Returns `token` (X-Token) & `hasExistingAbha`.\n3. *(If Aadhaar mobile is different)*: **`enrol/mobile-otp`** → **`enrol/verify-mobile`**\n4. *(If fresh enrolment)*: **`GET enrol/suggest-address`** → **`POST enrol/create-address`**\n5. **`GET /api/v1/abha/profile`**: Fetch full Aadhaar profile using `token`.\n6. **`GET /api/v1/abha/card`**: (Optional) Download official Govt ABHA Card (PDF/Image).\n7. **`POST /api/v1/reception/register`**: Save patient to hospital DB. Returns `patient.id`.\n\n---\n\n## 🎟️ Phase 3: OPD Slip Generation (Creating Appointment Visit)\n\nOPD Slip in dono mein se **kisi ek API** se banti hai:\n\n### Method 1: Standard OPD Visit (For Option A, B, and C)\nOnce the patient is registered and you have `patient_id`:\n1. **`GET /api/v1/reception/departments`**: Fetch active departments and available doctors.\n2. **`POST /api/v1/reception/visit`**: **Generate OPD Slip!**\n   * Body: `{ \"patient_id\": 1, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Assigns Queue Token (e.g. `OPD-042`), creates Visit in Doctor's queue, and generates printable OPD Slip.\n\n### Method 2: Scan & Share (ABDM QR Code Fast-Track)\nWhen a patient scans the Hospital Counter QR code using their ABHA App:\n1. ABDM Webhook (**`POST /api/webhook/abdm/v1/scan-and-share`**) automatically receives demographic data and queues the token (valid for 30 min).\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views waiting scanned patients.\n3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Look up specific 3-digit token (e.g. `TK-482`).\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: **Generate OPD Slip!**\n   * Body: `{ \"queue_id\": 5, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Confirms the queue, links doctor/department, and generates printable OPD Slip.\n\n---\n\n## 🩺 Phase 4: Triage & Nurse Station (Vitals Recording)\n\nOnce the OPD token slip is generated, the Nurse / Triage Station notes the patient's vitals before doctor consultation:\n1. **`POST /api/v1/vitals`**: **Record Patient Vitals** (BP, Pulse, Temperature, SpO2, Height, Weight, Blood Glucose).\n   * Body: `{ \"patient_id\": 1, \"opd_visit_id\": 1, \"temperature\": 98.6, \"blood_pressure_sys\": 120, \"blood_pressure_dia\": 80, \"pulse_rate\": 72, \"weight\": 68.5, \"height\": 172.0 }`\n   * **Result:** Saves vitals, auto-calculates BMI ($23.15$), and links to visit/patient.\n2. **`GET /api/v1/vitals/visit/{visitId}`**: View vitals recorded for this specific visit.\n3. **`GET /api/v1/patients/{patientId}/vitals`**: View entire vitals history for a patient.\n\n---\n\n## 👨‍⚕️ Phase 5: Doctor's Panel (Consultation)\n\n1. **`GET /api/v1/opd/queue`**: Doctor views their live OPD queue for today (includes patient details & latest recorded vitals).\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient into the consultation room.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes consultation, adding diagnosis, notes, and prescription.",
         "version": "1.0.0"
     },
     "servers": [
@@ -476,13 +476,20 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "login_id",
                                     "password"
                                 ],
                                 "properties": {
                                     "login_id": {
                                         "type": "string",
-                                        "example": "superadmin@hms.com or DR-SMITH-001"
+                                        "example": "superadmin@hms.com or superadmin"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "superadmin@hms.com"
+                                    },
+                                    "username": {
+                                        "type": "string",
+                                        "example": "superadmin"
                                     },
                                     "password": {
                                         "type": "string",
@@ -546,7 +553,7 @@
         "/api/v1/departments": {
             "get": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "List all departments in the hospital",
                 "description": "Retrieves a list of all medical departments. Supports search, filtering, and ?all=true for dropdowns.",
@@ -614,7 +621,7 @@
             },
             "post": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "Create a new department",
                 "description": "Creates a new department in the hospital (e.g. Cardiology, Orthopedics). Code should be unique.",
@@ -662,7 +669,7 @@
         "/api/v1/departments/{id}": {
             "put": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "Update a department",
                 "description": "Modifies an existing department's name, code, or active status.",
@@ -717,7 +724,7 @@
             },
             "delete": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "Delete a department",
                 "description": "Removes a department from the system. (Warning: affects associated doctors).",
@@ -747,7 +754,7 @@
         "/api/v1/doctors": {
             "get": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "List all doctors in the hospital",
                 "description": "Retrieves a list of all registered doctors across all departments. Supports search, department filter, active status filter, and ?all=true for dropdowns.",
@@ -824,7 +831,7 @@
             },
             "post": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "Create a new doctor",
                 "description": "Registers a new doctor and assigns them to a specific department.",
@@ -902,7 +909,7 @@
         "/api/v1/doctors/available-today": {
             "get": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "List doctors available today",
                 "description": "Fetches a list of doctors who have an active schedule for the current day of the week. Supports search and department filtering.",
@@ -972,7 +979,7 @@
         "/api/v1/doctors/{id}": {
             "put": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "Update a doctor",
                 "description": "Updates the basic profile details of an existing doctor.",
@@ -1058,7 +1065,7 @@
             },
             "delete": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "Delete a doctor",
                 "description": "Deactivates or deletes a doctor record from the hospital.",
@@ -1088,7 +1095,7 @@
         "/api/v1/doctors/{id}/schedule": {
             "put": {
                 "tags": [
-                    "7. Departments & Doctors"
+                    "8. Departments & Doctors"
                 ],
                 "summary": "Update doctor schedule",
                 "description": "Updates the weekly availability of a doctor. Time must be in 24-hour HH:MM format (e.g., '09:00', '17:30'). Day of week: 0=Sun, 1=Mon, ..., 6=Sat.",
@@ -1163,7 +1170,7 @@
         "/api/v1/hospitals": {
             "get": {
                 "tags": [
-                    "6. Hospitals & Admin"
+                    "7. Hospitals & Admin"
                 ],
                 "summary": "List all registered Hospitals",
                 "description": "Super Admin API to retrieve a paginated list of all hospitals currently onboarded to the system.",
@@ -1181,7 +1188,7 @@
             },
             "post": {
                 "tags": [
-                    "6. Hospitals & Admin"
+                    "7. Hospitals & Admin"
                 ],
                 "summary": "Register a new Hospital & create default Admin",
                 "description": "Super Admin API to onboard a new hospital into the system and set up its initial Admin account.",
@@ -1264,7 +1271,7 @@
         "/api/v1/hospitals/{id}": {
             "get": {
                 "tags": [
-                    "6. Hospitals & Admin"
+                    "7. Hospitals & Admin"
                 ],
                 "summary": "Get specific Hospital details",
                 "operationId": "978f234bf487cdc9c878ce520ce5917c",
@@ -1291,7 +1298,7 @@
             },
             "put": {
                 "tags": [
-                    "6. Hospitals & Admin"
+                    "7. Hospitals & Admin"
                 ],
                 "summary": "Update Hospital details",
                 "operationId": "471d2ffdb43decb5c8e3fd5e283cdb85",
@@ -1318,7 +1325,7 @@
             },
             "delete": {
                 "tags": [
-                    "6. Hospitals & Admin"
+                    "7. Hospitals & Admin"
                 ],
                 "summary": "Delete a Hospital",
                 "operationId": "1813cf095b22d4aaab318814a11f973a",
@@ -1347,7 +1354,7 @@
         "/api/v1/opd/queue": {
             "get": {
                 "tags": [
-                    "5. OPD (Doctor)"
+                    "6. OPD (Doctor)"
                 ],
                 "summary": "Get today's OPD queue for a doctor",
                 "description": "Fetches the list of all patients assigned to a specific doctor for today's date. Supports status filtering and patient search.",
@@ -1428,7 +1435,7 @@
         "/api/v1/opd/visit/{visitId}/call": {
             "post": {
                 "tags": [
-                    "5. OPD (Doctor)"
+                    "6. OPD (Doctor)"
                 ],
                 "summary": "Call a patient into the doctor's cabin",
                 "description": "Marks the patient's status as 'Consulting', indicating the doctor has started the checkup.",
@@ -1474,7 +1481,7 @@
         "/api/v1/opd/visit/{visitId}/complete": {
             "post": {
                 "tags": [
-                    "5. OPD (Doctor)"
+                    "6. OPD (Doctor)"
                 ],
                 "summary": "Complete a patient consultation",
                 "description": "Finishes the OPD visit. The doctor can add diagnosis, clinical notes, and medicines. Status becomes 'Completed'.",
@@ -1528,7 +1535,7 @@
         "/api/v1/patients": {
             "get": {
                 "tags": [
-                    "8. Patients"
+                    "9. Patients"
                 ],
                 "summary": "Get all patients",
                 "description": "Retrieves a list of all patients registered in the hospital. Supports search by name, mobile, ABHA number/address, and pagination.",
@@ -1587,7 +1594,7 @@
             },
             "post": {
                 "tags": [
-                    "8. Patients"
+                    "9. Patients"
                 ],
                 "summary": "Register a new patient",
                 "description": "Manually registers a new patient with their ABHA number. Useful for manual data entry.",
@@ -2007,7 +2014,7 @@
         "/api/v1/storage/upload-url": {
             "post": {
                 "tags": [
-                    "10. Storage"
+                    "11. Storage"
                 ],
                 "summary": "Generate a presigned URL for direct file upload to Cloudflare R2 / S3",
                 "description": "Returns a presigned URL. The frontend should make a PUT request to this URL with the raw file data (binary) to upload it directly to cloud storage without passing through the backend.",
@@ -2056,7 +2063,7 @@
         "/api/v1/storage/view-url": {
             "get": {
                 "tags": [
-                    "10. Storage"
+                    "11. Storage"
                 ],
                 "summary": "Generate a time-limited presigned URL to view a private file",
                 "description": "Returns a temporary URL (usually valid for 5-15 mins) that allows the frontend to display or download a privately stored file (like a PDF report or image).",
@@ -2075,6 +2082,580 @@
                 "responses": {
                     "200": {
                         "description": "View URL generated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/vitals": {
+            "get": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Get list of recorded vitals",
+                "description": "Fetches recorded vitals filtered by patient_id, opd_visit_id, date, or patient search.",
+                "operationId": "ca104f7cda33acd02549a0971a803e74",
+                "parameters": [
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "description": "Filter by patient ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "opd_visit_id",
+                        "in": "query",
+                        "description": "Filter by OPD Visit ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Filter by record date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by patient name, mobile, or ABHA",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "description": "Fetch all without pagination (true/false)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": false
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Records per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of vitals"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Record Patient Vitals (Nurse Station)",
+                "description": "Records standard vitals (BP, Pulse, Temperature, SpO2, Height, Weight, Blood Sugar) and optional dynamic custom vitals defined by the hospital. BMI is auto-calculated.",
+                "operationId": "5ae00bf6c1634bf782e6cedad04bfc6e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "patient_id"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "description": "ID of the patient",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "opd_visit_id": {
+                                        "description": "Optional ID of current OPD Visit / Token",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "temperature": {
+                                        "description": "Body temperature",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 98.6
+                                    },
+                                    "temperature_unit": {
+                                        "description": "Temperature unit (F or C)",
+                                        "type": "string",
+                                        "example": "F",
+                                        "enum": [
+                                            "F",
+                                            "C"
+                                        ]
+                                    },
+                                    "blood_pressure_sys": {
+                                        "description": "Systolic BP (mmHg)",
+                                        "type": "integer",
+                                        "example": 120
+                                    },
+                                    "blood_pressure_dia": {
+                                        "description": "Diastolic BP (mmHg)",
+                                        "type": "integer",
+                                        "example": 80
+                                    },
+                                    "pulse_rate": {
+                                        "description": "Pulse / Heart rate (bpm)",
+                                        "type": "integer",
+                                        "example": 72
+                                    },
+                                    "respiratory_rate": {
+                                        "description": "Respiratory rate (breaths/min)",
+                                        "type": "integer",
+                                        "example": 16
+                                    },
+                                    "oxygen_saturation": {
+                                        "description": "SpO2 percentage (%)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 98.5
+                                    },
+                                    "weight": {
+                                        "description": "Weight in kg",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 65.5
+                                    },
+                                    "height": {
+                                        "description": "Height in cm",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 170
+                                    },
+                                    "blood_glucose": {
+                                        "description": "Blood glucose in mg/dL",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 110
+                                    },
+                                    "glucose_type": {
+                                        "type": "string",
+                                        "example": "random",
+                                        "enum": [
+                                            "fasting",
+                                            "random",
+                                            "post_meal"
+                                        ]
+                                    },
+                                    "custom_vitals": {
+                                        "description": "Dynamic custom vitals configured by the hospital (Key-Value pairs)",
+                                        "type": "object",
+                                        "example": {
+                                            "pain_score": 4,
+                                            "waist_circumference": 85
+                                        }
+                                    },
+                                    "recorded_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-08-17T10:30:00Z"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Vitals recorded successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/vitals/{id}": {
+            "get": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Get vital details by ID",
+                "description": "Fetches specific vital reading details.",
+                "operationId": "9f07e792aeb4830c3b666b97105fde00",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vital details"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Delete vital record",
+                "description": "Deletes an incorrect vital entry.",
+                "operationId": "a5e8dbf225fec0115a5e4b8c7cefeb25",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vital deleted successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/patients/{patientId}/vitals": {
+            "get": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Get patient vitals history",
+                "description": "Fetches full vitals history recorded for a given patient.",
+                "operationId": "f16f68b7d29a47d5f6d32c295694b1bd",
+                "parameters": [
+                    {
+                        "name": "patientId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient vitals history"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/opd/visit/{visitId}/vitals": {
+            "get": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Get vitals for an OPD visit",
+                "description": "Fetches vitals recorded specifically for an OPD visit token.",
+                "operationId": "8dffd7bd0d31537749862ed778573776",
+                "parameters": [
+                    {
+                        "name": "visitId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Visit vitals"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/vitals/configs": {
+            "get": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Get hospital's configured vital fields",
+                "description": "Returns the list of vital fields enabled for the hospital. Frontend uses this to render dynamic vital forms.",
+                "operationId": "727183700860f65a7516c0ef59552453",
+                "parameters": [
+                    {
+                        "name": "active_only",
+                        "in": "query",
+                        "description": "Filter only active fields (default: true)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of configured vital fields"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Add a custom vital field for hospital",
+                "description": "Hospital Admin creates a new custom vital field that nurses should record (e.g., Pain Score, Waist Size, Left/Right Eye Vision).",
+                "operationId": "823ff63cd8f98b0daa91d2ec476024a7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "field_key",
+                                    "label"
+                                ],
+                                "properties": {
+                                    "field_key": {
+                                        "description": "Unique key identifier",
+                                        "type": "string",
+                                        "example": "pain_score"
+                                    },
+                                    "label": {
+                                        "description": "Display name on UI",
+                                        "type": "string",
+                                        "example": "Pain Scale (1 - 10)"
+                                    },
+                                    "category": {
+                                        "description": "General, Cardio, Diabetic, Pediatric, etc.",
+                                        "type": "string",
+                                        "example": "General"
+                                    },
+                                    "unit": {
+                                        "description": "e.g. mmHg, bpm, cm, mg/dL, scale",
+                                        "type": "string",
+                                        "example": "scale"
+                                    },
+                                    "input_type": {
+                                        "type": "string",
+                                        "example": "number",
+                                        "enum": [
+                                            "number",
+                                            "text",
+                                            "select",
+                                            "boolean"
+                                        ]
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "Mild",
+                                            "Moderate",
+                                            "Severe"
+                                        ]
+                                    },
+                                    "min_value": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1
+                                    },
+                                    "max_value": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 10
+                                    },
+                                    "is_required": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "sort_order": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Custom vital field created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/vitals/configs/{id}": {
+            "put": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Update custom vital field configuration",
+                "description": "Updates label, unit, min/max range, active status, or sort order for a vital field.",
+                "operationId": "19ba4dba335b88770743573f170e3bd1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "label": {
+                                        "type": "string",
+                                        "example": "Pain Scale"
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "General"
+                                    },
+                                    "unit": {
+                                        "type": "string",
+                                        "example": "scale"
+                                    },
+                                    "input_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "number",
+                                            "text",
+                                            "select",
+                                            "boolean"
+                                        ]
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "min_value": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "max_value": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "is_required": {
+                                        "type": "boolean"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    },
+                                    "sort_order": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Configuration updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Delete custom vital field configuration",
+                "description": "Removes a custom vital field from the hospital's vital form.",
+                "operationId": "94113e70757fa07a2224b78ee5702f6d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Configuration deleted successfully"
                     }
                 },
                 "security": [
@@ -2112,23 +2693,27 @@
             "description": "Flow C & D — Walk-in Registration, Departments, OPD Visit, Scan & Share Queue"
         },
         {
-            "name": "5. OPD (Doctor)",
+            "name": "5. Triage & Vitals (Nurse)",
+            "description": "Triage Station — Recording patient vitals & dynamic hospital vital field configurations"
+        },
+        {
+            "name": "6. OPD (Doctor)",
             "description": "Doctor Panel — Today's OPD Queue Management"
         },
         {
-            "name": "6. Hospitals & Admin",
+            "name": "7. Hospitals & Admin",
             "description": "Super Admin — Hospital Management"
         },
         {
-            "name": "7. Departments & Doctors",
+            "name": "8. Departments & Doctors",
             "description": "Admin — Department & Doctor Setup"
         },
         {
-            "name": "8. Patients",
+            "name": "9. Patients",
             "description": "Patient Records Management"
         },
         {
-            "name": "10. Storage",
+            "name": "11. Storage",
             "description": "File Upload/Download via R2/S3"
         },
         {

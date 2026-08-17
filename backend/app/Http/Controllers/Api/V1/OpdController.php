@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(
-    name: "5. OPD (Doctor)",
+    name: "6. OPD (Doctor)",
     description: "Doctor Panel — Today's OPD Queue Management"
 )]
 class OpdController extends Controller
@@ -27,7 +27,7 @@ class OpdController extends Controller
         summary: "Get today's OPD queue for a doctor",
         description: "Fetches the list of all patients assigned to a specific doctor for today's date. Supports status filtering and patient search.",
         security: [["bearerAuth" => []]],
-        tags: ["5. OPD (Doctor)"]
+        tags: ["6. OPD (Doctor)"]
     )]
     #[OA\Parameter(name: "doctor_id", in: "query", description: "ID of the doctor", required: true, schema: new OA\Schema(type: "integer", example: 1))]
     #[OA\Parameter(name: "status", in: "query", description: "Filter by status: waiting, called, in_consultation, done, cancelled, or all", required: false, schema: new OA\Schema(type: "string", example: "waiting"))]
@@ -53,7 +53,7 @@ class OpdController extends Controller
         summary: "Call a patient into the doctor's cabin",
         description: "Marks the patient's status as 'Consulting', indicating the doctor has started the checkup.",
         security: [["bearerAuth" => []]],
-        tags: ["5. OPD (Doctor)"]
+        tags: ["6. OPD (Doctor)"]
     )]
     #[OA\Parameter(name: "visitId", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\RequestBody(
@@ -86,7 +86,7 @@ class OpdController extends Controller
         summary: "Complete a patient consultation",
         description: "Finishes the OPD visit. The doctor can add diagnosis, clinical notes, and medicines. Status becomes 'Completed'.",
         security: [["bearerAuth" => []]],
-        tags: ["5. OPD (Doctor)"]
+        tags: ["6. OPD (Doctor)"]
     )]
     #[OA\Parameter(name: "visitId", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\RequestBody(

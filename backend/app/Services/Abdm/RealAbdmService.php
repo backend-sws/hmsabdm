@@ -506,7 +506,7 @@ class RealAbdmService implements AbdmServiceInterface
         try {
             $response = $this->httpClient()
                 ->withHeaders($headers)
-                ->get("{$this->abhaUrl}/v3/profile/account/qr-code");
+                ->get("{$this->abhaUrl}/v3/profile/account/qrCode");
         } catch (\Illuminate\Http\Client\RequestException $e) {
             $response = $e->response;
         }

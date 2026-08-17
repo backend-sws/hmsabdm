@@ -89,7 +89,7 @@ interface AbdmServiceInterface
 
     /**
      * Download ABHA QR Code (PNG)
-     * GET /v3/profile/account/qr-code
+     * GET /v3/profile/account/qrCode
      */
     public function downloadQrCode(string $token): array;
 

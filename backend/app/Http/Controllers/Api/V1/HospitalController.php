@@ -28,7 +28,7 @@ class HospitalController extends Controller
         summary: "Register a new Hospital & create default Admin",
         description: "Super Admin API to onboard a new hospital into the system and set up its initial Admin account.",
         security: [["bearerAuth" => []]],
-        tags: ["6. Hospitals & Admin"]
+        tags: ["7. Hospitals & Admin"]
     )]
     #[OA\RequestBody(
         required: true,
@@ -113,7 +113,7 @@ class HospitalController extends Controller
         summary: "List all registered Hospitals",
         description: "Super Admin API to retrieve a paginated list of all hospitals currently onboarded to the system.",
         security: [["bearerAuth" => []]],
-        tags: ["6. Hospitals & Admin"]
+        tags: ["7. Hospitals & Admin"]
     )]
     #[OA\Response(response: 200, description: "List of Hospitals")]
     public function index(Request $request)
@@ -143,7 +143,7 @@ class HospitalController extends Controller
         path: "/api/v1/hospitals/{id}",
         summary: "Get specific Hospital details",
         security: [["bearerAuth" => []]],
-        tags: ["6. Hospitals & Admin"]
+        tags: ["7. Hospitals & Admin"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Hospital details")]
@@ -160,7 +160,7 @@ class HospitalController extends Controller
         path: "/api/v1/hospitals/{id}",
         summary: "Update Hospital details",
         security: [["bearerAuth" => []]],
-        tags: ["6. Hospitals & Admin"]
+        tags: ["7. Hospitals & Admin"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Hospital updated successfully")]
@@ -192,7 +192,7 @@ class HospitalController extends Controller
         path: "/api/v1/hospitals/{id}",
         summary: "Delete a Hospital",
         security: [["bearerAuth" => []]],
-        tags: ["6. Hospitals & Admin"]
+        tags: ["7. Hospitals & Admin"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Hospital deleted successfully")]

@@ -27,7 +27,7 @@ class DepartmentController extends Controller
         summary: "List all departments in the hospital",
         description: "Retrieves a list of all medical departments. Supports search, filtering, and ?all=true for dropdowns.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\Parameter(name: "search", in: "query", description: "Search by department name, code, or description", required: false, schema: new OA\Schema(type: "string"))]
     #[OA\Parameter(name: "is_active", in: "query", description: "Filter by active status (true/false)", required: false, schema: new OA\Schema(type: "boolean"))]
@@ -47,7 +47,7 @@ class DepartmentController extends Controller
         summary: "Create a new department",
         description: "Creates a new department in the hospital (e.g. Cardiology, Orthopedics). Code should be unique.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\RequestBody(
         required: true,
@@ -88,7 +88,7 @@ class DepartmentController extends Controller
         summary: "Update a department",
         description: "Modifies an existing department's name, code, or active status.",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\RequestBody(
@@ -134,7 +134,7 @@ class DepartmentController extends Controller
         summary: "Delete a department",
         description: "Removes a department from the system. (Warning: affects associated doctors).",
         security: [["bearerAuth" => []]],
-        tags: ["7. Departments & Doctors"]
+        tags: ["8. Departments & Doctors"]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Department deleted")]
