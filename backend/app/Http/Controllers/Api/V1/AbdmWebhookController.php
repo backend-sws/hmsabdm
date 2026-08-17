@@ -23,23 +23,51 @@ class AbdmWebhookController extends Controller
         protected AbdmServiceInterface $abdmService
     ) {}
 
-    /**
-     * @OA\Post(
-     *     path="/api/webhook/abdm/v1/scan-and-share",
-     *     summary="Receive Scan & Share Demographic Data",
-     *     tags={"ABDM Webhooks"},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             type="object"
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=202,
-     *         description="Accepted callback"
-     *     )
-     * )
-     */
+    #[OA\Post(
+        path: "/api/webhook/abdm/v1/scan-and-share",
+        summary: "ABDM Webhook — Receive Scan & Share Demographic Data",
+        description: "Public Webhook hit by ABDM Gateway when a patient scans the hospital QR code in their ABHA App. Creates patient, auto-assigns UHID, and generates a 3-digit queue token.",
+        tags: ["11. ABDM Webhooks"]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "hipCode", type: "string", example: "BRIDGE-TEST-HIP", description: "Hospital HIP ID"),
+                new OA\Property(
+                    property: "profile",
+                    type: "object",
+                    properties: [
+                        new OA\Property(
+                            property: "patient",
+                            type: "object",
+                            properties: [
+                                new OA\Property(property: "name", type: "string", example: "Aarav Sharma"),
+                                new OA\Property(property: "gender", type: "string", example: "M"),
+                                new OA\Property(property: "yearOfBirth", type: "string", example: "1994"),
+                                new OA\Property(property: "mobile", type: "string", example: "9876543210"),
+                                new OA\Property(property: "abhaNumber", type: "string", example: "91-2461-6423-7108"),
+                                new OA\Property(property: "abhaAddress", type: "string", example: "aarav94@sbx"),
+                                new OA\Property(property: "address", type: "string", example: "Flat 402, Green Valley Apartments"),
+                                new OA\Property(property: "pincode", type: "string", example: "110001")
+                            ]
+                        )
+                    ]
+                )
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 202,
+        description: "Token generated successfully and returned to ABDM Gateway",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Token generated"),
+                new OA\Property(property: "token", type: "string", example: "482")
+            ]
+        )
+    )]
     public function handleScanAndShare(Request $request)
     {
         Log::info('ABDM Scan and Share Webhook received', $request->all());
