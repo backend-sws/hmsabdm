@@ -40,7 +40,6 @@ export const LoginPage: React.FC = () => {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),

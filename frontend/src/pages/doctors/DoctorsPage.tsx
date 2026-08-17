@@ -1,183 +1,327 @@
-import React, { useState, useMemo, useCallback } from "react"
-import { PageHeader } from "@/components/common/PageHeader"
-import { SectionCard } from "@/components/SectionCard"
-import { FilterBar } from "@/components/filter-bar"
-import { DataTable, type Column } from "@/components/common/DataTable"
-import { StatusBadge } from "@/components/common/StatusBadge"
-import { useSearchFilter } from "@/hooks/useSearchFilter"
-import { useDisclosure } from "@/hooks/useDisclosure"
-import { FormContainer } from "@/components/formContainer"
-import { sectionHeader } from "@/components/sectionHeader"
+import { useCallback, useMemo } from "react"
+import {
+  Eye,
+  Pencil,
+  Plus,
+  Trash2,
+  Users,
+  CheckCircle2,
+  ShieldAlert,
+  Activity,
+  Clock,
+} from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Plus, Clock } from "lucide-react"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { FilterBar } from "@/components/filter-bar"
+import SectionCard from "@/components/SectionCard"
+import StatCardsRow, { type StatItem } from "@/components/common/stat-cards-row"
+import PageHeaderBanner from "@/components/common/PageHeaderBanner"
+import DataTable, { type DataTableColumn } from "@/components/common/DataTable"
+import { ConfirmDialog } from "@/components/confirmDialog"
+import { useDisclosure } from "@/hooks/useDisclosure"
+import { useSearchFilter } from "@/hooks/useSearchFilter"
+import { doctorService } from "@/services/doctorService"
+import { departmentService } from "@/services/departmentService"
+import { queryKeys } from "@/constants/queryKeys"
+import {
+  INITIAL_FILTERS,
+  STATUS_OPTIONS,
+  DAYS_OF_WEEK,
+} from "@/constants/doctor.constants"
+import DoctorEdit from "@/components/modals/doctorEdit"
+import type { Doctor } from "@/types/doctor"
 
-interface DoctorItem {
-  id: string
-  name: string
-  specialty: string
-  department: string
-  schedule: string
-  roomNo: string
-  status: "AVAILABLE" | "ON_DUTY" | "ON_LEAVE"
-}
-
-const mockDoctors: DoctorItem[] = [
-  {
-    id: "DOC-001",
-    name: "Dr. Ananya Roy",
-    specialty: "Cardiologist",
-    department: "Cardiology",
-    schedule: "09:00 AM - 02:00 PM",
-    roomNo: "Room 102",
-    status: "ON_DUTY",
-  },
-  {
-    id: "DOC-002",
-    name: "Dr. Rajesh Verma",
-    specialty: "General Physician",
-    department: "General Medicine",
-    schedule: "08:30 AM - 04:00 PM",
-    roomNo: "Room 105",
-    status: "AVAILABLE",
-  },
-  {
-    id: "DOC-003",
-    name: "Dr. Sunita Rao",
-    specialty: "Orthopedic Surgeon",
-    department: "Orthopedics",
-    schedule: "10:00 AM - 03:00 PM",
-    roomNo: "Room 201",
-    status: "ON_LEAVE",
-  },
-]
-
-const INITIAL_FILTERS = {
-  search: "",
-  status: "",
-  page: 1,
-  limit: 10,
-}
-
-export const DoctorsPage: React.FC = () => {
-  const [doctors] = useState<DoctorItem[]>(mockDoctors)
-  const doctorDisclosure = useDisclosure()
+export function DoctorsPage() {
   const { filter, handleFilter } = useSearchFilter(INITIAL_FILTERS)
+  const queryClient = useQueryClient()
+  const deleteDisclosure = useDisclosure<Doctor>()
+  const editDisclosure = useDisclosure<Doctor & { viewMode?: boolean }>()
+
+  // Fetch doctors list
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.doctors.list(filter),
+    queryFn: () => doctorService.getDoctors(filter),
+  })
+
+  const doctorsList = data?.data || []
+  const meta: any = data?.meta || {}
+
+  // Fetch active departments for the filter dropdown
+  const { data: deptData } = useQuery({
+    queryKey: queryKeys.departments.all,
+    queryFn: () =>
+      departmentService.getDepartments({ all: true, is_active: true }),
+  })
+  const departments = Array.isArray(deptData)
+    ? deptData
+    : (deptData as any)?.data || []
+
+  const departmentOptions = useMemo(() => {
+    return departments.map((dept: any) => ({
+      label: dept.name,
+      value: String(dept.id),
+    }))
+  }, [departments])
+
+  const deleteDoctorMutation = useMutation({
+    mutationFn: (id: string | number) => doctorService.deleteDoctor(id),
+    onSuccess: () => {
+      toast.success("Doctor profile deleted successfully")
+      queryClient.invalidateQueries({ queryKey: queryKeys.doctors.all })
+      deleteDisclosure.onClose()
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to delete doctor profile")
+    },
+  })
 
   const handleFilterChange = useCallback(
-    (updates: Record<string, any>) => {
-      handleFilter({ ...updates, page: 1 })
-    },
+    (updates: Record<string, any>) => handleFilter({ ...updates, page: 1 }),
     [handleFilter]
   )
 
-  const filteredDoctors = useMemo(() => {
-    return doctors.filter((doc) => {
-      const matchesSearch =
-        !filter.search ||
-        doc.name.toLowerCase().includes(filter.search.toLowerCase()) ||
-        doc.specialty.toLowerCase().includes(filter.search.toLowerCase()) ||
-        doc.department.toLowerCase().includes(filter.search.toLowerCase())
+  const stats: StatItem[] = useMemo(() => {
+    const total = meta.total || doctorsList.length || 0
+    const activeCount = doctorsList.filter((d) => d.is_active !== false).length
+    const inactiveCount = doctorsList.filter(
+      (d) => d.is_active === false
+    ).length
+    const uniqueSpecialties = new Set(
+      doctorsList.map((d) => d.specialization).filter(Boolean)
+    ).size
 
-      const matchesStatus = !filter.status || doc.status === filter.status
-      return matchesSearch && matchesStatus
-    })
-  }, [doctors, filter])
+    return [
+      {
+        title: "Total Physicians",
+        value: total,
+        description: "Registered medical staff",
+        icon: <Users className="h-6 w-6" />,
+        colorScheme: "blue",
+      },
+      {
+        title: "Active Roster",
+        value: activeCount,
+        description:
+          total > 0
+            ? `${Math.round((activeCount / total) * 100)}% active`
+            : "100% active",
+        icon: <CheckCircle2 className="h-6 w-6" />,
+        colorScheme: "emerald",
+      },
+      {
+        title: "Inactive Staff",
+        value: inactiveCount,
+        description: "Suspended or off-roster",
+        icon: <ShieldAlert className="h-6 w-6" />,
+        colorScheme: "amber",
+      },
+      {
+        title: "Medical Specialties",
+        value: uniqueSpecialties,
+        description: "Distinct clinical areas",
+        icon: <Activity className="h-6 w-6" />,
+        colorScheme: "purple",
+      },
+    ]
+  }, [meta, doctorsList])
 
-  const columns: Column<DoctorItem>[] = useMemo(
+  const columns = useMemo<DataTableColumn<Doctor>[]>(
     () => [
       {
-        header: "Doctor Name",
-        accessorKey: "name",
-        cell: (row) => (
+        key: "name",
+        header: "Physician Name",
+        render: (row) => (
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 font-bold text-foreground">
+                {row.name}
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {row.specialization || "General Physician"}
+              </p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "department",
+        header: "Department & Credentials",
+        render: (row) => (
           <div>
-            <p className="font-semibold text-foreground">{row.name}</p>
-            <p className="text-xs text-muted-foreground">{row.specialty}</p>
+            <p className="text-xs font-semibold text-foreground">
+              {row.department?.name || "General Unit"}
+            </p>
+            <p className="font-mono text-xs text-muted-foreground">
+              {row.qualification || "MBBS"}
+            </p>
           </div>
         ),
       },
       {
-        header: "Department & OPD Room",
-        cell: (row) => (
-          <div>
-            <p className="text-xs font-medium text-foreground">{row.department}</p>
-            <p className="text-xs text-muted-foreground font-mono">{row.roomNo}</p>
-          </div>
+        key: "schedule",
+        header: "Weekly OPD Roster",
+        render: (row) => {
+          const activeDays =
+            row.schedules
+              ?.filter((s) => s.is_active !== false)
+              .map((s) => {
+                const day = DAYS_OF_WEEK.find(
+                  (d) => d.value === Number(s.day_of_week)
+                )
+                return day ? day.label.substring(0, 3) : ""
+              })
+              .filter(Boolean) || []
+
+          return (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>
+                {activeDays.length > 0
+                  ? activeDays.join(", ")
+                  : "No Duty Schedule"}
+              </span>
+            </div>
+          )
+        },
+      },
+      {
+        key: "consultation_time",
+        header: "Slot Duration",
+        render: (row) => (
+          <span className="font-mono text-xs font-medium text-foreground">
+            {row.consultation_time || 15} mins
+          </span>
         ),
       },
       {
-        header: "Shift Schedule",
-        accessorKey: "schedule",
-        cell: (row) => (
-          <div className="flex items-center gap-1.5 text-xs text-foreground">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>{row.schedule}</span>
-          </div>
+        key: "is_active",
+        header: "Roster Status",
+        render: (row) => (
+          <StatusBadge status={row.is_active ? "ACTIVE" : "INACTIVE"} />
         ),
       },
       {
-        header: "Duty Status",
-        cell: (row) => <StatusBadge status={row.status} />,
+        key: "actions",
+        header: "Actions",
+        className: "text-right",
+        render: (row) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={() => editDisclosure.onOpen({ ...row, viewMode: true })}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={() => editDisclosure.onOpen(row)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={() => deleteDisclosure.onOpen(row)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
       },
     ],
-    []
+    [editDisclosure, deleteDisclosure]
   )
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeaderBanner
         title="Doctors Directory & OPD Roster"
-        subtitle="Manage OPD duty schedules, physician availability, and room assignments."
-        badgeText="Medical Roster"
-        badgeVariant="success"
-        actions={
-          <Button variant="default" size="sm" onClick={() => doctorDisclosure.onOpen(null)}>
-            <Plus className="h-4 w-4 mr-1.5" /> Add Doctor Profile
-          </Button>
-        }
+        subtitle="Manage physician profiles, credentials, and weekly OPD consultation rosters."
+        imageSrc="/hospital.png"
+        imageAlt="Doctors Directory Header"
       />
 
-      <SectionCard title="Hospital Doctors & Schedules" description="Filter doctor profiles and schedule allocations.">
-        <FilterBar values={filter} onChange={handleFilterChange}>
-          <FilterBar.Search name="search" placeholder="Search doctor name, specialty, room..." className="w-72" />
-          <FilterBar.Select
-            name="status"
-            placeholder="All Statuses"
-            options={[
-              { label: "Available", value: "AVAILABLE" },
-              { label: "On Duty", value: "ON_DUTY" },
-              { label: "On Leave", value: "ON_LEAVE" },
-            ]}
-          />
-        </FilterBar>
+      <StatCardsRow stats={stats} isLoading={isLoading} />
 
-        <div className="mt-4">
-          <DataTable columns={columns} data={filteredDoctors} keyExtractor={(item) => item.id} />
+      <SectionCard
+        title="Active Physicians Directory"
+        description="Filter and search registered doctors, specialization, or update shift schedules."
+        actions={
+          <Button
+            onClick={() => editDisclosure.onOpen()}
+            className="bg-blue-600 font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Register Doctor
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <FilterBar values={filter} onChange={handleFilterChange}>
+            <FilterBar.Search
+              name="search"
+              placeholder="Search doctor name, specialization, qualification, phone..."
+              className="w-[320px]"
+            />
+            <FilterBar.Select
+              name="department_id"
+              placeholder="All Departments"
+              options={departmentOptions}
+              className="w-[200px]"
+            />
+            <FilterBar.Select
+              name="is_active"
+              placeholder="All Statuses"
+              options={STATUS_OPTIONS}
+              className="w-[180px]"
+            />
+          </FilterBar>
+
+          <DataTable
+            columns={columns}
+            data={doctorsList}
+            rowKey="id"
+            currentPage={filter.page}
+            pageSize={filter.limit}
+            totalRecords={meta.total || doctorsList.length}
+            lastPage={meta.last_page || 1}
+            isLoading={isLoading}
+            onPageChange={(page) => handleFilter({ page })}
+            handlePageSizeChange={(limit) => handleFilter({ limit, page: 1 })}
+            emptyTitle="No doctor profiles found"
+            emptyDescription="Try adjusting your search criteria or register a new physician profile."
+          />
         </div>
       </SectionCard>
 
-      <FormContainer
-        open={doctorDisclosure.isOpen}
-        onOpenChange={doctorDisclosure.onClose}
-        title="Add Doctor Profile"
-        description="Register a new physician and configure OPD shift schedule."
-        size="lg"
-      >
-        <div className="space-y-4">
-          {sectionHeader("01", "Physician Information")}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Doctor Full Name</Label>
-              <Input placeholder="e.g. Dr. Vikram Sethi" />
-            </div>
-            <div>
-              <Label>Specialty</Label>
-              <Input placeholder="e.g. Neurologist" />
-            </div>
-          </div>
-        </div>
-      </FormContainer>
+      <DoctorEdit
+        open={editDisclosure.isOpen}
+        onClose={editDisclosure.onClose}
+        doctor={editDisclosure.data}
+      />
+
+      <ConfirmDialog
+        open={deleteDisclosure.isOpen}
+        onOpenChange={deleteDisclosure.onClose}
+        title="Delete Doctor Profile"
+        description={`Delete profile for ${deleteDisclosure.data?.name || "this doctor"}? This will deactivate/delete their user login credentials and rosters.`}
+        onConfirm={() =>
+          deleteDoctorMutation.mutate(deleteDisclosure.data?.id || "")
+        }
+        isLoading={deleteDoctorMutation.isPending}
+        confirmText="Delete Profile"
+        variant="danger"
+      />
     </div>
   )
 }
+
+export default DoctorsPage
