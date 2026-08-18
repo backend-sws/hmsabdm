@@ -36,8 +36,10 @@ class VitalController extends Controller
         content: new OA\JsonContent(
             required: ["patient_id"],
             properties: [
-                new OA\Property(property: "patient_id", type: "integer", example: 1, description: "ID of the patient"),
-                new OA\Property(property: "opd_visit_id", type: "integer", example: 1, description: "Optional ID of current OPD Visit / Token"),
+                new OA\Property(property: "patient_id", type: "integer", example: 1, description: "Patient ID"),
+                new OA\Property(property: "opd_visit_id", type: "integer", example: 1, description: "Optional ID of OPD Visit / Token"),
+                new OA\Property(property: "ipd_admission_id", type: "integer", example: 1, description: "Optional ID of IPD Inpatient Admission"),
+                new OA\Property(property: "encounter_type", type: "string", enum: ["opd", "ipd", "emergency"], example: "opd", description: "Encounter context"),
                 new OA\Property(property: "temperature", type: "number", format: "float", example: 98.6, description: "Body temperature"),
                 new OA\Property(property: "temperature_unit", type: "string", enum: ["F", "C"], example: "F", description: "Temperature unit (F or C)"),
                 new OA\Property(property: "blood_pressure_sys", type: "integer", example: 120, description: "Systolic BP (mmHg)"),
@@ -65,6 +67,8 @@ class VitalController extends Controller
         $validated = $request->validate([
             'patient_id'         => 'required|integer|exists:patients,id',
             'opd_visit_id'       => 'nullable|integer|exists:opd_visits,id',
+            'ipd_admission_id'   => 'nullable|integer|exists:ipd_admissions,id',
+            'encounter_type'     => 'nullable|string|in:opd,ipd,emergency',
             'temperature'        => 'nullable|numeric|between:50,120',
             'temperature_unit'   => 'nullable|in:F,C',
             'blood_pressure_sys' => 'nullable|integer|between:40,300',
@@ -91,12 +95,14 @@ class VitalController extends Controller
     #[OA\Get(
         path: "/api/v1/vitals",
         summary: "Get list of recorded vitals",
-        description: "Fetches recorded vitals filtered by patient_id, opd_visit_id, date, or patient search.",
+        description: "Fetches recorded vitals filtered by patient_id, opd_visit_id, ipd_admission_id, encounter_type, date, or patient search.",
         security: [["bearerAuth" => []]],
         tags: ["5. Triage & Vitals (Nurse)"]
     )]
     #[OA\Parameter(name: "patient_id", in: "query", description: "Filter by patient ID", required: false, schema: new OA\Schema(type: "integer"))]
     #[OA\Parameter(name: "opd_visit_id", in: "query", description: "Filter by OPD Visit ID", required: false, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "ipd_admission_id", in: "query", description: "Filter by IPD Admission ID", required: false, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "encounter_type", in: "query", description: "Filter by encounter type (opd, ipd, emergency)", required: false, schema: new OA\Schema(type: "string", enum: ["opd", "ipd", "emergency"]))]
     #[OA\Parameter(name: "date", in: "query", description: "Filter by record date (YYYY-MM-DD)", required: false, schema: new OA\Schema(type: "string", format: "date"))]
     #[OA\Parameter(name: "search", in: "query", description: "Search by patient name, mobile, or ABHA", required: false, schema: new OA\Schema(type: "string"))]
     #[OA\Parameter(name: "all", in: "query", description: "Fetch all without pagination (true/false)", required: false, schema: new OA\Schema(type: "boolean", example: false))]
@@ -108,13 +114,12 @@ class VitalController extends Controller
         $hospitalId = $this->getHospitalId($request);
         $vitals = $this->vitalService->getVitals($hospitalId, $request);
 
-        return $this->paginatedOrSuccessResponse($vitals, 'Vitals retrieved successfully');
+        return $this->successResponse($vitals, 'Vitals retrieved successfully');
     }
 
     #[OA\Get(
         path: "/api/v1/vitals/{id}",
-        summary: "Get vital details by ID",
-        description: "Fetches specific vital reading details.",
+        summary: "Get single vital record details",
         security: [["bearerAuth" => []]],
         tags: ["5. Triage & Vitals (Nurse)"]
     )]
@@ -160,6 +165,23 @@ class VitalController extends Controller
         $vitals = $this->vitalService->getVisitVitals($hospitalId, (int) $visitId);
 
         return $this->successResponse($vitals, 'OPD Visit vitals');
+    }
+
+    #[OA\Get(
+        path: "/api/v1/vitals/ipd/{admissionId}",
+        summary: "Get vitals history for an IPD Admission",
+        description: "Fetches chronological vitals history (rounding chart / flowsheet) for an admitted IPD inpatient.",
+        security: [["bearerAuth" => []]],
+        tags: ["5. Triage & Vitals (Nurse)"]
+    )]
+    #[OA\Parameter(name: "admissionId", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "IPD Admission vitals chart")]
+    public function ipdAdmissionVitals(Request $request, $admissionId)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $vitals = $this->vitalService->getIpdAdmissionVitals($hospitalId, (int) $admissionId);
+
+        return $this->successResponse($vitals, 'IPD Admission vitals chart');
     }
 
     #[OA\Delete(

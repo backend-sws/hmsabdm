@@ -18,12 +18,13 @@ trait CanFilterAndPaginate
      * - ?per_page=-1 (Returns collection)
      * - ?per_page=N & ?page=N (Returns paginated results)
      *
-     * @param Builder $query
+    /**
+     * @param Builder|\Spatie\QueryBuilder\QueryBuilder|\Illuminate\Database\Query\Builder $query
      * @param Request|array|null $request
      * @param int $defaultPerPage
      * @return LengthAwarePaginator|Collection
      */
-    public function applyPaginationOrAll(Builder $query, Request|array|null $request = null, int $defaultPerPage = 15)
+    public function applyPaginationOrAll($query, Request|array|null $request = null, int $defaultPerPage = 15)
     {
         $req = $request instanceof Request ? $request : request();
         

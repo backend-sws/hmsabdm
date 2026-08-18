@@ -14,6 +14,9 @@ class Patient extends Model
         'hospital_id',
         'uhid',
         'name',
+        'guardian_name',
+        'guardian_relation',
+        'guardian_phone',
         'mobile',
         'abha_number',
         'abha_address',
@@ -22,7 +25,18 @@ class Patient extends Model
         'blood_group',
         'address',
         'city',
-        'pincode'
+        'district',
+        'state',
+        'pincode',
+        'photo',
+        'kyc_verified',
+        'custom_fields',
+    ];
+
+    protected $casts = [
+        'dob'           => 'date',
+        'kyc_verified'  => 'boolean',
+        'custom_fields' => 'array',
     ];
 
     protected static function booted()

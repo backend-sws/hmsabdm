@@ -95,23 +95,30 @@ class ReceptionController extends Controller
 
     #[OA\Post(
         path: "/api/v1/reception/register",
-        summary: "Register a patient without ABHA",
-        description: "Registers a normal walk-in patient. Date of birth (dob) must be in YYYY-MM-DD format.",
+        summary: "Manual Patient Registration (Without ABHA)",
+        description: "Registers a walk-in patient who does not have an ABHA card or chooses manual registration.",
         security: [["bearerAuth" => []]],
         tags: ["4. Reception"]
     )]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
+            required: ["name"],
             properties: [
-                new OA\Property(property: "name", type: "string", example: "Rajesh Kumar"),
+                new OA\Property(property: "name", type: "string", example: "Jane Doe"),
+                new OA\Property(property: "guardian_name", type: "string", example: "Robert Doe", description: "Father / Mother / Spouse Name"),
+                new OA\Property(property: "guardian_relation", type: "string", example: "Father"),
+                new OA\Property(property: "guardian_phone", type: "string", example: "9876500000"),
                 new OA\Property(property: "mobile", type: "string", example: "9876543210"),
-                new OA\Property(property: "gender", type: "string", example: "M"),
-                new OA\Property(property: "dob", type: "string", format: "date", example: "1985-08-15"),
+                new OA\Property(property: "gender", type: "string", example: "F"),
+                new OA\Property(property: "dob", type: "string", format: "date", example: "1995-08-15"),
                 new OA\Property(property: "blood_group", type: "string", example: "B+"),
-                new OA\Property(property: "address", type: "string", example: "House 4, Sector 12"),
-                new OA\Property(property: "city", type: "string", example: "Gurgaon"),
-                new OA\Property(property: "pincode", type: "string", example: "122001")
+                new OA\Property(property: "address", type: "string", example: "45 Park Street"),
+                new OA\Property(property: "city", type: "string", example: "Mumbai"),
+                new OA\Property(property: "district", type: "string", example: "Mumbai Suburban"),
+                new OA\Property(property: "state", type: "string", example: "Maharashtra"),
+                new OA\Property(property: "pincode", type: "string", example: "400001"),
+                new OA\Property(property: "custom_fields", type: "object", example: ["marital_status" => "Single", "occupation" => "Engineer"])
             ]
         )
     )]
@@ -119,14 +126,22 @@ class ReceptionController extends Controller
     public function registerWithoutAbha(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string',
-            'mobile' => 'nullable|string|max:15',
-            'gender' => 'nullable|string|size:1',
-            'dob' => 'nullable|date',
-            'blood_group' => 'nullable|string|max:5',
-            'address' => 'nullable|string',
-            'city' => 'nullable|string|max:100',
-            'pincode' => 'nullable|string|max:20',
+            'name'              => 'required|string',
+            'guardian_name'     => 'nullable|string|max:255',
+            'guardian_relation' => 'nullable|string|max:50',
+            'guardian_phone'    => 'nullable|string|max:20',
+            'mobile'            => 'nullable|string|max:15',
+            'gender'            => 'nullable|string|size:1',
+            'dob'               => 'nullable|date',
+            'blood_group'       => 'nullable|string|max:5',
+            'address'           => 'nullable|string',
+            'city'              => 'nullable|string|max:100',
+            'district'          => 'nullable|string|max:100',
+            'state'             => 'nullable|string|max:100',
+            'pincode'           => 'nullable|string|max:20',
+            'photo'             => 'nullable|string',
+            'kyc_verified'      => 'nullable|boolean',
+            'custom_fields'     => 'nullable|array',
         ]);
 
         $hospitalId = $this->getHospitalId($request);
@@ -182,8 +197,8 @@ class ReceptionController extends Controller
 
     #[OA\Post(
         path: "/api/v1/reception/visit",
-        summary: "Create direct OPD visit for registered patient",
-        description: "Creates an OPD appointment (visit) for a patient who is already registered in the hospital.",
+        summary: "Create OPD visit (Parcha) with Split / Multi-Mode Payment support",
+        description: "Creates an OPD registration slip (visit) with multi-mode payment, split payments, and fee discounts.",
         security: [["bearerAuth" => []]],
         tags: ["4. Reception"]
     )]
@@ -195,11 +210,28 @@ class ReceptionController extends Controller
                 new OA\Property(property: "doctor_id", type: "integer", example: 5),
                 new OA\Property(property: "department_id", type: "integer", example: 2),
                 new OA\Property(property: "appointment_type_id", type: "integer", nullable: true, example: 1),
-                new OA\Property(property: "chief_complaint", type: "string", example: "Fever and cold"),
-                new OA\Property(property: "fee_charged", type: "number", format: "float", example: 300.00),
-                new OA\Property(property: "payment_status", type: "string", example: "paid"),
-                new OA\Property(property: "payment_method", type: "string", example: "upi"),
-                new OA\Property(property: "payment_ref", type: "string", example: "UPI123456789")
+                new OA\Property(property: "chief_complaint", type: "string", example: "Fever and headache"),
+                new OA\Property(property: "fee_charged", type: "number", format: "float", example: 500.00),
+                new OA\Property(property: "discount", type: "number", format: "float", example: 50.00),
+                new OA\Property(property: "amount_paid", type: "number", format: "float", example: 450.00),
+                new OA\Property(property: "payment_status", type: "string", enum: ["pending", "paid", "partial", "waived"], example: "paid"),
+                new OA\Property(property: "payment_method", type: "string", enum: ["cash", "card", "upi", "insurance", "split", "cheque", "other"], example: "split"),
+                new OA\Property(property: "payment_ref", type: "string", example: "REF12345"),
+                new OA\Property(
+                    property: "payment_breakdown",
+                    type: "array",
+                    items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: "method", type: "string", example: "cash"),
+                            new OA\Property(property: "amount", type: "number", example: 250.00),
+                            new OA\Property(property: "ref", type: "string", example: null)
+                        ]
+                    ),
+                    example: [
+                        ["method" => "cash", "amount" => 250.00],
+                        ["method" => "upi", "amount" => 200.00, "ref" => "UPI987654321"]
+                    ]
+                )
             ]
         )
     )]
@@ -207,15 +239,21 @@ class ReceptionController extends Controller
     public function createVisit(Request $request)
     {
         $validated = $request->validate([
-            'patient_id' => 'required|integer|exists:patients,id',
-            'doctor_id' => 'required|integer|exists:doctors,id',
-            'department_id' => 'required|integer|exists:departments,id',
+            'patient_id'          => 'required|integer|exists:patients,id',
+            'doctor_id'           => 'required|integer|exists:doctors,id',
+            'department_id'       => 'required|integer|exists:departments,id',
             'appointment_type_id' => 'nullable|integer|exists:appointment_types,id',
-            'chief_complaint' => 'nullable|string',
-            'fee_charged' => 'nullable|numeric',
-            'payment_status' => 'nullable|string|in:pending,paid,waived',
-            'payment_method' => 'nullable|string|in:cash,card,upi,insurance',
-            'payment_ref' => 'nullable|string|max:255',
+            'chief_complaint'     => 'nullable|string',
+            'fee_charged'         => 'nullable|numeric|min:0',
+            'discount'            => 'nullable|numeric|min:0',
+            'amount_paid'         => 'nullable|numeric|min:0',
+            'payment_status'      => 'nullable|string|in:pending,paid,partial,waived',
+            'payment_method'      => 'nullable|string|in:cash,card,upi,insurance,split,cheque,other',
+            'payment_ref'         => 'nullable|string|max:255',
+            'payment_breakdown'   => 'nullable|array',
+            'payment_breakdown.*.method' => 'required_with:payment_breakdown|string',
+            'payment_breakdown.*.amount' => 'required_with:payment_breakdown|numeric|min:0.01',
+            'payment_breakdown.*.ref'    => 'nullable|string',
         ]);
 
         $hospitalId = $this->getHospitalId($request);

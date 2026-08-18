@@ -47,6 +47,19 @@ Route::prefix('v1')->group(function () {
             Route::post('/', [HospitalSettingController::class, 'saveSettings']);
             Route::get('/uhid', [HospitalSettingController::class, 'getUhidConfig']);
             Route::put('/uhid', [HospitalSettingController::class, 'updateUhidConfig']);
+            Route::get('/opd-number', [HospitalSettingController::class, 'getOpdConfig']);
+            Route::put('/opd-number', [HospitalSettingController::class, 'updateOpdConfig']);
+            Route::get('/ipd-number', [HospitalSettingController::class, 'getIpdConfig']);
+            Route::put('/ipd-number', [HospitalSettingController::class, 'updateIpdConfig']);
+            Route::get('/numbering', [HospitalSettingController::class, 'getNumberingOverview']);
+        });
+
+        // Hospital Admin - Dynamic Custom Patient Registration Fields
+        Route::prefix('patient-fields')->group(function () {
+            Route::get('/configs', [\App\Http\Controllers\Api\V1\PatientFieldConfigController::class, 'getConfigs']);
+            Route::post('/configs', [\App\Http\Controllers\Api\V1\PatientFieldConfigController::class, 'createConfig']);
+            Route::put('/configs/{id}', [\App\Http\Controllers\Api\V1\PatientFieldConfigController::class, 'updateConfig']);
+            Route::delete('/configs/{id}', [\App\Http\Controllers\Api\V1\PatientFieldConfigController::class, 'deleteConfig']);
         });
 
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -54,9 +67,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [AuthController::class, 'me']);
         
-        // Patients
-        Route::get('/patients', [PatientController::class, 'index']);
-        Route::post('/patients', [PatientController::class, 'store']);
+        // Patients (CRUD)
+        Route::apiResource('patients', PatientController::class);
         
         // Storage (R2 / S3 Presigned URLs)
         Route::post('/storage/upload-url', [StorageController::class, 'generateUploadUrl']);
@@ -114,9 +126,11 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{id}', [VitalController::class, 'destroy']);
             Route::get('/patient/{patientId}', [VitalController::class, 'patientVitals']);
             Route::get('/visit/{visitId}', [VitalController::class, 'visitVitals']);
+            Route::get('/ipd/{admissionId}', [VitalController::class, 'ipdAdmissionVitals']);
         });
         Route::get('/patients/{patientId}/vitals', [VitalController::class, 'patientVitals']);
         Route::get('/opd/visit/{visitId}/vitals', [VitalController::class, 'visitVitals']);
+        Route::get('/ipd/admissions/{admissionId}/vitals', [VitalController::class, 'ipdAdmissionVitals']);
 
         // OPD / Doctor's Panel
         Route::prefix('opd')->group(function () {
