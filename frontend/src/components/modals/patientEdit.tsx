@@ -14,11 +14,27 @@ import {
   PATIENT_FORM_INITIAL_DATA,
   GENDER_OPTIONS,
   BLOOD_GROUP_OPTIONS,
+  GUARDIAN_RELATION_OPTIONS,
+  MARITAL_STATUS_OPTIONS,
 } from "@/constants/patient.constants"
-import type { Patient, CreatePatientDto } from "@/types/patient"
+import type { Patient, RegisterPatientWithoutAbhaDto } from "@/types/patient"
 
-interface PatientFormValues extends Omit<CreatePatientDto, "gender"> {
+interface PatientFormValues {
+  name: string
+  guardian_name?: string
+  guardian_relation?: string
+  guardian_phone?: string
+  mobile?: string
   gender: "M" | "F" | "O" | ""
+  dob?: string
+  blood_group?: string
+  address?: string
+  city?: string
+  district?: string
+  state?: string
+  pincode?: string
+  marital_status?: string
+  occupation?: string
 }
 
 interface PatientEditProps {
@@ -42,16 +58,19 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
       if (!isCreateMode && patient) {
         reset({
           name: patient.name || "",
+          guardian_name: patient.guardian_name || "",
+          guardian_relation: patient.guardian_relation || "",
+          guardian_phone: patient.guardian_phone || "",
           mobile: patient.mobile || "",
-          email: patient.email || "",
-          dob: patient.dob || "",
           gender: patient.gender || "",
           blood_group: patient.blood_group || "",
           address: patient.address || "",
           city: patient.city || "",
+          district: patient.district || "",
+          state: patient.state || "",
           pincode: patient.pincode || "",
-          abha_number: patient.abha_number || "",
-          abha_address: patient.abha_address || "",
+          marital_status: patient.custom_fields?.marital_status || "",
+          occupation: patient.custom_fields?.occupation || "",
         })
       } else {
         reset(PATIENT_FORM_INITIAL_DATA)
@@ -63,21 +82,27 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
 
   const mutation = useMutation({
     mutationFn: (data: PatientFormValues) => {
-      // Prepare payload (convert empty strings to undefined or null for optional fields)
-      const payload: CreatePatientDto = {
+      const custom_fields: Record<string, string> = {}
+      if (data.marital_status) custom_fields.marital_status = data.marital_status
+      if (data.occupation) custom_fields.occupation = data.occupation
+
+      const payload: RegisterPatientWithoutAbhaDto = {
         name: data.name,
+        guardian_name: data.guardian_name || undefined,
+        guardian_relation: data.guardian_relation || undefined,
+        guardian_phone: data.guardian_phone || undefined,
         mobile: data.mobile || undefined,
-        email: data.email || undefined,
-        dob: data.dob || undefined,
         gender: data.gender || undefined,
+        dob: data.dob || undefined,
         blood_group: data.blood_group || undefined,
         address: data.address || undefined,
         city: data.city || undefined,
+        district: data.district || undefined,
+        state: data.state || undefined,
         pincode: data.pincode || undefined,
-        abha_number: data.abha_number || undefined,
-        abha_address: data.abha_address || undefined,
+        ...(Object.keys(custom_fields).length > 0 ? { custom_fields } : {}),
       }
-      return patientService.createPatient(payload)
+      return patientService.registerPatientWithoutAbha(payload)
     },
     onSuccess: (newPatient) => {
       toast.success(`Patient registered successfully with UHID: ${newPatient.uhid}`)
@@ -124,7 +149,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
       description={
         isViewMode
           ? "Detailed hospital registry demographic information and ABHA keys."
-          : "Manually register a normal walk-in patient. All ABHA options are optional."
+          : "Manually register a normal walk-in patient. Guardian, demographic, and contact fields can be captured."
       }
       size="lg"
       footer={
@@ -221,12 +246,45 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
                 <Label className="text-muted-foreground text-xs uppercase font-semibold">Blood Group</Label>
                 <p className="text-sm font-medium text-foreground mt-1">{patient?.blood_group || "N/A"}</p>
               </div>
+              {patient?.custom_fields?.marital_status && (
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase font-semibold">Marital Status</Label>
+                  <p className="text-sm font-medium text-foreground mt-1">{patient.custom_fields.marital_status}</p>
+                </div>
+              )}
+              {patient?.custom_fields?.occupation && (
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase font-semibold">Occupation</Label>
+                  <p className="text-sm font-medium text-foreground mt-1">{patient.custom_fields.occupation}</p>
+                </div>
+              )}
             </div>
           </div>
 
+          {/* View Mode: Guardian Details */}
+          {(patient?.guardian_name || patient?.guardian_phone) && (
+            <div className="space-y-4 rounded-xl border bg-card p-6 shadow-2xs">
+              {sectionHeader("02", "Guardian Info")}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase font-semibold">Guardian Name</Label>
+                  <p className="text-sm font-semibold text-foreground mt-1">{patient?.guardian_name || "N/A"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase font-semibold">Relation</Label>
+                  <p className="text-sm font-medium text-foreground mt-1">{patient?.guardian_relation || "N/A"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase font-semibold">Guardian Phone</Label>
+                  <p className="text-sm font-medium text-foreground mt-1">{patient?.guardian_phone || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* View Mode: Contact & Address */}
           <div className="space-y-4 rounded-xl border bg-card p-6 shadow-2xs">
-            {sectionHeader("02", "Residential Contact Details")}
+            {sectionHeader("03", "Residential Contact Details")}
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="sm:col-span-3">
                 <Label className="text-muted-foreground text-xs uppercase font-semibold">Residential Address</Label>
@@ -237,6 +295,14 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
                 <p className="text-sm font-medium text-foreground mt-1">{patient?.city || "N/A"}</p>
               </div>
               <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">District</Label>
+                <p className="text-sm font-medium text-foreground mt-1">{patient?.district || "N/A"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">State</Label>
+                <p className="text-sm font-medium text-foreground mt-1">{patient?.state || "N/A"}</p>
+              </div>
+              <div>
                 <Label className="text-muted-foreground text-xs uppercase font-semibold">Pincode</Label>
                 <p className="text-sm font-mono text-foreground mt-1">{patient?.pincode || "N/A"}</p>
               </div>
@@ -245,7 +311,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
 
           {/* View Mode: ABDM/ABHA Identity */}
           <div className="space-y-4 rounded-xl border border-emerald-500/10 bg-emerald-500/[0.02] p-6 shadow-2xs">
-            {sectionHeader("03", "ABDM Digital Health Identity Details")}
+            {sectionHeader("04", "ABDM Digital Health Identity Details")}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label className="text-muted-foreground text-xs uppercase font-semibold">ABHA Number</Label>
@@ -270,7 +336,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
         >
           {/* Section 01: Demographics */}
           <div className="space-y-4 rounded-xl border bg-card p-4 shadow-2xs sm:p-6">
-            {sectionHeader("01", "Demographics & Identification")}
+            {sectionHeader("01", "Demographics & Personal Details")}
 
             <div className="grid gap-4 sm:grid-cols-3">
               <FormField
@@ -279,7 +345,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
                 label="Full Patient Name"
                 placeholder="e.g. Ramesh Kumar"
                 required
-                className="sm:col-span-3"
+                className="sm:col-span-2"
               />
 
               <FormField
@@ -287,14 +353,6 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
                 name="mobile"
                 label="Mobile Number"
                 placeholder="e.g. 9876543210"
-              />
-
-              <FormField
-                control={control}
-                name="email"
-                label="Email Address"
-                placeholder="e.g. ramesh@example.com"
-                inputType="email"
               />
 
               <FormSelectField
@@ -319,19 +377,64 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
                 options={BLOOD_GROUP_OPTIONS}
                 placeholder="Select Blood Group"
               />
+
+              <FormSelectField
+                control={control}
+                name="marital_status"
+                label="Marital Status"
+                options={MARITAL_STATUS_OPTIONS}
+                placeholder="Select Marital Status"
+              />
+
+              <FormField
+                control={control}
+                name="occupation"
+                label="Occupation"
+                placeholder="e.g. Engineer"
+                className="sm:col-span-2"
+              />
             </div>
           </div>
 
-          {/* Section 02: Contact & Address */}
+          {/* Section 02: Guardian Information */}
           <div className="space-y-4 rounded-xl border bg-card p-4 shadow-2xs sm:p-6">
-            {sectionHeader("02", "Residential Address")}
+            {sectionHeader("02", "Guardian Information")}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField
+                control={control}
+                name="guardian_name"
+                label="Guardian Name"
+                placeholder="e.g. Robert Doe"
+              />
+
+              <FormSelectField
+                control={control}
+                name="guardian_relation"
+                label="Guardian Relation"
+                options={GUARDIAN_RELATION_OPTIONS}
+                placeholder="Select Relation"
+              />
+
+              <FormField
+                control={control}
+                name="guardian_phone"
+                label="Guardian Phone"
+                placeholder="e.g. 9876500000"
+              />
+            </div>
+          </div>
+
+          {/* Section 03: Residential Address */}
+          <div className="space-y-4 rounded-xl border bg-card p-4 shadow-2xs sm:p-6">
+            {sectionHeader("03", "Residential Address")}
+
+            <div className="grid gap-4 sm:grid-cols-3">
               <Controller
                 control={control}
                 name="address"
                 render={({ field }) => (
-                  <div className="space-y-1.5 sm:col-span-2">
+                  <div className="space-y-1.5 sm:col-span-3">
                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                       Residential Street Address
                     </Label>
@@ -355,33 +458,23 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
 
               <FormField
                 control={control}
+                name="district"
+                label="District"
+                placeholder="e.g. Central Delhi"
+              />
+
+              <FormField
+                control={control}
+                name="state"
+                label="State"
+                placeholder="e.g. Delhi"
+              />
+
+              <FormField
+                control={control}
                 name="pincode"
                 label="Pincode"
                 placeholder="e.g. 110001"
-              />
-            </div>
-          </div>
-
-          {/* Section 03: ABHA Settings (Optional) */}
-          <div className="space-y-4 rounded-xl border border-dashed bg-slate-50/50 p-4 shadow-2xs sm:p-6 dark:bg-muted/10">
-            {sectionHeader("03", "ABHA Gateway Integration (Optional)")}
-            <p className="text-xs text-muted-foreground -mt-2">
-              If the patient already possesses ABDM credentials, you can key them here. Otherwise, these can be omitted.
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={control}
-                name="abha_number"
-                label="ABHA Number"
-                placeholder="e.g. 12-3456-7890-1234"
-              />
-
-              <FormField
-                control={control}
-                name="abha_address"
-                label="ABHA Address (PHR Address)"
-                placeholder="e.g. rameshkumar@abdm"
               />
             </div>
           </div>
@@ -390,3 +483,4 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
     </FormContainer>
   )
 }
+

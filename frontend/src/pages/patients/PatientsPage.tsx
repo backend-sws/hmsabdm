@@ -1,5 +1,12 @@
 import { useCallback, useMemo } from "react"
-import { Eye, Plus, Users, ShieldCheck, Activity, CalendarDays } from "lucide-react"
+import {
+  Eye,
+  Plus,
+  Users,
+  ShieldCheck,
+  Activity,
+  CalendarDays,
+} from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
 import { Button } from "@/components/ui/button"
@@ -63,21 +70,30 @@ export const PatientsPage: React.FC = () => {
       {
         title: "Male Patients",
         value: maleCount,
-        description: total > 0 ? `${Math.round((maleCount / total) * 100)}% of total` : "0%",
+        description:
+          total > 0
+            ? `${Math.round((maleCount / total) * 100)}% of total`
+            : "0%",
         icon: <CalendarDays className="h-6 w-6" />,
         colorScheme: "indigo",
       },
       {
         title: "Female Patients",
         value: femaleCount,
-        description: total > 0 ? `${Math.round((femaleCount / total) * 100)}% of total` : "0%",
+        description:
+          total > 0
+            ? `${Math.round((femaleCount / total) * 100)}% of total`
+            : "0%",
         icon: <Activity className="h-6 w-6" />,
         colorScheme: "purple",
       },
       {
         title: "ABHA Linked",
         value: abhaLinked,
-        description: total > 0 ? `${Math.round((abhaLinked / total) * 100)}% digitized` : "0% linked",
+        description:
+          total > 0
+            ? `${Math.round((abhaLinked / total) * 100)}% digitized`
+            : "0% linked",
         icon: <ShieldCheck className="h-6 w-6" />,
         colorScheme: "emerald",
       },
@@ -135,11 +151,15 @@ export const PatientsPage: React.FC = () => {
               {formatGender(row.gender)}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              {row.dob ? `${calculateAge(row.dob)} (${new Date(row.dob).toLocaleDateString("en-IN", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })})` : "DOB not specified"}
+              {row.dob
+                ? `${calculateAge(row.dob)} (${new Date(
+                    row.dob
+                  ).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })})`
+                : "DOB not specified"}
             </p>
           </div>
         ),
@@ -152,7 +172,7 @@ export const PatientsPage: React.FC = () => {
           return (
             <div className="flex flex-col gap-0.5">
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold w-fit ${
+                className={`inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                   isLinked
                     ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
                     : "bg-slate-100 text-muted-foreground"
@@ -174,14 +194,16 @@ export const PatientsPage: React.FC = () => {
         header: "Actions",
         className: "text-right",
         render: (row) => (
-          <div className="flex justify-end items-center">
+          <div className="flex items-center justify-end">
             <Button
               variant="outline"
               size="xs"
-              className="hover:bg-blue-50 hover:text-blue-600 active:scale-[0.98] transition-all"
-              onClick={() => patientDisclosure.onOpen({ ...row, viewMode: true })}
+              className="transition-all hover:bg-blue-50 hover:text-blue-600 active:scale-[0.98]"
+              onClick={() =>
+                patientDisclosure.onOpen({ ...row, viewMode: true })
+              }
             >
-              <Eye className="h-3.5 w-3.5 mr-1" /> View Profile
+              <Eye className="mr-1 h-3.5 w-3.5" /> View Profile
             </Button>
           </div>
         ),
@@ -197,18 +219,36 @@ export const PatientsPage: React.FC = () => {
         subtitle="Manage patient registration records, generate UHIDs, and access digital health identities."
         badgeText="Active Registry"
         badgeVariant="default"
-        actions={
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => patientDisclosure.onOpen()}
-            className="bg-blue-600 font-semibold text-white hover:bg-blue-700 active:scale-[0.98] transition-all"
-          >
-            <Plus className="h-4 w-4 mr-1.5" /> Register Patient
-          </Button>
-        }
-      />
+        // actions={
 
+        // }
+      />
+      <div className="flex w-full justify-around">
+        <Button
+          variant="default"
+          size="lg"
+          onClick={() => patientDisclosure.onOpen()}
+          className="bg-blue-600 font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
+        >
+          Register via ABHA
+        </Button>{" "}
+        <Button
+          variant="default"
+          size="lg"
+          onClick={() => patientDisclosure.onOpen()}
+          className="bg-blue-600 font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
+        >
+          <Plus className="mr-1.5 h-4 w-4" /> Register via Mobile
+        </Button>
+        <Button
+          variant="default"
+          size="lg"
+          onClick={() => patientDisclosure.onOpen()}
+          className="bg-blue-600 font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
+        >
+          <Plus className="mr-1.5 h-4 w-4" /> Register via Mobile
+        </Button>
+      </div>
       {/* Stats Cards Row */}
       <StatCardsRow items={stats} />
 
@@ -236,7 +276,9 @@ export const PatientsPage: React.FC = () => {
             totalRecords={Number(meta.total || 0)}
             lastPage={Number(meta.last_page || 1)}
             onPageChange={(page) => handleFilterChange({ page })}
-            handlePageSizeChange={(limit) => handleFilterChange({ limit, page: 1 })}
+            handlePageSizeChange={(limit) =>
+              handleFilterChange({ limit, page: 1 })
+            }
           />
         </div>
       </SectionCard>

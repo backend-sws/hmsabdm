@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient"
-import type { Patient, PatientFilter, CreatePatientDto } from "@/types/patient"
+import type { Patient, PatientFilter, CreatePatientDto, RegisterPatientWithoutAbhaDto } from "@/types/patient"
 import type { PaginatedResponse } from "@/types/hospital"
 
 export const patientService = {
@@ -24,6 +24,13 @@ export const patientService = {
 
   createPatient: async (data: CreatePatientDto): Promise<Patient> => {
     return apiClient<Patient>("/patients", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  registerPatientWithoutAbha: async (data: RegisterPatientWithoutAbhaDto): Promise<Patient> => {
+    return apiClient<Patient>("/reception/register", {
       method: "POST",
       body: JSON.stringify(data),
     })
