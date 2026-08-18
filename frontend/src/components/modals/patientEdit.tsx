@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm, Controller, type SubmitHandler } from "react-hook-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -17,6 +17,10 @@ import {
 } from "@/constants/patient.constants"
 import type { Patient, CreatePatientDto } from "@/types/patient"
 
+interface PatientFormValues extends Omit<CreatePatientDto, "gender"> {
+  gender: "M" | "F" | "O" | ""
+}
+
 interface PatientEditProps {
   open: boolean
   onClose: (open: boolean) => void
@@ -26,8 +30,9 @@ interface PatientEditProps {
 export default function PatientEdit({ open, onClose, patient }: PatientEditProps) {
   const isViewMode = !!patient?.viewMode
   const isCreateMode = !patient?.id
+  const [currentDate] = useState(() => new Date())
 
-  const { handleSubmit, control, reset } = useForm<CreatePatientDto>({
+  const { handleSubmit, control, reset } = useForm<PatientFormValues>({
     defaultValues: PATIENT_FORM_INITIAL_DATA,
     mode: "onChange",
   })
@@ -40,7 +45,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
           mobile: patient.mobile || "",
           email: patient.email || "",
           dob: patient.dob || "",
-          gender: (patient.gender as any) || "",
+          gender: patient.gender || "",
           blood_group: patient.blood_group || "",
           address: patient.address || "",
           city: patient.city || "",
@@ -57,7 +62,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
-    mutationFn: (data: CreatePatientDto) => {
+    mutationFn: (data: PatientFormValues) => {
       // Prepare payload (convert empty strings to undefined or null for optional fields)
       const payload: CreatePatientDto = {
         name: data.name,
@@ -85,7 +90,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
     },
   })
 
-  const onSubmit: SubmitHandler<CreatePatientDto> = (data) => {
+  const onSubmit: SubmitHandler<PatientFormValues> = (data) => {
     mutation.mutate(data)
   }
 
@@ -94,7 +99,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
     if (!dobString) return "N/A"
     const dob = new Date(dobString)
     if (isNaN(dob.getTime())) return "N/A"
-    const diffMs = Date.now() - dob.getTime()
+    const diffMs = currentDate.getTime() - dob.getTime()
     const ageDate = new Date(diffMs)
     return `${Math.abs(ageDate.getUTCFullYear() - 1970)} Years`
   }

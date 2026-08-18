@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 interface FormFieldProps<T extends FieldValues = any> {
-  control: Control<T>
+  control: Control<T, any, any>
   name: Path<T>
   label: string
   placeholder?: string
@@ -62,7 +62,7 @@ interface FormSelectOption {
 }
 
 interface FormSelectFieldProps<T extends FieldValues = any> {
-  control: Control<T>
+  control: Control<T, any, any>
   name: Path<T>
   label: string
   options: FormSelectOption[]
