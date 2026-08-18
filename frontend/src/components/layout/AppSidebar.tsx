@@ -51,7 +51,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       // badge: "Scan & Share",
     },
     {
-      title: "ABHA Patients",
+      title: "Patient Registration",
       path: "/patients",
       icon: Users,
       roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],

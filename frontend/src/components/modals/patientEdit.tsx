@@ -1,0 +1,387 @@
+import { useEffect } from "react"
+import { useForm, Controller, type SubmitHandler } from "react-hook-form"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { FormField, FormSelectField } from "@/components/ui/form-fields"
+import { FormContainer } from "@/components/formContainer"
+import { sectionHeader } from "@/components/sectionHeader"
+import { patientService } from "@/services/patientService"
+import { queryKeys } from "@/constants/queryKeys"
+import {
+  PATIENT_FORM_INITIAL_DATA,
+  GENDER_OPTIONS,
+  BLOOD_GROUP_OPTIONS,
+} from "@/constants/patient.constants"
+import type { Patient, CreatePatientDto } from "@/types/patient"
+
+interface PatientEditProps {
+  open: boolean
+  onClose: (open: boolean) => void
+  patient?: (Patient & { viewMode?: boolean }) | null
+}
+
+export default function PatientEdit({ open, onClose, patient }: PatientEditProps) {
+  const isViewMode = !!patient?.viewMode
+  const isCreateMode = !patient?.id
+
+  const { handleSubmit, control, reset } = useForm<CreatePatientDto>({
+    defaultValues: PATIENT_FORM_INITIAL_DATA,
+    mode: "onChange",
+  })
+
+  useEffect(() => {
+    if (open) {
+      if (!isCreateMode && patient) {
+        reset({
+          name: patient.name || "",
+          mobile: patient.mobile || "",
+          email: patient.email || "",
+          dob: patient.dob || "",
+          gender: (patient.gender as any) || "",
+          blood_group: patient.blood_group || "",
+          address: patient.address || "",
+          city: patient.city || "",
+          pincode: patient.pincode || "",
+          abha_number: patient.abha_number || "",
+          abha_address: patient.abha_address || "",
+        })
+      } else {
+        reset(PATIENT_FORM_INITIAL_DATA)
+      }
+    }
+  }, [open, patient, reset, isCreateMode])
+
+  const queryClient = useQueryClient()
+
+  const mutation = useMutation({
+    mutationFn: (data: CreatePatientDto) => {
+      // Prepare payload (convert empty strings to undefined or null for optional fields)
+      const payload: CreatePatientDto = {
+        name: data.name,
+        mobile: data.mobile || undefined,
+        email: data.email || undefined,
+        dob: data.dob || undefined,
+        gender: data.gender || undefined,
+        blood_group: data.blood_group || undefined,
+        address: data.address || undefined,
+        city: data.city || undefined,
+        pincode: data.pincode || undefined,
+        abha_number: data.abha_number || undefined,
+        abha_address: data.abha_address || undefined,
+      }
+      return patientService.createPatient(payload)
+    },
+    onSuccess: (newPatient) => {
+      toast.success(`Patient registered successfully with UHID: ${newPatient.uhid}`)
+      queryClient.invalidateQueries({ queryKey: queryKeys.patients.all })
+      reset()
+      onClose(false)
+    },
+    meta: {
+      errorTitle: "Failed to register patient",
+    },
+  })
+
+  const onSubmit: SubmitHandler<CreatePatientDto> = (data) => {
+    mutation.mutate(data)
+  }
+
+  // Calculate age for view mode helper
+  const calculateAge = (dobString?: string) => {
+    if (!dobString) return "N/A"
+    const dob = new Date(dobString)
+    if (isNaN(dob.getTime())) return "N/A"
+    const diffMs = Date.now() - dob.getTime()
+    const ageDate = new Date(diffMs)
+    return `${Math.abs(ageDate.getUTCFullYear() - 1970)} Years`
+  }
+
+  const formatGenderLabel = (genderVal?: string) => {
+    if (genderVal === "M") return "Male"
+    if (genderVal === "F") return "Female"
+    if (genderVal === "O") return "Other"
+    return genderVal || "N/A"
+  }
+
+  return (
+    <FormContainer
+      variant="modal"
+      open={open}
+      onOpenChange={(isOpen) => onClose(isOpen)}
+      title={
+        isViewMode
+          ? `Patient Profile - ${patient?.name || ""}`
+          : "Register New Patient"
+      }
+      description={
+        isViewMode
+          ? "Detailed hospital registry demographic information and ABHA keys."
+          : "Manually register a normal walk-in patient. All ABHA options are optional."
+      }
+      size="lg"
+      footer={
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onClose(false)}
+            disabled={mutation.isPending}
+          >
+            {isViewMode ? "Close" : "Cancel"}
+          </Button>
+
+          {!isViewMode && (
+            <Button
+              type="submit"
+              form="patient-reg-form"
+              disabled={mutation.isPending}
+              className="bg-blue-600 font-semibold text-white hover:bg-blue-700 active:scale-[0.98] transition-all"
+            >
+              {mutation.isPending ? "Registering..." : "Register Patient"}
+            </Button>
+          )}
+        </div>
+      }
+    >
+      {isViewMode ? (
+        <div className="space-y-6">
+          {/* View Mode: UHID Banner */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 dark:bg-blue-950/20">
+            <div>
+              <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                Unique Health Identification (UHID)
+              </span>
+              <p className="text-xl font-bold font-mono text-primary leading-tight">
+                {patient?.uhid || "NOT GENERATED"}
+              </p>
+            </div>
+            {patient?.created_at && (
+              <div className="text-left sm:text-right">
+                <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  Registration Date
+                </span>
+                <p className="text-xs font-semibold text-foreground">
+                  {new Date(patient.created_at).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* View Mode: Demographics */}
+          <div className="space-y-4 rounded-xl border bg-card p-6 shadow-2xs">
+            {sectionHeader("01", "Demographics & Personal Details")}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">Full Name</Label>
+                <p className="text-sm font-semibold text-foreground mt-1">{patient?.name}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">Mobile Number</Label>
+                <p className="text-sm font-medium text-foreground mt-1">{patient?.mobile || "N/A"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">Email Address</Label>
+                <p className="text-sm font-medium text-foreground mt-1">{patient?.email || "N/A"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">Gender</Label>
+                <p className="text-sm font-medium text-foreground mt-1">
+                  {formatGenderLabel(patient?.gender)}
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">Date of Birth</Label>
+                <p className="text-sm font-medium text-foreground mt-1">
+                  {patient?.dob ? new Date(patient.dob).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  }) : "N/A"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">Age</Label>
+                <p className="text-sm font-medium text-foreground mt-1">{calculateAge(patient?.dob)}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">Blood Group</Label>
+                <p className="text-sm font-medium text-foreground mt-1">{patient?.blood_group || "N/A"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* View Mode: Contact & Address */}
+          <div className="space-y-4 rounded-xl border bg-card p-6 shadow-2xs">
+            {sectionHeader("02", "Residential Contact Details")}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="sm:col-span-3">
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">Residential Address</Label>
+                <p className="text-sm font-medium text-foreground mt-1">{patient?.address || "N/A"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">City</Label>
+                <p className="text-sm font-medium text-foreground mt-1">{patient?.city || "N/A"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">Pincode</Label>
+                <p className="text-sm font-mono text-foreground mt-1">{patient?.pincode || "N/A"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* View Mode: ABDM/ABHA Identity */}
+          <div className="space-y-4 rounded-xl border border-emerald-500/10 bg-emerald-500/[0.02] p-6 shadow-2xs">
+            {sectionHeader("03", "ABDM Digital Health Identity Details")}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">ABHA Number</Label>
+                <p className="text-sm font-mono font-medium text-emerald-700 dark:text-emerald-400 mt-1">
+                  {patient?.abha_number || "NOT LINKED"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase font-semibold">ABHA Address</Label>
+                <p className="text-sm font-mono font-medium text-emerald-700 dark:text-emerald-400 mt-1">
+                  {patient?.abha_address || "NOT LINKED"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <form
+          id="patient-reg-form"
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-6"
+        >
+          {/* Section 01: Demographics */}
+          <div className="space-y-4 rounded-xl border bg-card p-4 shadow-2xs sm:p-6">
+            {sectionHeader("01", "Demographics & Identification")}
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField
+                control={control}
+                name="name"
+                label="Full Patient Name"
+                placeholder="e.g. Ramesh Kumar"
+                required
+                className="sm:col-span-3"
+              />
+
+              <FormField
+                control={control}
+                name="mobile"
+                label="Mobile Number"
+                placeholder="e.g. 9876543210"
+              />
+
+              <FormField
+                control={control}
+                name="email"
+                label="Email Address"
+                placeholder="e.g. ramesh@example.com"
+                inputType="email"
+              />
+
+              <FormSelectField
+                control={control}
+                name="gender"
+                label="Gender"
+                options={GENDER_OPTIONS}
+                placeholder="Select Gender"
+              />
+
+              <FormField
+                control={control}
+                name="dob"
+                label="Date of Birth"
+                inputType="date"
+              />
+
+              <FormSelectField
+                control={control}
+                name="blood_group"
+                label="Blood Group"
+                options={BLOOD_GROUP_OPTIONS}
+                placeholder="Select Blood Group"
+              />
+            </div>
+          </div>
+
+          {/* Section 02: Contact & Address */}
+          <div className="space-y-4 rounded-xl border bg-card p-4 shadow-2xs sm:p-6">
+            {sectionHeader("02", "Residential Address")}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Controller
+                control={control}
+                name="address"
+                render={({ field }) => (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                      Residential Street Address
+                    </Label>
+                    <textarea
+                      {...field}
+                      value={field.value || ""}
+                      rows={2}
+                      placeholder="e.g. House No. 45, Ground Floor, Sector 15"
+                      className="w-full rounded-md border border-input bg-background p-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="city"
+                label="City / Town"
+                placeholder="e.g. New Delhi"
+              />
+
+              <FormField
+                control={control}
+                name="pincode"
+                label="Pincode"
+                placeholder="e.g. 110001"
+              />
+            </div>
+          </div>
+
+          {/* Section 03: ABHA Settings (Optional) */}
+          <div className="space-y-4 rounded-xl border border-dashed bg-slate-50/50 p-4 shadow-2xs sm:p-6 dark:bg-muted/10">
+            {sectionHeader("03", "ABHA Gateway Integration (Optional)")}
+            <p className="text-xs text-muted-foreground -mt-2">
+              If the patient already possesses ABDM credentials, you can key them here. Otherwise, these can be omitted.
+            </p>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={control}
+                name="abha_number"
+                label="ABHA Number"
+                placeholder="e.g. 12-3456-7890-1234"
+              />
+
+              <FormField
+                control={control}
+                name="abha_address"
+                label="ABHA Address (PHR Address)"
+                placeholder="e.g. rameshkumar@abdm"
+              />
+            </div>
+          </div>
+        </form>
+      )}
+    </FormContainer>
+  )
+}
