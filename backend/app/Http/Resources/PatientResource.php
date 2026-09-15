@@ -21,6 +21,8 @@ class PatientResource extends JsonResource
             'guardian_name'     => $this->guardian_name,
             'guardian_relation' => $this->guardian_relation,
             'guardian_phone'    => $this->guardian_phone,
+            'id_proof_type'     => $this->id_proof_type,
+            'id_proof_number'   => $this->id_proof_number,
             'mobile'            => $this->mobile,
             'abha_number'       => $this->abha_number,
             'abha_address'      => $this->abha_address,

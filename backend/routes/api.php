@@ -109,6 +109,18 @@ Route::prefix('v1')->group(function () {
             Route::get('/departments', [ReceptionController::class, 'getDepartments']);
             Route::post('/register', [ReceptionController::class, 'registerWithoutAbha']);
             Route::post('/visit', [ReceptionController::class, 'createVisit']);
+            Route::post('/admit-ipd', [\App\Http\Controllers\Api\V1\IpdController::class, 'admit']);
+        });
+
+        // IPD (Inpatient Admissions, Wards, Beds & Parcha)
+        Route::prefix('ipd')->group(function () {
+            Route::get('/wards', [\App\Http\Controllers\Api\V1\IpdController::class, 'wards']);
+            Route::get('/beds/available', [\App\Http\Controllers\Api\V1\IpdController::class, 'availableBeds']);
+            Route::post('/admit', [\App\Http\Controllers\Api\V1\IpdController::class, 'admit']);
+            Route::get('/admissions', [\App\Http\Controllers\Api\V1\IpdController::class, 'admissions']);
+            Route::get('/admissions/{id}', [\App\Http\Controllers\Api\V1\IpdController::class, 'show']);
+            Route::post('/admissions/{id}/transfer-bed', [\App\Http\Controllers\Api\V1\IpdController::class, 'transferBed']);
+            Route::post('/admissions/{id}/discharge', [\App\Http\Controllers\Api\V1\IpdController::class, 'discharge']);
         });
 
         // Triage / Nurse Station — Patient Vitals & Hospital Dynamic Field Configs

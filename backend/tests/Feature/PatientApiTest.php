@@ -121,4 +121,60 @@ class PatientApiTest extends TestCase
 
         $this->assertDatabaseMissing('patients', ['id' => $patient->id]);
     }
+
+    public function test_deduplicates_returning_patient_with_same_abha_or_mobile(): void
+    {
+        $hospital = Hospital::factory()->create();
+        $user = User::factory()->create(['hospital_id' => $hospital->id]);
+
+        $existing = Patient::factory()->create([
+            'hospital_id'  => $hospital->id,
+            'name'         => 'Vikram Singh',
+            'mobile'       => '9876543210',
+            'abha_address' => 'vikram@abdm',
+        ]);
+
+        // Receptionist re-enters the same patient after 1 month in normal flow
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/patients', [
+                'name'         => 'Vikram Singh',
+                'mobile'       => '9876543210',
+                'abha_address' => 'vikram@abdm',
+                'city'         => 'Jaipur',
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.id', $existing->id)
+            ->assertJsonPath('data.uhid', $existing->uhid)
+            ->assertJsonPath('data.city', 'Jaipur');
+
+        // Verify no duplicate patient was created
+        $this->assertEquals(1, Patient::where('hospital_id', $hospital->id)->count());
+    }
+
+    public function test_allows_family_members_with_same_mobile_but_different_name(): void
+    {
+        $hospital = Hospital::factory()->create();
+        $user = User::factory()->create(['hospital_id' => $hospital->id]);
+
+        $father = Patient::factory()->create([
+            'hospital_id' => $hospital->id,
+            'name'        => 'Ramesh Sharma',
+            'mobile'      => '9876500000',
+        ]);
+
+        // Daughter registers with same family mobile number
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/patients', [
+                'name'   => 'Pooja Sharma',
+                'mobile' => '9876500000',
+                'gender' => 'F',
+            ]);
+
+        $response->assertStatus(201);
+        $this->assertNotEquals($father->id, $response->json('data.id'));
+
+        // Verify 2 distinct patients exist
+        $this->assertEquals(2, Patient::where('hospital_id', $hospital->id)->count());
+    }
 }

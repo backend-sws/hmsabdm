@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SuperAdminSeeder::class,
             DoctorDepartmentSeeder::class,
+            WardBedSeeder::class,
         ]);
 
         // Get the hospital created by SuperAdminSeeder

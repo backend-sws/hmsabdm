@@ -14,19 +14,40 @@ class IpdAdmission extends Model
         'hospital_id',
         'patient_id',
         'doctor_id',
+        'department_id',
+        'ward_id',
+        'bed_id',
         'ipd_number',
+        'admission_type',
+        'admission_reason',
+        'is_mlc',
+        'mlc_details',
         'status',
+        'advance_deposit',
+        'payment_status',
+        'payment_method',
+        'payment_ref',
+        'payment_breakdown',
         'admission_date',
         'discharge_date',
+        'attendant_name',
+        'attendant_relation',
+        'attendant_phone',
+        'attendant_address',
     ];
 
     protected $attributes = [
-        'status' => 'admitted',
+        'status'         => 'admitted',
+        'admission_type' => 'planned',
+        'is_mlc'         => false,
     ];
 
     protected $casts = [
-        'admission_date' => 'datetime',
-        'discharge_date' => 'datetime',
+        'admission_date'    => 'datetime',
+        'discharge_date'    => 'datetime',
+        'is_mlc'            => 'boolean',
+        'advance_deposit'   => 'float',
+        'payment_breakdown' => 'array',
     ];
 
     protected static function booted()
@@ -52,6 +73,21 @@ class IpdAdmission extends Model
     public function doctor()
     {
         return $this->belongsTo(Doctor::class);
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function ward()
+    {
+        return $this->belongsTo(Ward::class);
+    }
+
+    public function bed()
+    {
+        return $this->belongsTo(Bed::class);
     }
 
     public function vitals()

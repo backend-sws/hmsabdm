@@ -70,6 +70,11 @@ class ServiceBindingProvider extends ServiceProvider
             \App\Services\PatientField\PatientFieldConfigServiceInterface::class,
             \App\Services\PatientField\PatientFieldConfigService::class
         );
+
+        $this->app->bind(
+            \App\Services\Ipd\IpdServiceInterface::class,
+            \App\Services\Ipd\IpdService::class
+        );
     }
 
     /**

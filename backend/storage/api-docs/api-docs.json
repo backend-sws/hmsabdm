@@ -1688,6 +1688,411 @@
                 ]
             }
         },
+        "/api/v1/ipd/wards": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get list of all Wards and Bed availability stats",
+                "description": "Returns all active hospital wards with total beds, available beds, and occupied beds count.",
+                "operationId": "35b6a20872f3d9b190cc5bfd4a8bb4d5",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Wards and Bed statistics list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/beds/available": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get all Available (Vacant) Beds",
+                "description": "Returns all vacant beds ready for admission. Can be filtered by ward_id.",
+                "operationId": "8df64ac5d3ad38355bc46ca7d8f7b60d",
+                "parameters": [
+                    {
+                        "name": "ward_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Available beds list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admit": {
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Direct IPD Admission & Issue IPD Parcha (Admission Slip)",
+                "description": "Admits a patient into IPD, allocates a bed, records advance payment, and returns complete printable IPD Admission Slip data. Accepts existing patient_id, ABHA Scan & Share token, or direct walk-in patient registration details.",
+                "operationId": "e59ee75c582fc54c6655c7b675509136",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "patient_id": {
+                                        "description": "Existing Patient ID (optional if name/mobile or token is passed)",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "token": {
+                                        "description": "Scan and Share Queue token (optional)",
+                                        "type": "string",
+                                        "example": "123"
+                                    },
+                                    "name": {
+                                        "description": "Patient name (for direct walk-in admission)",
+                                        "type": "string",
+                                        "example": "Suresh Kumar"
+                                    },
+                                    "mobile": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "M"
+                                    },
+                                    "dob": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1988-06-15"
+                                    },
+                                    "doctor_id": {
+                                        "description": "Admitting Doctor ID",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "department_id": {
+                                        "description": "Department ID",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "ward_id": {
+                                        "description": "Ward ID",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "bed_id": {
+                                        "description": "Bed ID",
+                                        "type": "integer",
+                                        "example": 3
+                                    },
+                                    "admission_type": {
+                                        "type": "string",
+                                        "example": "planned",
+                                        "enum": [
+                                            "planned",
+                                            "emergency",
+                                            "day_care",
+                                            "maternity",
+                                            "transfer"
+                                        ]
+                                    },
+                                    "admission_reason": {
+                                        "type": "string",
+                                        "example": "Acute Appendicitis - Emergency Laparoscopy"
+                                    },
+                                    "is_mlc": {
+                                        "description": "Medico-Legal Case flag",
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "mlc_details": {
+                                        "type": "string",
+                                        "example": "RTA Case FIR No 123"
+                                    },
+                                    "advance_deposit": {
+                                        "description": "Advance deposit amount paid at admission",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 5000
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "upi",
+                                        "enum": [
+                                            "cash",
+                                            "card",
+                                            "upi",
+                                            "insurance",
+                                            "split",
+                                            "other"
+                                        ]
+                                    },
+                                    "payment_ref": {
+                                        "type": "string",
+                                        "example": "UPI1234567890"
+                                    },
+                                    "payment_breakdown": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "method": {
+                                                    "type": "string",
+                                                    "example": "cash"
+                                                },
+                                                "amount": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 2500
+                                                },
+                                                "ref": {
+                                                    "type": "string",
+                                                    "example": "TXN123"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "attendant_name": {
+                                        "type": "string",
+                                        "example": "Ramesh Kumar"
+                                    },
+                                    "attendant_relation": {
+                                        "type": "string",
+                                        "example": "Brother"
+                                    },
+                                    "attendant_phone": {
+                                        "type": "string",
+                                        "example": "9876500000"
+                                    },
+                                    "attendant_address": {
+                                        "type": "string",
+                                        "example": "123 MG Road, Delhi"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "IPD Admission created and IPD Parcha issued"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get currently admitted Inpatients list",
+                "description": "Fetches active inpatients with bed, ward, doctor, and patient details. Supports status, ward, doctor, and patient search filtering.",
+                "operationId": "f0992b0eaba320a8301625a47126c495",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "admitted"
+                        }
+                    },
+                    {
+                        "name": "ward_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "doctor_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Active admissions list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get specific IPD Admission Slip (Parcha) Data",
+                "description": "Retrieves complete IPD Admission details including patient info, bed, ward, doctor, advance deposit, and attendant details.",
+                "operationId": "dac2ed36a2825659e1cd9df53ce3e6a6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "IPD Admission Slip data"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/transfer-bed": {
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Transfer Patient to a different Ward / Bed",
+                "description": "Frees the patient's existing bed and assigns a new vacant bed.",
+                "operationId": "78b14db0a265ddbef494c89d97af125e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "new_bed_id"
+                                ],
+                                "properties": {
+                                    "new_bed_id": {
+                                        "type": "integer",
+                                        "example": 8
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient transferred successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/discharge": {
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Discharge Patient and Free Bed",
+                "description": "Marks the IPD admission as discharged, records discharge date, and marks the bed as available.",
+                "operationId": "1f052be21b1e1b1ba531db3cdca59724",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "discharge_date": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-08-20 11:30:00"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient discharged successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/opd/queue": {
             "get": {
                 "tags": [
@@ -1963,6 +2368,25 @@
                                         "type": "string",
                                         "example": "9876500000"
                                     },
+                                    "id_proof_type": {
+                                        "description": "Identity Proof Type",
+                                        "type": "string",
+                                        "example": "pan",
+                                        "enum": [
+                                            "aadhaar",
+                                            "pan",
+                                            "voter_id",
+                                            "driving_license",
+                                            "passport",
+                                            "ration_card",
+                                            "other"
+                                        ]
+                                    },
+                                    "id_proof_number": {
+                                        "description": "Identity Card / Proof Number",
+                                        "type": "string",
+                                        "example": "ABCDE1234F"
+                                    },
                                     "mobile": {
                                         "type": "string",
                                         "example": "9876543210"
@@ -2084,7 +2508,7 @@
                     "9. Patients"
                 ],
                 "summary": "Update patient demographic information",
-                "description": "Updates an existing patient's details such as name, guardian, contact, address, DOB, gender, blood group, ABHA, or custom fields.",
+                "description": "Updates an existing patient's details such as name, guardian, ID proof, contact, address, DOB, gender, blood group, ABHA, or custom fields.",
                 "operationId": "3b8d0a85cd7984d11ab97dea48582496",
                 "parameters": [
                     {
@@ -2117,6 +2541,23 @@
                                     "guardian_phone": {
                                         "type": "string",
                                         "example": "9876500000"
+                                    },
+                                    "id_proof_type": {
+                                        "type": "string",
+                                        "example": "pan",
+                                        "enum": [
+                                            "aadhaar",
+                                            "pan",
+                                            "voter_id",
+                                            "driving_license",
+                                            "passport",
+                                            "ration_card",
+                                            "other"
+                                        ]
+                                    },
+                                    "id_proof_number": {
+                                        "type": "string",
+                                        "example": "ABCDE1234F"
                                     },
                                     "mobile": {
                                         "type": "string",
@@ -2649,6 +3090,23 @@
                                     "guardian_phone": {
                                         "type": "string",
                                         "example": "9876500000"
+                                    },
+                                    "id_proof_type": {
+                                        "type": "string",
+                                        "example": "driving_license",
+                                        "enum": [
+                                            "aadhaar",
+                                            "pan",
+                                            "voter_id",
+                                            "driving_license",
+                                            "passport",
+                                            "ration_card",
+                                            "other"
+                                        ]
+                                    },
+                                    "id_proof_number": {
+                                        "type": "string",
+                                        "example": "DL1420110012345"
                                     },
                                     "mobile": {
                                         "type": "string",
@@ -3658,6 +4116,10 @@
         {
             "name": "12. Storage",
             "description": "File Upload/Download via R2/S3"
+        },
+        {
+            "name": "11. IPD (Inpatient Admissions)",
+            "description": "Inpatient Management — Wards, Beds, IPD Parcha (Admission Slip), Transfers & Discharges"
         },
         {
             "name": "Authentication",

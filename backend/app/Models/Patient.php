@@ -17,6 +17,8 @@ class Patient extends Model
         'guardian_name',
         'guardian_relation',
         'guardian_phone',
+        'id_proof_type',
+        'id_proof_number',
         'mobile',
         'abha_number',
         'abha_address',

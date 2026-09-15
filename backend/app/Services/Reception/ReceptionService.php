@@ -82,6 +82,51 @@ class ReceptionService implements ReceptionServiceInterface
         if (empty($data['hospital_id']) && $hospitalId) {
             $data['hospital_id'] = $hospitalId;
         }
+
+        $query = Patient::where('hospital_id', $hospitalId);
+
+        // 1. Match by ABHA Number
+        if (!empty($data['abha_number'])) {
+            $existing = (clone $query)->where('abha_number', $data['abha_number'])->first();
+            if ($existing) {
+                $existing->update(array_filter($data));
+                return $existing->fresh()->toArray();
+            }
+        }
+
+        // 2. Match by ABHA Address
+        if (!empty($data['abha_address'])) {
+            $existing = (clone $query)->where('abha_address', $data['abha_address'])->first();
+            if ($existing) {
+                $existing->update(array_filter($data));
+                return $existing->fresh()->toArray();
+            }
+        }
+
+        // 3. Match by ID Proof (e.g. PAN, DL, Voter ID)
+        if (!empty($data['id_proof_number']) && !empty($data['id_proof_type'])) {
+            $existing = (clone $query)
+                ->where('id_proof_type', $data['id_proof_type'])
+                ->where('id_proof_number', $data['id_proof_number'])
+                ->first();
+            if ($existing) {
+                $existing->update(array_filter($data));
+                return $existing->fresh()->toArray();
+            }
+        }
+
+        // 4. Match by Mobile + Name
+        if (!empty($data['mobile']) && !empty($data['name'])) {
+            $existing = (clone $query)
+                ->where('mobile', $data['mobile'])
+                ->whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($data['name']))])
+                ->first();
+            if ($existing) {
+                $existing->update(array_filter($data));
+                return $existing->fresh()->toArray();
+            }
+        }
+
         return Patient::create($data)->toArray();
     }
 
