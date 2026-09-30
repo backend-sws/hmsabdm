@@ -269,4 +269,72 @@ class ReceptionController extends Controller
             return $this->errorResponse($e->getMessage(), null, 400);
         }
     }
+
+    #[OA\Post(
+        path: "/api/v1/reception/quick-visit",
+        summary: "1-Click Quick Re-visit Token for Existing Patients",
+        description: "Issues an instant OPD appointment token for an existing patient without re-entering demographics. Checks hospital free follow-up validity rules (e.g. 7 days).",
+        security: [["bearerAuth" => []]],
+        tags: ["4. Reception"]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["doctor_id"],
+            properties: [
+                new OA\Property(property: "patient_id", type: "integer", nullable: true, example: 10),
+                new OA\Property(property: "uhid", type: "string", nullable: true, example: "UHID-2026-0001"),
+                new OA\Property(property: "mobile", type: "string", nullable: true, example: "9876543210"),
+                new OA\Property(property: "doctor_id", type: "integer", example: 5),
+                new OA\Property(property: "department_id", type: "integer", nullable: true, example: 2),
+                new OA\Property(property: "appointment_type_id", type: "integer", nullable: true, example: 1),
+                new OA\Property(property: "chief_complaint", type: "string", nullable: true, example: "Follow-up check"),
+                new OA\Property(property: "fee_charged", type: "number", format: "float", nullable: true, example: 500.00),
+                new OA\Property(property: "discount", type: "number", format: "float", nullable: true, example: 0.00),
+                new OA\Property(property: "amount_paid", type: "number", format: "float", nullable: true, example: 500.00),
+                new OA\Property(property: "payment_status", type: "string", nullable: true, enum: ["pending", "paid", "partial", "waived"]),
+                new OA\Property(property: "payment_method", type: "string", nullable: true, enum: ["cash", "card", "upi", "insurance", "split", "cheque", "other"]),
+                new OA\Property(property: "notes", type: "string", nullable: true)
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: "Quick Re-visit Token Generated")]
+    #[OA\Response(response: 400, description: "Error generating token or patient not found")]
+    public function quickVisit(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_id'          => 'nullable|integer|exists:patients,id',
+            'uhid'                => 'nullable|string',
+            'mobile'              => 'nullable|string',
+            'doctor_id'           => 'required|integer|exists:doctors,id',
+            'department_id'       => 'nullable|integer|exists:departments,id',
+            'appointment_type_id' => 'nullable|integer|exists:appointment_types,id',
+            'chief_complaint'     => 'nullable|string',
+            'notes'               => 'nullable|string',
+            'fee_charged'         => 'nullable|numeric|min:0',
+            'discount'            => 'nullable|numeric|min:0',
+            'amount_paid'         => 'nullable|numeric|min:0',
+            'payment_status'      => 'nullable|string|in:pending,paid,partial,waived',
+            'payment_method'      => 'nullable|string|in:cash,card,upi,insurance,split,cheque,other',
+            'payment_ref'         => 'nullable|string|max:255',
+            'payment_breakdown'   => 'nullable|array',
+        ]);
+
+        if (empty($validated['patient_id']) && empty($validated['uhid']) && empty($validated['mobile'])) {
+            return $this->errorResponse('Please provide at least one of: patient_id, uhid, or mobile number.', null, 422);
+        }
+
+        $hospitalId = $this->getHospitalId($request);
+
+        try {
+            $result = $this->receptionService->quickRevisit($hospitalId, $validated);
+            if (!empty($result['requires_selection'])) {
+                return $this->successResponse($result, 'Multiple patient records matched. Selection required.');
+            }
+            return $this->successResponse($result, 'Quick Re-visit Token Generated Successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
 }
+

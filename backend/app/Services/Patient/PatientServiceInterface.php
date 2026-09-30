@@ -30,4 +30,10 @@ interface PatientServiceInterface
      * Delete a patient.
      */
     public function deletePatient(int $id): bool;
+
+    /**
+     * Get 360-degree comprehensive medical history and chronological timeline for a patient.
+     */
+    public function getPatientHistory(int $id, ?int $hospitalId = null): array;
 }
+

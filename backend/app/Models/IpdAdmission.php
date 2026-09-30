@@ -95,8 +95,30 @@ class IpdAdmission extends Model
         return $this->hasMany(Vital::class);
     }
 
+    public function latestVital()
+    {
+        return $this->hasOne(Vital::class)->latestOfMany();
+    }
+
+
     public function hospital()
     {
         return $this->belongsTo(Hospital::class);
     }
+
+    public function doctorRounds()
+    {
+        return $this->hasMany(IpdDoctorRound::class);
+    }
+
+    public function nursingProcedures()
+    {
+        return $this->hasMany(IpdNursingProcedure::class);
+    }
+
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
 }
+

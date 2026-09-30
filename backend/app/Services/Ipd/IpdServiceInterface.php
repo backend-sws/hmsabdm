@@ -40,4 +40,35 @@ interface IpdServiceInterface
      * Discharge patient and release bed.
      */
     public function dischargePatient(int $hospitalId, int $id, array $data = []): IpdAdmission;
+
+    /**
+     * Get live visual bed matrix grouped by ward with patient, doctor, and occupancy statistics.
+     */
+    public function getBedMatrix(int $hospitalId): array;
+
+    /**
+     * Record doctor daily inpatient bedside round (SOAP note) and auto-trigger doctor round fee to ledger.
+     */
+    public function recordDoctorRound(int $hospitalId, int $admissionId, array $data, int $userId): array;
+
+    /**
+     * Get all doctor daily rounds for an inpatient admission.
+     */
+    public function getDoctorRounds(int $hospitalId, int $admissionId): array;
+
+    /**
+     * Record bedside nursing procedure and auto-post procedure tariff to patient ledger.
+     */
+    public function recordNursingProcedure(int $hospitalId, int $admissionId, array $data, int $userId, ?string $nurseName = null): array;
+
+    /**
+     * Get all bedside nursing procedures performed for an inpatient admission.
+     */
+    public function getNursingProcedures(int $hospitalId, int $admissionId): array;
+
+    /**
+     * Get complete 360-degree inpatient chart (admission, rounds, vitals, drug chart, procedures, financial ledger).
+     */
+    public function getInpatientChart(int $hospitalId, int $admissionId): array;
 }
+

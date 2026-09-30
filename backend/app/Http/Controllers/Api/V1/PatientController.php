@@ -219,4 +219,22 @@ class PatientController extends Controller
         $this->patientService->deletePatient((int) $id);
         return $this->successResponse(null, 'Patient deleted successfully');
     }
+
+    #[OA\Get(
+        path: "/api/v1/patients/{id}/history",
+        summary: "Get 360-degree patient medical history and chronological timeline",
+        description: "Fetches unified chronological timeline across OPD visits, IPD admissions, e-prescriptions, vitals recordings, and billing summary.",
+        tags: ["9. Patients"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Patient 360 history retrieved successfully")]
+    #[OA\Response(response: 404, description: "Patient not found")]
+    public function history(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $history = $this->patientService->getPatientHistory((int) $id, $hospitalId);
+        return $this->successResponse($history, 'Patient 360 history retrieved successfully');
+    }
 }
+

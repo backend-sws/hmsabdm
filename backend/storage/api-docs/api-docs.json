@@ -550,6 +550,644 @@
                 ]
             }
         },
+        "/api/v1/billing/charges/categories": {
+            "get": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Get list of hospital charge categories",
+                "description": "Returns all charge categories (Bed, Doctor Fees, Nursing, Equipment, Procedures, Labs, Admin) with item counts.",
+                "operationId": "b37212bdd444d813ccead72d32cffeae",
+                "responses": {
+                    "200": {
+                        "description": "Charge categories list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Create a custom hospital charge category",
+                "operationId": "794c0869b09fc58c8dfe4b51c80f320d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "display_name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "physiotherapy_charges"
+                                    },
+                                    "display_name": {
+                                        "type": "string",
+                                        "example": "Physiotherapy & Rehab"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Rehabilitation and physical therapy charges"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Category created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/billing/charges": {
+            "get": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Get hospital services charges catalog",
+                "description": "Returns all service tariffs with filtering by category, billing type, ward, or text search.",
+                "operationId": "3087f2ddcf55e5fae1211a51e6c95879",
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "description": "Filter by category name e.g. bed_charges, nursing_charges",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "billing_type",
+                        "in": "query",
+                        "description": "fixed, per_day, per_hour, per_unit",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "ward_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of service tariffs"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Create a new service charge / tariff item",
+                "description": "Creates a new billable service tariff (e.g., specific bed rate, doctor fee, nursing procedure, equipment hourly rate).",
+                "operationId": "f75f5e6e85ff749f00bc21676be88724",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "category_id",
+                                    "code",
+                                    "name",
+                                    "standard_rate"
+                                ],
+                                "properties": {
+                                    "category_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "example": "NURS-INJ"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "IV Injection Administration"
+                                    },
+                                    "billing_type": {
+                                        "type": "string",
+                                        "example": "fixed",
+                                        "enum": [
+                                            "fixed",
+                                            "per_day",
+                                            "per_hour",
+                                            "per_unit"
+                                        ]
+                                    },
+                                    "standard_rate": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 150
+                                    },
+                                    "tax_percentage": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 0
+                                    },
+                                    "ward_id": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": true
+                                    },
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": true
+                                    },
+                                    "department_id": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Intravenous cannula medication push fee"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Charge created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/billing/charges/{id}": {
+            "put": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Update an existing service charge / tariff item",
+                "operationId": "7baa1a0120ffe684c72825dc94f84af3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Updated Charge Name"
+                                    },
+                                    "standard_rate": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1200
+                                    },
+                                    "tax_percentage": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 5
+                                    },
+                                    "billing_type": {
+                                        "type": "string",
+                                        "example": "per_day",
+                                        "enum": [
+                                            "fixed",
+                                            "per_day",
+                                            "per_hour",
+                                            "per_unit"
+                                        ]
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Charge updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Delete or deactivate a service charge tariff",
+                "operationId": "dbd81910c22dc636c925882cf5271896",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Charge deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/billing/ledger/charge": {
+            "post": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Post a charge item to Patient's Running Ledger",
+                "description": "Nurse, Doctor, or Cashier posts a billable service charge (e.g. bedside dressing, nebulization, specialist round, injection) to an admitted patient or OPD encounter.",
+                "operationId": "75d0a0b0e8bb62b30387b851a85a9643",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "patient_id",
+                                    "encounter_type",
+                                    "encounter_id",
+                                    "item_name",
+                                    "unit_price"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "encounter_type": {
+                                        "type": "string",
+                                        "example": "ipd",
+                                        "enum": [
+                                            "ipd",
+                                            "opd",
+                                            "emergency"
+                                        ]
+                                    },
+                                    "encounter_id": {
+                                        "description": "ipd_admission_id or opd_visit_id",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "charge_id": {
+                                        "description": "Optional Charge Master ID",
+                                        "type": "integer",
+                                        "example": 9,
+                                        "nullable": true
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "nursing_charges"
+                                    },
+                                    "item_name": {
+                                        "type": "string",
+                                        "example": "Bedside Wound Dressing (Minor)"
+                                    },
+                                    "unit_price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 200
+                                    },
+                                    "quantity": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1
+                                    },
+                                    "tax_amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 0
+                                    },
+                                    "discount_amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 0
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Post-op abdominal surgical dressing changed at 11:30 AM"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Charge posted to ledger"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/billing/ledger/patient/{patientId}": {
+            "get": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Get Patient's live running billing ledger",
+                "description": "Returns the complete itemized running ledger, gross total, tax, discount, net amount, and category-wise breakdown.",
+                "operationId": "844510bb2adbab13fae1ab1ab3a38f01",
+                "parameters": [
+                    {
+                        "name": "patientId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "encounter_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ipd",
+                                "opd",
+                                "emergency"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "encounter_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "unbilled",
+                                "billed",
+                                "cancelled"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient running bill summary and items"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/billing/ledger/{id}/cancel": {
+            "post": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Cancel a ledger charge item",
+                "description": "Cancels an unbilled charge item (e.g. accidental double entry by nurse or doctor).",
+                "operationId": "739cd74161d8ba59536060f3e0a8391e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Entry made by mistake on wrong patient"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ledger item cancelled"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hospital/settings/bed-billing": {
+            "get": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Get hospital customizable Bed Billing calculation rules",
+                "description": "Hospital Admin API: Returns bed calculation policy (24h from allotment vs Midnight vs Cutoff), grace period, and same day rules.",
+                "operationId": "b4453c81f6d1d9f8628896fd05b2a5d3",
+                "responses": {
+                    "200": {
+                        "description": "Bed billing rules"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Update hospital customizable Bed Billing calculation rules",
+                "description": "Customize whether bed is charged every 24 hours from allotment time (admission_24h), fixed midnight (midnight), or custom cutoff time (custom_cutoff).",
+                "operationId": "9546086e04ae03e2099180e0744c4537",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "bed_billing_cycle": {
+                                        "description": "admission_24h: 24h cycle from exact allotment timestamp | midnight: 00:00 AM calendar day | custom_cutoff: specific hour | hourly: actual hours",
+                                        "type": "string",
+                                        "example": "admission_24h",
+                                        "enum": [
+                                            "admission_24h",
+                                            "midnight",
+                                            "custom_cutoff",
+                                            "hourly"
+                                        ]
+                                    },
+                                    "bed_cutoff_time": {
+                                        "description": "Cutoff time for custom_cutoff cycle (HH:MM)",
+                                        "type": "string",
+                                        "example": "12:00"
+                                    },
+                                    "bed_grace_period_minutes": {
+                                        "description": "Grace period in minutes upon admission/discharge",
+                                        "type": "integer",
+                                        "example": 120
+                                    },
+                                    "same_day_discharge_rule": {
+                                        "type": "string",
+                                        "example": "half_day",
+                                        "enum": [
+                                            "full_day",
+                                            "half_day",
+                                            "hourly",
+                                            "free_if_under_grace"
+                                        ]
+                                    },
+                                    "auto_apply_nursing_with_bed": {
+                                        "description": "Whether daily ward nursing fee is auto-posted with bed rent",
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Bed billing settings updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/billing/charges/apply-bed-charges": {
+            "post": {
+                "tags": [
+                    "12. Hospital Charges & Billing Ledger"
+                ],
+                "summary": "Manually trigger automated Bed & Nursing charge engine",
+                "description": "Admin action to instantly run the bed charge calculation engine and apply pending cycles to all admitted patients.",
+                "operationId": "7209d03b8564ca61fa4bac6cef6b45f7",
+                "responses": {
+                    "200": {
+                        "description": "Bed charges processed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/departments": {
             "get": {
                 "tags": [
@@ -1158,6 +1796,468 @@
                 "responses": {
                     "200": {
                         "description": "Doctor schedule updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/emergency/triage": {
+            "post": {
+                "tags": [
+                    "12. Emergency & Triage Desk"
+                ],
+                "summary": "Fast-track 5-second ER Triage Admission",
+                "description": "Instantly admits emergency patient without reception queues. Supports unknown patients, ESI triage priority tagging (Red/Yellow/Green), MLC police details, instant bed allocation, and auto-generates Temporary UHID (EMG-2026-XXXXX).",
+                "operationId": "2af059cf225c8603ed80b1a4f5d0c9d5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "patient_id": {
+                                        "description": "Existing patient ID if known",
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "uhid": {
+                                        "description": "Existing UHID if known",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "patient_name": {
+                                        "type": "string",
+                                        "example": "Unknown Male (Accident victim)",
+                                        "nullable": true
+                                    },
+                                    "is_unknown_patient": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "M",
+                                        "enum": [
+                                            "M",
+                                            "F",
+                                            "O"
+                                        ]
+                                    },
+                                    "approximate_age": {
+                                        "type": "integer",
+                                        "example": 35
+                                    },
+                                    "brought_by": {
+                                        "description": "Ambulance, Police, Relative, Self, Good Samaritan",
+                                        "type": "string",
+                                        "example": "Ambulance"
+                                    },
+                                    "brought_by_contact": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "priority_level": {
+                                        "description": "Red = Resuscitation/Immediate, Yellow = Emergent/Urgent, Green = Stable",
+                                        "type": "string",
+                                        "example": "red",
+                                        "enum": [
+                                            "red",
+                                            "yellow",
+                                            "green"
+                                        ]
+                                    },
+                                    "triage_category": {
+                                        "type": "string",
+                                        "example": "Trauma"
+                                    },
+                                    "chief_complaint": {
+                                        "type": "string",
+                                        "example": "Head injury following road traffic accident, active bleeding"
+                                    },
+                                    "consciousness_level": {
+                                        "type": "string",
+                                        "example": "pain",
+                                        "enum": [
+                                            "alert",
+                                            "voice",
+                                            "pain",
+                                            "unresponsive"
+                                        ]
+                                    },
+                                    "gcs_score": {
+                                        "description": "Glasgow Coma Scale (3-15)",
+                                        "type": "integer",
+                                        "example": 9
+                                    },
+                                    "initial_vitals": {
+                                        "properties": {
+                                            "bp_systolic": {
+                                                "type": "number",
+                                                "example": 90
+                                            },
+                                            "bp_diastolic": {
+                                                "type": "number",
+                                                "example": 60
+                                            },
+                                            "pulse": {
+                                                "type": "number",
+                                                "example": 120
+                                            },
+                                            "spo2": {
+                                                "type": "number",
+                                                "example": 92
+                                            },
+                                            "temperature": {
+                                                "type": "number",
+                                                "example": 98.2
+                                            },
+                                            "respiratory_rate": {
+                                                "type": "number",
+                                                "example": 26
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "is_mlc": {
+                                        "description": "Medico-Legal Case flag",
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "police_station": {
+                                        "type": "string",
+                                        "example": "Connaught Place Police Station"
+                                    },
+                                    "police_officer_name": {
+                                        "type": "string",
+                                        "example": "SI Kuldeep Singh"
+                                    },
+                                    "police_buckle_number": {
+                                        "type": "string",
+                                        "example": "CP-4421"
+                                    },
+                                    "incident_place": {
+                                        "type": "string",
+                                        "example": "Outer Ring Road near Flyover"
+                                    },
+                                    "mlc_injuries_details": {
+                                        "type": "string",
+                                        "example": "Laceration over frontal scalp 5cm x 2cm, multiple abrasions"
+                                    },
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 3,
+                                        "nullable": true
+                                    },
+                                    "ward_id": {
+                                        "type": "integer",
+                                        "example": 2,
+                                        "nullable": true
+                                    },
+                                    "bed_id": {
+                                        "type": "integer",
+                                        "example": 5,
+                                        "nullable": true
+                                    },
+                                    "advance_deposit": {
+                                        "type": "number",
+                                        "example": 0
+                                    },
+                                    "clinical_notes": {
+                                        "type": "string",
+                                        "example": "IV fluids initiated, CT Brain ordered"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Emergency Triage Created Successfully"
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/emergency/triages": {
+            "get": {
+                "tags": [
+                    "12. Emergency & Triage Desk"
+                ],
+                "summary": "Live Emergency & Triage Desk List with Priority Counters",
+                "description": "Retrieves active casualty cases with live counters for Red (Resuscitation), Yellow (Urgent), Green (Stable), and MLC cases.",
+                "operationId": "e7039e3186721ff77903b34703d08db2",
+                "parameters": [
+                    {
+                        "name": "priority_level",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "red",
+                                "yellow",
+                                "green"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_mlc",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Live triage desk list retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/emergency/triages/{id}": {
+            "get": {
+                "tags": [
+                    "12. Emergency & Triage Desk"
+                ],
+                "summary": "Get specific Emergency Triage details",
+                "operationId": "8aa7c6cbbe715d42cb5bc89b9dd25e62",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Emergency triage details"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/emergency/triages/{id}/link-patient": {
+            "put": {
+                "tags": [
+                    "12. Emergency & Triage Desk"
+                ],
+                "summary": "Post-stabilization KYC / ABHA patient identity linking",
+                "description": "Links emergency admission and all associated vitals, prescriptions, and charges to a verified patient profile once stabilized or relatives arrive.",
+                "operationId": "4dfdc72fb9eac7a170d32ff9de3061c0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "target_patient_id": {
+                                        "description": "Merge/link to an existing registered patient ID",
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "name": {
+                                        "description": "Verified patient name",
+                                        "type": "string",
+                                        "example": "Ramesh Sharma"
+                                    },
+                                    "mobile": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "dob": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1988-06-15"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "M",
+                                        "enum": [
+                                            "M",
+                                            "F",
+                                            "O"
+                                        ]
+                                    },
+                                    "blood_group": {
+                                        "type": "string",
+                                        "example": "B+"
+                                    },
+                                    "abha_number": {
+                                        "type": "string",
+                                        "example": "14-1234-5678-9012"
+                                    },
+                                    "abha_address": {
+                                        "type": "string",
+                                        "example": "ramesh@abdm"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "Flat 402, Green Park"
+                                    },
+                                    "id_proof_type": {
+                                        "type": "string",
+                                        "example": "aadhaar",
+                                        "enum": [
+                                            "aadhaar",
+                                            "pan",
+                                            "voter_id",
+                                            "driving_license"
+                                        ]
+                                    },
+                                    "id_proof_number": {
+                                        "type": "string",
+                                        "example": "123456789012"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient identity linked successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/emergency/triages/{id}/mlc-slip": {
+            "get": {
+                "tags": [
+                    "12. Emergency & Triage Desk"
+                ],
+                "summary": "Generate official Police Intimation Memo (MLC Slip)",
+                "description": "Generates formatted police intimation memo with patient condition, nature of injuries, examining doctor info, and legal declaration.",
+                "operationId": "c19ef5f397c091329d99e4226fcaab2d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Police Intimation Memo generated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/emergency/triages/{id}/status": {
+            "put": {
+                "tags": [
+                    "12. Emergency & Triage Desk"
+                ],
+                "summary": "Update emergency triage clinical status",
+                "description": "Updates casualty patient status (stabilized, discharged, transferred, admitted_to_ipd).",
+                "operationId": "751a0806ac4d0f0edca28907f24ea77b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "example": "stabilized",
+                                        "enum": [
+                                            "under_treatment",
+                                            "stabilized",
+                                            "admitted_to_ipd",
+                                            "transferred_external",
+                                            "discharged",
+                                            "brought_dead",
+                                            "expired"
+                                        ]
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Patient vitals stabilized, bleeding controlled."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Triage status updated"
                     }
                 },
                 "security": [
@@ -2675,6 +3775,39 @@
                 ]
             }
         },
+        "/api/v1/patients/{id}/history": {
+            "get": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Get 360-degree patient medical history and chronological timeline",
+                "description": "Fetches unified chronological timeline across OPD visits, IPD admissions, e-prescriptions, vitals recordings, and billing summary.",
+                "operationId": "01558b585cce5724f6bed79285cb9265",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient 360 history retrieved successfully"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/patient-fields/configs": {
             "get": {
                 "tags": [
@@ -2892,6 +4025,378 @@
                 "responses": {
                     "200": {
                         "description": "Field configuration deleted successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/medicines/search": {
+            "get": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Search Indian Medicines Master (200,000 medicines)",
+                "description": "Instant autocomplete search by Brand Name, Generic Name, or Salt Composition. Returns dosage forms, strengths, and MRP.",
+                "operationId": "46115ceecacf686675bd6eb314a03ba3",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search query (e.g. Augmentin, Paracetamol, Azithral)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "Augmentin"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Max results (default: 20)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of matching medicines with salt composition and MRP"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/diagnosis/search": {
+            "get": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Search WHO ICD-10 Diagnosis Codes (94,765 codes)",
+                "description": "Instant autocomplete search by ICD-10 code (e.g. A00, E11.9, I10) or disease description (e.g. Cholera, Diabetes, Hypertension).",
+                "operationId": "5fecbac03493862a3ccf04d6a4fea9ec",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search query (e.g. Fever, Malaria, E11)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "Malaria"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Max results (default: 20)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of matching ICD-10 codes"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/prescriptions": {
+            "post": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Create a complete structured E-Prescription",
+                "description": "Creates an official prescription with chief complaints, clinical notes, structured medicines, and ICD-10 diagnoses. If opd_visit_id is provided, automatically completes the OPD consultation.",
+                "operationId": "f76a6256a85cc1756314194b591494d9",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "patient_id"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "doctor_id": {
+                                        "description": "Doctor ID (optional, defaults to auth user's doctor profile)",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "opd_visit_id": {
+                                        "type": "integer",
+                                        "example": 5,
+                                        "nullable": true
+                                    },
+                                    "ipd_admission_id": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": true
+                                    },
+                                    "encounter_type": {
+                                        "type": "string",
+                                        "example": "opd",
+                                        "enum": [
+                                            "opd",
+                                            "ipd",
+                                            "emergency"
+                                        ]
+                                    },
+                                    "chief_complaints": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "Fever for 3 days",
+                                            "Productive cough"
+                                        ]
+                                    },
+                                    "clinical_notes": {
+                                        "type": "string",
+                                        "example": "Bilateral chest wheezing, throat congested"
+                                    },
+                                    "diet_advice": {
+                                        "type": "string",
+                                        "example": "Drink warm fluids, light semi-solid diet"
+                                    },
+                                    "general_advice": {
+                                        "type": "string",
+                                        "example": "Strict bed rest for 3 days"
+                                    },
+                                    "follow_up_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-20"
+                                    },
+                                    "diagnoses": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "icd10_id": {
+                                                    "type": "integer",
+                                                    "example": 52,
+                                                    "nullable": true
+                                                },
+                                                "icd_code": {
+                                                    "type": "string",
+                                                    "example": "A00.0"
+                                                },
+                                                "diagnosis_name": {
+                                                    "type": "string",
+                                                    "example": "Cholera due to Vibrio cholerae 01"
+                                                },
+                                                "diagnosis_type": {
+                                                    "type": "string",
+                                                    "example": "confirmed",
+                                                    "enum": [
+                                                        "provisional",
+                                                        "confirmed",
+                                                        "differential"
+                                                    ]
+                                                },
+                                                "notes": {
+                                                    "type": "string",
+                                                    "example": "Acute onset"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "medicine_id": {
+                                                    "type": "integer",
+                                                    "example": 1,
+                                                    "nullable": true
+                                                },
+                                                "medicine_name": {
+                                                    "type": "string",
+                                                    "example": "Augmentin 625 Duo Tablet"
+                                                },
+                                                "generic_name": {
+                                                    "type": "string",
+                                                    "example": "Amoxycillin + Clavulanic Acid"
+                                                },
+                                                "dosage_form": {
+                                                    "type": "string",
+                                                    "example": "Tablet"
+                                                },
+                                                "dosage": {
+                                                    "type": "string",
+                                                    "example": "625mg"
+                                                },
+                                                "frequency": {
+                                                    "type": "string",
+                                                    "example": "1-0-1"
+                                                },
+                                                "duration_days": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "timing": {
+                                                    "type": "string",
+                                                    "example": "After Food"
+                                                },
+                                                "instructions": {
+                                                    "type": "string",
+                                                    "example": "Complete 5-day course"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Prescription created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/opd/visit/{visitId}/prescribe": {
+            "post": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Prescribe medicines and complete OPD visit in 1-click",
+                "description": "Convenience endpoint for Doctor OPD Panel to submit prescription directly on the visit, auto-marking the visit as 'done'.",
+                "operationId": "de932c3880d3f4ede7837ef70557da31",
+                "parameters": [
+                    {
+                        "name": "visitId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Visit prescribed and completed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/prescriptions/{id}": {
+            "get": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Get complete printable E-Prescription by ID",
+                "description": "Returns the full prescription slip data including patient details, doctor credentials, items, and ICD-10 diagnoses.",
+                "operationId": "d4305f79e9ed3c5755da910ae9905954",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Complete printable prescription"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/prescriptions/patient/{patientId}": {
+            "get": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Get all prescriptions history for a patient",
+                "description": "Returns all past prescriptions for the patient across all doctors and visits.",
+                "operationId": "97628e7a0b315aa52fffef1f1628be5b",
+                "parameters": [
+                    {
+                        "name": "patientId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient prescription history"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/prescriptions/visit/{visitId}": {
+            "get": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Get prescription for a specific OPD visit",
+                "operationId": "d7e97e5a67cbdcf8959c4f76a72e3f0d",
+                "parameters": [
+                    {
+                        "name": "visitId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OPD visit prescription"
                     }
                 },
                 "security": [
@@ -3332,6 +4837,123 @@
                 "responses": {
                     "200": {
                         "description": "OPD Visit Created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/quick-visit": {
+            "post": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "1-Click Quick Re-visit Token for Existing Patients",
+                "description": "Issues an instant OPD appointment token for an existing patient without re-entering demographics. Checks hospital free follow-up validity rules (e.g. 7 days).",
+                "operationId": "ad0db3eadca50c13a2b84b45a8b7ac59",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "doctor_id"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "integer",
+                                        "example": 10,
+                                        "nullable": true
+                                    },
+                                    "uhid": {
+                                        "type": "string",
+                                        "example": "UHID-2026-0001",
+                                        "nullable": true
+                                    },
+                                    "mobile": {
+                                        "type": "string",
+                                        "example": "9876543210",
+                                        "nullable": true
+                                    },
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "department_id": {
+                                        "type": "integer",
+                                        "example": 2,
+                                        "nullable": true
+                                    },
+                                    "appointment_type_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "chief_complaint": {
+                                        "type": "string",
+                                        "example": "Follow-up check",
+                                        "nullable": true
+                                    },
+                                    "fee_charged": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500,
+                                        "nullable": true
+                                    },
+                                    "discount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 0,
+                                        "nullable": true
+                                    },
+                                    "amount_paid": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500,
+                                        "nullable": true
+                                    },
+                                    "payment_status": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "pending",
+                                            "paid",
+                                            "partial",
+                                            "waived"
+                                        ]
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "cash",
+                                            "card",
+                                            "upi",
+                                            "insurance",
+                                            "split",
+                                            "cheque",
+                                            "other"
+                                        ]
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Quick Re-visit Token Generated"
+                    },
+                    "400": {
+                        "description": "Error generating token or patient not found"
                     }
                 },
                 "security": [
@@ -4118,8 +5740,20 @@
             "description": "File Upload/Download via R2/S3"
         },
         {
+            "name": "12. Hospital Charges & Billing Ledger",
+            "description": "Tariff Master Catalog, Real-Time Inpatient Running Ledger, and Customizable Bed Billing Rules"
+        },
+        {
+            "name": "12. Emergency & Triage Desk",
+            "description": "Fast-track 5-second casualty admissions, ESI triage (Red/Yellow/Green), unknown patient handling, MLC intimation, and post-stabilization identity linking"
+        },
+        {
             "name": "11. IPD (Inpatient Admissions)",
             "description": "Inpatient Management — Wards, Beds, IPD Parcha (Admission Slip), Transfers & Discharges"
+        },
+        {
+            "name": "13. E-Prescription & Master Catalogs",
+            "description": "Doctor E-Prescriptions with WHO ICD-10 Diagnosis Codes and 200,000 Indian Medicines Autocomplete"
         },
         {
             "name": "Authentication",

@@ -241,4 +241,169 @@ class IpdController extends Controller
             return $this->errorResponse($e->getMessage(), null, 400);
         }
     }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/bed-matrix",
+        summary: "Live Visual Bed Matrix (All Wards & Beds)",
+        description: "Returns a visual 2D matrix of all hospital wards, their beds (Available, Occupied, Maintenance), patient demographics, attending doctor, elapsed admission time, and live running bills.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Response(response: 200, description: "Bed matrix retrieved successfully")]
+    public function bedMatrix(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $matrix = $this->ipdService->getBedMatrix($hospitalId);
+        return $this->successResponse($matrix, 'Bed matrix retrieved successfully');
+    }
+
+    #[OA\Post(
+        path: "/api/v1/ipd/admissions/{id}/rounds",
+        summary: "Record Doctor Inpatient Daily Round (SOAP Note)",
+        description: "Records attending doctor's bedside clinical round with Subjective, Objective, Assessment, and Plan (SOAP) notes. Automatically triggers and posts doctor round consultation fee to the patient's running bill ledger.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "doctor_id", type: "integer", nullable: true, example: 1),
+                new OA\Property(property: "round_date", type: "string", format: "date", example: "2026-09-15"),
+                new OA\Property(property: "round_type", type: "string", enum: ["routine", "specialist_call", "emergency", "night_round"], example: "routine"),
+                new OA\Property(property: "subjective", type: "string", example: "Patient feeling better, mild abdominal discomfort after meal"),
+                new OA\Property(property: "objective", type: "string", example: "Abdomen soft, non-tender. Bowel sounds present. Surgical dressing dry."),
+                new OA\Property(property: "assessment", type: "string", example: "Post-op Day 2 status post Lap Appendectomy, recovery satisfactory"),
+                new OA\Property(property: "plan", type: "string", example: "Step down IV antibiotics to oral, start soft diet, ambulate"),
+                new OA\Property(property: "diet_advice", type: "string", example: "soft"),
+                new OA\Property(property: "clinical_condition", type: "string", enum: ["improving", "stable", "deteriorating", "critical"], example: "improving"),
+                new OA\Property(property: "is_discharge_planned", type: "boolean", example: true),
+                new OA\Property(property: "planned_discharge_date", type: "string", format: "date", example: "2026-09-17"),
+                new OA\Property(property: "fee_charged", type: "number", format: "float", example: 500.00)
+            ]
+        )
+    )]
+    #[OA\Response(response: 201, description: "Doctor round recorded and fee posted")]
+    public function recordRound(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'doctor_id'              => 'nullable|integer|exists:doctors,id',
+            'round_date'             => 'nullable|date',
+            'round_time'             => 'nullable|string',
+            'round_type'             => 'nullable|string|in:routine,specialist_call,emergency,night_round',
+            'subjective'             => 'nullable|string',
+            'objective'              => 'nullable|string',
+            'assessment'             => 'nullable|string',
+            'plan'                   => 'nullable|string',
+            'diet_advice'            => 'nullable|string|max:100',
+            'clinical_condition'     => 'nullable|string|in:improving,stable,deteriorating,critical',
+            'is_discharge_planned'   => 'nullable|boolean',
+            'planned_discharge_date' => 'nullable|date',
+            'fee_charged'            => 'nullable|numeric|min:0',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 0;
+
+        try {
+            $round = $this->ipdService->recordDoctorRound($hospitalId, (int) $id, $validated, $userId);
+            return $this->createdResponse($round, 'Doctor round recorded successfully and tariff added to running bill');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/rounds",
+        summary: "Get Doctor Daily Rounds History",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Doctor rounds history retrieved")]
+    public function getRounds(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $rounds = $this->ipdService->getDoctorRounds($hospitalId, (int) $id);
+        return $this->successResponse($rounds, 'Doctor rounds history retrieved');
+    }
+
+    #[OA\Post(
+        path: "/api/v1/ipd/admissions/{id}/procedures",
+        summary: "Record Bedside Nursing Procedure & Charge",
+        description: "Nurse logs a bedside procedure (e.g. Dressing, Nebulization, Catheterization, IV Cannulation, ECG). Automatically posts the procedure charge to patient running ledger.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["procedure_name"],
+            properties: [
+                new OA\Property(property: "procedure_name", type: "string", example: "Wound Dressing (Minor)"),
+                new OA\Property(property: "procedure_code", type: "string", example: "NURS-DRESS-MIN"),
+                new OA\Property(property: "performed_at", type: "string", format: "date-time", example: "2026-09-15 11:30:00"),
+                new OA\Property(property: "performed_by_name", type: "string", example: "Nurse Sunita"),
+                new OA\Property(property: "notes", type: "string", example: "Surgical wound cleaned with betadine, sterile gauze dressing applied"),
+                new OA\Property(property: "charge_amount", type: "number", format: "float", example: 200.00)
+            ]
+        )
+    )]
+    #[OA\Response(response: 201, description: "Bedside procedure recorded and charge posted")]
+    public function recordProcedure(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'procedure_name'    => 'required|string|max:150',
+            'procedure_code'    => 'nullable|string|max:50',
+            'performed_at'      => 'nullable|date',
+            'performed_by_name' => 'nullable|string|max:150',
+            'notes'             => 'nullable|string',
+            'charge_amount'     => 'nullable|numeric|min:0',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 0;
+        $nurseName = $request->user()?->name ?? ($validated['performed_by_name'] ?? 'Staff Nurse');
+
+        try {
+            $procedure = $this->ipdService->recordNursingProcedure($hospitalId, (int) $id, $validated, $userId, $nurseName);
+            return $this->createdResponse($procedure, 'Bedside nursing procedure recorded and charged successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/procedures",
+        summary: "Get Bedside Nursing Procedures Log",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Nursing procedures list retrieved")]
+    public function getProcedures(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $procedures = $this->ipdService->getNursingProcedures($hospitalId, (int) $id);
+        return $this->successResponse($procedures, 'Nursing procedures log retrieved');
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/chart",
+        summary: "Get Inpatient 360 Comprehensive Medical & Financial Chart",
+        description: "Retrieves complete inpatient clinical profile: admission info, doctor SOAP rounds, vital charts, drug prescriptions, bedside procedures, and live running financial bill summary.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Inpatient 360 chart retrieved successfully")]
+    public function chart(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $chart = $this->ipdService->getInpatientChart($hospitalId, (int) $id);
+        return $this->successResponse($chart, 'Inpatient chart retrieved successfully');
+    }
 }
+

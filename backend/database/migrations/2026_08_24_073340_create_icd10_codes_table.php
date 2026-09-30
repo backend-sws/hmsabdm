@@ -24,7 +24,9 @@ return new class extends Migration
         });
 
         // PostgreSQL GIN full-text index for lightning-fast search
-        \DB::statement("CREATE INDEX icd10_fts_idx ON icd10_codes USING gin(to_tsvector('english', short_description))");
+        if (\DB::getDriverName() === 'pgsql') {
+            \DB::statement("CREATE INDEX icd10_fts_idx ON icd10_codes USING gin(to_tsvector('english', short_description))");
+        }
     }
 
     /**

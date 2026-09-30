@@ -52,6 +52,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/ipd-number', [HospitalSettingController::class, 'getIpdConfig']);
             Route::put('/ipd-number', [HospitalSettingController::class, 'updateIpdConfig']);
             Route::get('/numbering', [HospitalSettingController::class, 'getNumberingOverview']);
+            Route::get('/bed-billing', [\App\Http\Controllers\Api\V1\ChargeController::class, 'getBedBillingConfig']);
+            Route::put('/bed-billing', [\App\Http\Controllers\Api\V1\ChargeController::class, 'updateBedBillingConfig']);
         });
 
         // Hospital Admin - Dynamic Custom Patient Registration Fields
@@ -67,7 +69,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [AuthController::class, 'me']);
         
-        // Patients (CRUD)
+        // Patients (CRUD & 360 History)
+        Route::get('patients/{id}/history', [PatientController::class, 'history']);
         Route::apiResource('patients', PatientController::class);
         
         // Storage (R2 / S3 Presigned URLs)
@@ -109,19 +112,32 @@ Route::prefix('v1')->group(function () {
             Route::get('/departments', [ReceptionController::class, 'getDepartments']);
             Route::post('/register', [ReceptionController::class, 'registerWithoutAbha']);
             Route::post('/visit', [ReceptionController::class, 'createVisit']);
+            Route::post('/quick-visit', [ReceptionController::class, 'quickVisit']);
             Route::post('/admit-ipd', [\App\Http\Controllers\Api\V1\IpdController::class, 'admit']);
         });
 
-        // IPD (Inpatient Admissions, Wards, Beds & Parcha)
+
+        // IPD (Inpatient Admissions, Wards, Beds & Visual Bed Matrix)
         Route::prefix('ipd')->group(function () {
             Route::get('/wards', [\App\Http\Controllers\Api\V1\IpdController::class, 'wards']);
             Route::get('/beds/available', [\App\Http\Controllers\Api\V1\IpdController::class, 'availableBeds']);
+            Route::get('/bed-matrix', [\App\Http\Controllers\Api\V1\IpdController::class, 'bedMatrix']);
             Route::post('/admit', [\App\Http\Controllers\Api\V1\IpdController::class, 'admit']);
             Route::get('/admissions', [\App\Http\Controllers\Api\V1\IpdController::class, 'admissions']);
             Route::get('/admissions/{id}', [\App\Http\Controllers\Api\V1\IpdController::class, 'show']);
+            Route::get('/admissions/{id}/chart', [\App\Http\Controllers\Api\V1\IpdController::class, 'chart']);
             Route::post('/admissions/{id}/transfer-bed', [\App\Http\Controllers\Api\V1\IpdController::class, 'transferBed']);
             Route::post('/admissions/{id}/discharge', [\App\Http\Controllers\Api\V1\IpdController::class, 'discharge']);
+
+            // Doctor Inpatient Daily Rounds (SOAP Notes)
+            Route::post('/admissions/{id}/rounds', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordRound']);
+            Route::get('/admissions/{id}/rounds', [\App\Http\Controllers\Api\V1\IpdController::class, 'getRounds']);
+
+            // Bedside Nursing Procedures
+            Route::post('/admissions/{id}/procedures', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordProcedure']);
+            Route::get('/admissions/{id}/procedures', [\App\Http\Controllers\Api\V1\IpdController::class, 'getProcedures']);
         });
+
 
         // Triage / Nurse Station — Patient Vitals & Hospital Dynamic Field Configs
         Route::prefix('vitals')->group(function () {
@@ -149,6 +165,45 @@ Route::prefix('v1')->group(function () {
             Route::get('/queue', [OpdController::class, 'todayQueue']);
             Route::post('/visit/{visitId}/call', [OpdController::class, 'callPatient']);
             Route::post('/visit/{visitId}/complete', [OpdController::class, 'completeConsultation']);
+            Route::post('/visit/{visitId}/prescribe', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'prescribeVisit']);
+        });
+
+        // Fast Autocomplete Search for Medicines & WHO ICD-10 Diagnoses
+        Route::get('/medicines/search', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'searchMedicines']);
+        Route::get('/diagnosis/search', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'searchDiagnoses']);
+
+        // Structured E-Prescriptions
+        Route::prefix('prescriptions')->group(function () {
+            Route::post('/', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'store']);
+            Route::get('/{id}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'show']);
+            Route::get('/patient/{patientId}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'patientPrescriptions']);
+            Route::get('/visit/{visitId}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'visitPrescription']);
+        });
+
+        // Hospital Charges Master, Tariff Engine & Patient Running Ledger
+        Route::prefix('billing')->group(function () {
+            Route::get('/charges/categories', [\App\Http\Controllers\Api\V1\ChargeController::class, 'getCategories']);
+            Route::post('/charges/categories', [\App\Http\Controllers\Api\V1\ChargeController::class, 'createCategory']);
+            Route::get('/charges', [\App\Http\Controllers\Api\V1\ChargeController::class, 'index']);
+            Route::post('/charges', [\App\Http\Controllers\Api\V1\ChargeController::class, 'store']);
+            Route::put('/charges/{id}', [\App\Http\Controllers\Api\V1\ChargeController::class, 'update']);
+            Route::delete('/charges/{id}', [\App\Http\Controllers\Api\V1\ChargeController::class, 'destroy']);
+            Route::post('/charges/apply-bed-charges', [\App\Http\Controllers\Api\V1\ChargeController::class, 'triggerBedCharges']);
+
+            Route::post('/ledger/charge', [\App\Http\Controllers\Api\V1\ChargeController::class, 'postLedger']);
+            Route::get('/ledger/patient/{patientId}', [\App\Http\Controllers\Api\V1\ChargeController::class, 'getPatientLedger']);
+            Route::post('/ledger/{id}/cancel', [\App\Http\Controllers\Api\V1\ChargeController::class, 'cancelLedgerItem']);
+        });
+
+        // Emergency & Triage Desk (Casualty Fast-Track)
+        Route::prefix('emergency')->group(function () {
+            Route::post('/triage', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'admit']);
+            Route::get('/triages', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'index']);
+            Route::get('/triages/{id}', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'show']);
+            Route::put('/triages/{id}/link-patient', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'linkPatient']);
+            Route::get('/triages/{id}/mlc-slip', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'mlcSlip']);
+            Route::put('/triages/{id}/status', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'updateStatus']);
         });
     });
+
 });

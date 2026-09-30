@@ -27,7 +27,9 @@ return new class extends Migration
         });
 
         // Full-text search on brand_name + generic_name for prescription writer
-        \DB::statement("CREATE INDEX medicines_fts_idx ON medicines_master USING gin(to_tsvector('simple', brand_name || ' ' || generic_name))");
+        if (\DB::getDriverName() === 'pgsql') {
+            \DB::statement("CREATE INDEX medicines_fts_idx ON medicines_master USING gin(to_tsvector('simple', brand_name || ' ' || generic_name))");
+        }
     }
 
     /**
