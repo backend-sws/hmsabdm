@@ -56,6 +56,8 @@ class PatientController extends Controller
                 new OA\Property(property: "guardian_name", type: "string", example: "Robert Doe", description: "Father / Mother / Spouse / Guardian Name"),
                 new OA\Property(property: "guardian_relation", type: "string", example: "Father", description: "Relation (Father, Mother, Spouse, etc.)"),
                 new OA\Property(property: "guardian_phone", type: "string", example: "9876500000"),
+                new OA\Property(property: "id_proof_type", type: "string", enum: ["aadhaar", "pan", "voter_id", "driving_license", "passport", "ration_card", "other"], example: "pan", description: "Identity Proof Type"),
+                new OA\Property(property: "id_proof_number", type: "string", example: "ABCDE1234F", description: "Identity Card / Proof Number"),
                 new OA\Property(property: "mobile", type: "string", example: "9876543210"),
                 new OA\Property(property: "abha_number", type: "string", example: "12-3456-7890-1234"),
                 new OA\Property(property: "email", type: "string", format: "email", example: "john@example.com"),
@@ -87,6 +89,8 @@ class PatientController extends Controller
             'guardian_name'     => 'nullable|string|max:255',
             'guardian_relation' => 'nullable|string|max:50',
             'guardian_phone'    => 'nullable|string|max:20',
+            'id_proof_type'     => 'nullable|string|in:aadhaar,pan,voter_id,driving_license,passport,ration_card,other',
+            'id_proof_number'   => 'nullable|string|max:100',
             'mobile'            => 'nullable|string|max:15',
             'abha_number'       => 'nullable|string|unique:patients,abha_number',
             'email'             => 'nullable|email|unique:patients,email',
@@ -130,7 +134,7 @@ class PatientController extends Controller
     #[OA\Put(
         path: "/api/v1/patients/{id}",
         summary: "Update patient demographic information",
-        description: "Updates an existing patient's details such as name, guardian, contact, address, DOB, gender, blood group, ABHA, or custom fields.",
+        description: "Updates an existing patient's details such as name, guardian, ID proof, contact, address, DOB, gender, blood group, ABHA, or custom fields.",
         tags: ["9. Patients"],
         security: [["bearerAuth" => []]]
     )]
@@ -143,6 +147,8 @@ class PatientController extends Controller
                 new OA\Property(property: "guardian_name", type: "string", example: "Robert Doe"),
                 new OA\Property(property: "guardian_relation", type: "string", example: "Father"),
                 new OA\Property(property: "guardian_phone", type: "string", example: "9876500000"),
+                new OA\Property(property: "id_proof_type", type: "string", enum: ["aadhaar", "pan", "voter_id", "driving_license", "passport", "ration_card", "other"], example: "pan"),
+                new OA\Property(property: "id_proof_number", type: "string", example: "ABCDE1234F"),
                 new OA\Property(property: "mobile", type: "string", example: "9876543210"),
                 new OA\Property(property: "abha_number", type: "string", example: "12-3456-7890-1234"),
                 new OA\Property(property: "email", type: "string", format: "email", example: "john@example.com"),
@@ -175,6 +181,8 @@ class PatientController extends Controller
             'guardian_name'     => 'nullable|string|max:255',
             'guardian_relation' => 'nullable|string|max:50',
             'guardian_phone'    => 'nullable|string|max:20',
+            'id_proof_type'     => 'nullable|string|in:aadhaar,pan,voter_id,driving_license,passport,ration_card,other',
+            'id_proof_number'   => 'nullable|string|max:100',
             'mobile'            => 'nullable|string|max:15',
             'abha_number'       => 'nullable|string|unique:patients,abha_number,' . $id,
             'email'             => 'nullable|email|unique:patients,email,' . $id,
@@ -211,4 +219,22 @@ class PatientController extends Controller
         $this->patientService->deletePatient((int) $id);
         return $this->successResponse(null, 'Patient deleted successfully');
     }
+
+    #[OA\Get(
+        path: "/api/v1/patients/{id}/history",
+        summary: "Get 360-degree patient medical history and chronological timeline",
+        description: "Fetches unified chronological timeline across OPD visits, IPD admissions, e-prescriptions, vitals recordings, and billing summary.",
+        tags: ["9. Patients"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Patient 360 history retrieved successfully")]
+    #[OA\Response(response: 404, description: "Patient not found")]
+    public function history(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $history = $this->patientService->getPatientHistory((int) $id, $hospitalId);
+        return $this->successResponse($history, 'Patient 360 history retrieved successfully');
+    }
 }
+

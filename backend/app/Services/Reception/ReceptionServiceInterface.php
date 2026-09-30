@@ -33,4 +33,10 @@ interface ReceptionServiceInterface
      * Create an OPD visit for a patient
      */
     public function createOpdVisit(int $hospitalId, array $data): array;
+
+    /**
+     * Fast-track 1-click Re-visit token generation for existing patients with free follow-up rule check
+     */
+    public function quickRevisit(int $hospitalId, array $data): array;
 }
+

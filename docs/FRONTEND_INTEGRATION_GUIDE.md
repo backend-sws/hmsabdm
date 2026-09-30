@@ -1,7 +1,8 @@
 # 🏥 HMS – Frontend Integration Guide
 > **For Frontend Developers** — Step-by-step API flow documentation  
 > Base URL: `http://localhost:8000/api/v1`  
-> All protected APIs need: `Authorization: Bearer <token>` header
+> All protected APIs need: `Authorization: Bearer <token>` header  
+> 📖 **Comprehensive End-to-End Workflow Guide (OPD, Re-visit, Emergency, IPD 2D Bed Matrix, Doctor Rounds, Nursing & Bed Billing):** See [API_WORKFLOW_AND_INTEGRATION_GUIDE.md](file:///c:/Users/Employee/Desktop/hospital/docs/API_WORKFLOW_AND_INTEGRATION_GUIDE.md)
 
 ---
 

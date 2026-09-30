@@ -17,6 +17,8 @@ class Patient extends Model
         'guardian_name',
         'guardian_relation',
         'guardian_phone',
+        'id_proof_type',
+        'id_proof_number',
         'mobile',
         'abha_number',
         'abha_address',
@@ -57,4 +59,40 @@ class Patient extends Model
     {
         return $this->hasOne(Vital::class)->latestOfMany();
     }
+
+    public function opdVisits()
+    {
+        return $this->hasMany(OpdVisit::class);
+    }
+
+    public function ipdAdmissions()
+    {
+        return $this->hasMany(IpdAdmission::class);
+    }
+
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    public function billingLedgerItems()
+    {
+        return $this->hasMany(BillingLedgerItem::class);
+    }
+
+    public function latestOpdVisit()
+    {
+        return $this->hasOne(OpdVisit::class)->latestOfMany();
+    }
+
+    public function latestIpdAdmission()
+    {
+        return $this->hasOne(IpdAdmission::class)->latestOfMany();
+    }
+
+    public function latestPrescription()
+    {
+        return $this->hasOne(Prescription::class)->latestOfMany();
+    }
 }
+

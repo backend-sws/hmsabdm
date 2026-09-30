@@ -70,7 +70,28 @@ class ServiceBindingProvider extends ServiceProvider
             \App\Services\PatientField\PatientFieldConfigServiceInterface::class,
             \App\Services\PatientField\PatientFieldConfigService::class
         );
+
+        $this->app->bind(
+            \App\Services\Ipd\IpdServiceInterface::class,
+            \App\Services\Ipd\IpdService::class
+        );
+
+        $this->app->bind(
+            \App\Services\Billing\ChargeServiceInterface::class,
+            \App\Services\Billing\ChargeService::class
+        );
+
+        $this->app->bind(
+            \App\Services\Prescription\PrescriptionServiceInterface::class,
+            \App\Services\Prescription\PrescriptionService::class
+        );
+
+        $this->app->bind(
+            \App\Services\Emergency\EmergencyServiceInterface::class,
+            \App\Services\Emergency\EmergencyService::class
+        );
     }
+
 
     /**
      * Bootstrap services.
