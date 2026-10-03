@@ -10,6 +10,7 @@ export interface Hospital {
   name: string
   code?: string
   abdm_hip_id?: string
+  status?: string
   email?: string
   phone?: string
   address?: string

@@ -4,10 +4,11 @@ import { useAuth } from "@/context/AuthContext"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
+  allowedRoles?: string[]
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth()
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+  const { user, isAuthenticated, isLoading } = useAuth()
   const location = useLocation()
 
   if (isLoading) {
@@ -23,6 +24,27 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (allowedRoles && allowedRoles.length > 0) {
+    const rawRole = (user?.role || user?.roles?.[0] || "").toUpperCase().replace(/[\s_-]+/g, "")
+    const isSuperAdmin = rawRole.includes("SUPER")
+
+    const isAllowed = allowedRoles.some((r) => {
+      const nr = r.toUpperCase().replace(/[\s_-]+/g, "")
+      if (isSuperAdmin) {
+        return nr === "SUPERADMIN"
+      }
+      return (
+        nr === rawRole ||
+        (nr === "HOSPITALADMIN" && (rawRole === "ADMIN" || rawRole === "HOSPITALADMIN")) ||
+        (nr === "ADMIN" && (rawRole === "ADMIN" || rawRole === "HOSPITALADMIN"))
+      )
+    })
+
+    if (!isAllowed) {
+      return <Navigate to="/" replace />
+    }
   }
 
   return <>{children}</>

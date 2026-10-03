@@ -1,0 +1,391 @@
+import React, { useMemo } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { UserPlus, RefreshCw } from "lucide-react"
+
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
+import type { QuickVisitPayload } from "@/types/reception"
+
+export const walkInSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  mobile: z
+    .string()
+    .regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit mobile number")
+    .optional()
+    .or(z.literal("")),
+  gender: z.enum(["M", "F", "O"]).default("M"),
+  age: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((val) => (val !== "" && val !== undefined && val !== null && !isNaN(Number(val)) ? Number(val) : undefined)),
+  department_id: z
+    .union([z.string(), z.number()])
+    .refine((val) => val !== "" && val !== undefined && val !== null && !isNaN(Number(val)) && Number(val) > 0, {
+      message: "Please select a department",
+    })
+    .transform((val) => Number(val)),
+  doctor_id: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((val) => (val !== "" && val !== undefined && val !== null && !isNaN(Number(val)) ? Number(val) : undefined)),
+  slot_time: z.string().optional(),
+  visit_reason: z.string().optional(),
+  guardian_name: z.string().optional(),
+  guardian_phone: z
+    .string()
+    .regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit mobile number")
+    .optional()
+    .or(z.literal("")),
+  blood_group: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  district: z.string().optional(),
+  state: z.string().optional(),
+  pincode: z.string().optional(),
+  fee_charged: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== "" && v !== undefined && !isNaN(Number(v)) ? Number(v) : 0)),
+  payment_method: z.string().default("cash"),
+  payment_status: z.string().default("paid"),
+})
+
+export type WalkInFormValues = z.infer<typeof walkInSchema>
+
+interface WalkInFlowProps {
+  departments: any[]
+  isSubmitting: boolean
+  onSubmit: (payload: QuickVisitPayload) => void
+}
+
+export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmitting, onSubmit }) => {
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<WalkInFormValues>({
+    resolver: zodResolver(walkInSchema) as any,
+    defaultValues: {
+      gender: "M",
+      payment_method: "cash",
+      payment_status: "paid",
+      fee_charged: 0,
+      slot_time: "",
+    },
+  })
+
+  const selectedDeptId = watch("department_id")
+  const selectedDoctorId = watch("doctor_id")
+
+  const availableDoctors = useMemo(() => {
+    if (!selectedDeptId) return []
+    const dept = departments.find((d: any) => String(d.id) === String(selectedDeptId))
+    return dept?.doctors || []
+  }, [selectedDeptId, departments])
+
+  const selectedDoctor = useMemo(() => {
+    if (!selectedDoctorId) return null
+    return availableDoctors.find((doc: any) => String(doc.id) === String(selectedDoctorId))
+  }, [selectedDoctorId, availableDoctors])
+
+  const doctorTiming = useMemo(() => {
+    if (!selectedDoctor) return null
+    if (selectedDoctor.schedules && selectedDoctor.schedules.length > 0) {
+      const activeSched = selectedDoctor.schedules[0]
+      const start = activeSched.start_time?.slice(0, 5) || "09:00"
+      const end = activeSched.end_time?.slice(0, 5) || "13:00"
+      return `${start} - ${end}`
+    }
+    return selectedDoctor.consultation_time || "10:00 AM - 02:00 PM"
+  }, [selectedDoctor])
+
+  React.useEffect(() => {
+    if (selectedDoctor?.schedules?.[0]?.opd_fee) {
+      setValue("fee_charged", Number(selectedDoctor.schedules[0].opd_fee))
+    }
+  }, [selectedDoctor, setValue])
+
+  const handleFormSubmit = (data: WalkInFormValues) => {
+    const payload: QuickVisitPayload = {
+      name: data.name,
+      mobile: data.mobile || undefined,
+      gender: data.gender,
+      age: data.age,
+      department_id: data.department_id,
+      doctor_id: data.doctor_id || undefined,
+      slot_time: data.slot_time || undefined,
+      visit_reason: data.visit_reason || undefined,
+      guardian_name: data.guardian_name || undefined,
+      guardian_phone: data.guardian_phone || undefined,
+      blood_group: data.blood_group || undefined,
+      address: data.address || undefined,
+      city: data.city || undefined,
+      district: data.district || undefined,
+      state: data.state || undefined,
+      pincode: data.pincode || undefined,
+      fee_charged: data.fee_charged,
+      amount_paid: data.fee_charged,
+      payment_method: data.payment_method,
+      payment_status: data.payment_status,
+    }
+    onSubmit(payload)
+  }
+
+  return (
+    <div className="w-full space-y-6">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+        {/* Section 01: Demographics */}
+        <div className="w-full rounded-2xl border bg-card p-6 shadow-xs space-y-5">
+          <div className="flex items-center gap-2 border-b pb-3">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+              01
+            </span>
+            <h3 className="text-sm font-semibold text-foreground">Patient Demographic Info</h3>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2 lg:col-span-2">
+              <Label className="text-xs font-semibold">Full Name *</Label>
+              <Input
+                placeholder="e.g. Ramesh Kumar"
+                className="mt-1 text-xs"
+                {...register("name")}
+              />
+              {errors.name && (
+                <p className="text-[11px] text-destructive mt-1">{errors.name.message}</p>
+              )}
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-1">
+              <Label className="text-xs font-semibold">Mobile Number</Label>
+              <Input
+                type="tel"
+                placeholder="10-digit mobile"
+                className="mt-1 font-mono text-xs"
+                {...register("mobile")}
+              />
+              {errors.mobile && (
+                <p className="text-[11px] text-destructive mt-1">{errors.mobile.message}</p>
+              )}
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-1">
+              <Label className="text-xs font-semibold">Age (Years)</Label>
+              <Input
+                type="number"
+                placeholder="45"
+                className="mt-1 text-xs"
+                {...register("age")}
+              />
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-1">
+              <Label className="text-xs font-semibold">Gender</Label>
+              <select
+                {...register("gender")}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs"
+              >
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="O">Other</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-1">
+              <Label className="text-xs font-semibold">Blood Group</Label>
+              <select
+                {...register("blood_group")}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs"
+              >
+                <option value="">Select blood group (optional)</option>
+                {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((bg) => (
+                  <option key={bg} value={bg}>
+                    {bg}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-1">
+              <Label className="text-xs font-semibold">Guardian / Relative Name</Label>
+              <Input
+                placeholder="Attendant/Guardian"
+                className="mt-1 text-xs"
+                {...register("guardian_name")}
+              />
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-1">
+              <Label className="text-xs font-semibold">Guardian Mobile</Label>
+              <Input
+                placeholder="Guardian mobile"
+                className="mt-1 font-mono text-xs"
+                {...register("guardian_phone")}
+              />
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-2">
+              <Label className="text-xs font-semibold">Street / House Address</Label>
+              <Input
+                placeholder="House No, Road, Locality"
+                className="mt-1 text-xs"
+                {...register("address")}
+              />
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-1">
+              <Label className="text-xs font-semibold">City / Town</Label>
+              <Input placeholder="e.g. Ranchi" className="mt-1 text-xs" {...register("city")} />
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-1">
+              <Label className="text-xs font-semibold">District</Label>
+              <Input placeholder="District" className="mt-1 text-xs" {...register("district")} />
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-2">
+              <Label className="text-xs font-semibold">State</Label>
+              <Input placeholder="State" className="mt-1 text-xs" {...register("state")} />
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-2">
+              <Label className="text-xs font-semibold">Pincode</Label>
+              <Input placeholder="6-digit PIN" maxLength={6} className="mt-1 font-mono text-xs" {...register("pincode")} />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 02: OPD Assignment & Billing */}
+        <div className="w-full rounded-2xl border bg-card p-6 shadow-xs space-y-5">
+          <div className="flex items-center gap-2 border-b pb-3">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+              02
+            </span>
+            <h3 className="text-sm font-semibold text-foreground">OPD Department, Doctor & Billing</h3>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-1 lg:col-span-2">
+              <Label className="text-xs font-semibold">Department *</Label>
+              <select
+                {...register("department_id")}
+                className={cn(
+                  "mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs",
+                  errors.department_id ? "border-destructive text-destructive" : ""
+                )}
+              >
+                <option value="">-- Select Department --</option>
+                {departments.map((d: any) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} {d.doctors?.length ? `(${d.doctors.length} doctors)` : ""}
+                  </option>
+                ))}
+              </select>
+              {errors.department_id && (
+                <p className="text-[11px] text-destructive mt-1">{errors.department_id.message}</p>
+              )}
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Assigned Doctor (optional)</Label>
+                {doctorTiming && (
+                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    🕒 Shift: {doctorTiming}
+                  </span>
+                )}
+              </div>
+              <select
+                {...register("doctor_id")}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs"
+              >
+                <option value="">-- Auto-assign first available doctor --</option>
+                {availableDoctors.map((doc: any) => (
+                  <option key={doc.id} value={doc.id}>
+                    {doc.name} {doc.specialization ? `(${doc.specialization})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-2">
+              <Label className="text-xs font-semibold">Appointment Slot / Session</Label>
+              <select
+                {...register("slot_time")}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs"
+              >
+                <option value="">⚡ Next Available Token (Live Queue - FIFO)</option>
+                <option value="10:00 AM - 10:30 AM">10:00 AM – 10:30 AM (Morning Slot)</option>
+                <option value="10:30 AM - 11:00 AM">10:30 AM – 11:00 AM (Morning Slot)</option>
+                <option value="11:00 AM - 11:30 AM">11:00 AM – 11:30 AM (Morning Slot)</option>
+                <option value="11:30 AM - 12:00 PM">11:30 AM – 12:00 PM (Morning Slot)</option>
+                <option value="12:00 PM - 12:30 PM">12:00 PM – 12:30 PM (Morning Slot)</option>
+                <option value="12:30 PM - 01:00 PM">12:30 PM – 01:00 PM (Morning Slot)</option>
+                <option value="04:00 PM - 04:30 PM">04:00 PM – 04:30 PM (Evening Slot)</option>
+                <option value="04:30 PM - 05:00 PM">04:30 PM – 05:00 PM (Evening Slot)</option>
+                <option value="05:00 PM - 05:30 PM">05:00 PM – 05:30 PM (Evening Slot)</option>
+                <option value="05:30 PM - 06:00 PM">05:30 PM – 06:00 PM (Evening Slot)</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-4">
+              <Label className="text-xs font-semibold">Chief Complaint / Reason (optional)</Label>
+              <Input
+                placeholder="e.g. Fever, Cough, Chest pain, Checkup..."
+                className="mt-1 text-xs"
+                {...register("visit_reason")}
+              />
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-2">
+              <Label className="text-xs font-semibold">OPD Fee (₹)</Label>
+              <Input
+                type="number"
+                min="0"
+                placeholder="0"
+                className="mt-1 text-xs"
+                {...register("fee_charged")}
+              />
+            </div>
+
+            <div className="sm:col-span-1 lg:col-span-2">
+              <Label className="text-xs font-semibold">Payment Mode</Label>
+              <select
+                {...register("payment_method")}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs"
+              >
+                <option value="cash">Cash</option>
+                <option value="upi">UPI / QR</option>
+                <option value="card">Card</option>
+                <option value="insurance">Insurance / Ayushman</option>
+                <option value="waived">Waived / Free</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <Button type="submit" disabled={isSubmitting} className="h-11 px-6 text-sm font-semibold">
+            {isSubmitting ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Registering & Generating Token...
+              </>
+            ) : (
+              <>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Register Patient & Issue OPD Slip
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}

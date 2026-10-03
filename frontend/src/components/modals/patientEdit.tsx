@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router"
 import { useForm, Controller, type SubmitHandler } from "react-hook-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import {
+  Calendar,
+  Stethoscope,
+  ShieldCheck,
+  ArrowRight,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -17,6 +24,7 @@ import {
   GUARDIAN_RELATION_OPTIONS,
   MARITAL_STATUS_OPTIONS,
 } from "@/constants/patient.constants"
+import { PatientAvatar } from "@/components/common"
 import type { Patient, RegisterPatientWithoutAbhaDto } from "@/types/patient"
 
 interface PatientFormValues {
@@ -44,6 +52,7 @@ interface PatientEditProps {
 }
 
 export default function PatientEdit({ open, onClose, patient }: PatientEditProps) {
+  const navigate = useNavigate()
   const isViewMode = !!patient?.viewMode
   const isCreateMode = !patient?.id
   const [currentDate] = useState(() => new Date())
@@ -163,6 +172,21 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
             {isViewMode ? "Close" : "Cancel"}
           </Button>
 
+          {isViewMode && (
+            <Button
+              type="button"
+              onClick={() => {
+                onClose(false)
+                navigate("/reception")
+              }}
+              className="gap-1.5 bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              <Stethoscope className="h-4 w-4" />
+              Create OPD Visit / Slip
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          )}
+
           {!isViewMode && (
             <Button
               type="submit"
@@ -178,15 +202,42 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
     >
       {isViewMode ? (
         <div className="space-y-6">
-          {/* View Mode: UHID Banner */}
+          {/* View Mode: UHID & Registry Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 dark:bg-blue-950/20">
-            <div>
-              <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                Unique Health Identification (UHID)
-              </span>
-              <p className="text-xl font-bold font-mono text-primary leading-tight">
-                {patient?.uhid || "NOT GENERATED"}
-              </p>
+            <div className="flex items-center gap-4">
+              <PatientAvatar
+                photo={patient?.photo}
+                name={patient?.name}
+                uhid={patient?.uhid}
+                size="xl"
+                shape="rounded"
+                allowPreview={true}
+                kyc_verified={patient?.kyc_verified}
+                subtitle={[patient?.address, patient?.district || patient?.city, patient?.state, patient?.pincode].filter(Boolean).join(", ")}
+              />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    Unique Health Identification (UHID)
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      patient?.abha_number || patient?.abha_address
+                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                        : "bg-slate-200 text-muted-foreground dark:bg-slate-800"
+                    }`}
+                  >
+                    <ShieldCheck className="h-3 w-3" />
+                    {patient?.abha_number || patient?.abha_address
+                      ? "ABHA Digitized"
+                      : "Standard Registry"}
+                  </span>
+                </div>
+                <p className="text-xl font-bold font-mono text-primary leading-tight mt-0.5">
+                  {patient?.uhid || "NOT GENERATED"}
+                </p>
+                <p className="text-sm font-bold text-foreground mt-0.5">{patient?.name}</p>
+              </div>
             </div>
             {patient?.created_at && (
               <div className="text-left sm:text-right">
@@ -204,6 +255,51 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
                 </p>
               </div>
             )}
+          </div>
+
+          {/* View Mode: Clinical & Visit History Summary */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border bg-card p-3.5 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 text-primary" /> Last Visit Date
+              </span>
+              <p className="text-sm font-bold text-foreground mt-1">
+                {patient?.last_visit_date
+                  ? new Date(patient.last_visit_date).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  : "No visits recorded"}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Type: {patient?.last_visit_type || "New Registration"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border bg-card p-3.5 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Stethoscope className="h-3.5 w-3.5 text-emerald-600" /> Department
+              </span>
+              <p className="text-sm font-bold text-foreground mt-1">
+                {patient?.last_department || "General Consultation"}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Doctor: {patient?.last_doctor || "Hospital Duty Doctor"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border bg-card p-3.5 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <ShieldCheck className="h-3.5 w-3.5 text-blue-600" /> ABDM Status
+              </span>
+              <p className="text-sm font-bold font-mono text-primary mt-1 truncate">
+                {patient?.abha_address || patient?.abha_number || "Not Linked"}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {patient?.kyc_verified ? "KYC Verified" : "Demographic Linked"}
+              </p>
+            </div>
           </div>
 
           {/* View Mode: Demographics */}

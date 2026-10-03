@@ -30,6 +30,12 @@ class IpdAdmission extends Model
         'payment_breakdown',
         'admission_date',
         'discharge_date',
+        'discharge_type',
+        'discharge_summary',
+        'discharge_advice',
+        'final_diagnosis',
+        'discharged_by_user_id',
+        'invoice_id',
         'attendant_name',
         'attendant_relation',
         'attendant_phone',
@@ -119,6 +125,31 @@ class IpdAdmission extends Model
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);
+    }
+
+    public function intakeOutputs()
+    {
+        return $this->hasMany(IpdIntakeOutput::class);
+    }
+
+    public function marAdministrations()
+    {
+        return $this->hasMany(IpdMarAdministration::class);
+    }
+
+    public function shiftHandovers()
+    {
+        return $this->hasMany(IpdShiftHandover::class);
+    }
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+
+    public function dischargedByUser()
+    {
+        return $this->belongsTo(User::class, 'discharged_by_user_id');
     }
 }
 

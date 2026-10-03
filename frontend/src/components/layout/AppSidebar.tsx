@@ -9,10 +9,11 @@ import {
   Building2,
   Building,
   QrCode,
-  Activity,
   Sparkles,
-  ChevronRight,
   ShieldCheck,
+  Bed,
+  Siren,
+  Receipt,
 } from "lucide-react"
 
 interface AppSidebarProps {
@@ -27,41 +28,65 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   isCollapsed,
 }) => {
   const { user } = useAuth()
-  const userRole = user?.role || "SUPER_ADMIN"
+
+  const superAdminNavItems = [
+    {
+      title: "Platform Overview",
+      path: "/",
+      icon: LayoutDashboard,
+      roles: ["SUPER_ADMIN"],
+    },
+    {
+      title: "Hospital Facilities",
+      path: "/hospitals",
+      icon: Building,
+      roles: ["SUPER_ADMIN"],
+      badge: "Onboard",
+    },
+  ]
 
   const clinicalNavItems = [
     {
       title: "Dashboard",
       path: "/",
       icon: LayoutDashboard,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
-    },
-    {
-      title: "Hospitals",
-      path: "/hospitals",
-      icon: Building,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
-      // badge: "Scan & Share",
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
     {
       title: "Reception & Walk-in",
       path: "/reception",
       icon: QrCode,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "RECEPTIONIST"],
-      // badge: "Scan & Share",
+      roles: ["HOSPITAL_ADMIN", "RECEPTIONIST"],
     },
     {
       title: "Patient Registration",
       path: "/patients",
       icon: Users,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
     {
       title: "OPD Doctor Desk",
       path: "/opd",
       icon: Stethoscope,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR"],
-      // badge: "Live Queue",
+      roles: ["HOSPITAL_ADMIN", "DOCTOR"],
+    },
+    {
+      title: "IPD Inpatient Desk",
+      path: "/ipd",
+      icon: Bed,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
+    },
+    {
+      title: "Emergency & Casualty",
+      path: "/emergency",
+      icon: Siren,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
+    },
+    {
+      title: "Billing & Finance",
+      path: "/billing",
+      icon: Receipt,
+      roles: ["HOSPITAL_ADMIN", "RECEPTIONIST"],
     },
   ]
 
@@ -70,35 +95,42 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       title: "Doctors & Schedules",
       path: "/doctors",
       icon: UserCheck,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
+      roles: ["HOSPITAL_ADMIN"],
     },
     {
       title: "Departments",
       path: "/departments",
       icon: Building2,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
-    },
-
-    {
-      title: "Reports & Analytics",
-      path: "/reports",
-      icon: Activity,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
+      roles: ["HOSPITAL_ADMIN"],
     },
     {
-      title: "System Settings",
+      title: "Hospital Settings",
       path: "/settings",
       icon: Sparkles,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
+      roles: ["HOSPITAL_ADMIN"],
     },
   ]
 
-  const filteredClinical = clinicalNavItems.filter((i) =>
-    i.roles.includes(userRole)
-  )
-  const filteredManagement = managementNavItems.filter((i) =>
-    i.roles.includes(userRole)
-  )
+  const normalizeRole = (r: string) => r.toUpperCase().replace(/[\s_-]+/g, "")
+  const currentRole = normalizeRole(user?.role || user?.roles?.[0] || "HOSPITALADMIN")
+  const isSuperAdmin = currentRole.includes("SUPER")
+
+  const hasRole = (allowedRoles: string[]) => {
+    return allowedRoles.some((r) => {
+      const nr = normalizeRole(r)
+      if (isSuperAdmin) {
+        return nr === "SUPERADMIN"
+      }
+      return (
+        nr === currentRole ||
+        (nr === "HOSPITALADMIN" && (currentRole === "ADMIN" || currentRole === "HOSPITALADMIN")) ||
+        (nr === "ADMIN" && (currentRole === "ADMIN" || currentRole === "HOSPITALADMIN"))
+      )
+    })
+  }
+
+  const filteredClinical = clinicalNavItems.filter((i) => hasRole(i.roles))
+  const filteredManagement = managementNavItems.filter((i) => hasRole(i.roles))
 
   return (
     <aside
@@ -118,95 +150,26 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
       {/* Navigation Scrollable Body */}
       <div className="custom-scrollbar relative z-10 flex-1 space-y-6 overflow-y-auto p-3.5">
-        {/* Clinical Section */}
-        <div>
-          {!isCollapsed && (
-            <div className="mb-2.5 flex items-center justify-between px-3">
-              <p className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase">
-                Clinical Workflows
-              </p>
-              <span className="h-1 w-1 rounded-full bg-primary/60" />
-            </div>
-          )}
-          <nav className="space-y-1">
-            {filteredClinical.map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  end={item.path === "/"}
-                  title={isCollapsed ? item.title : undefined}
-                  className={({ isActive }) =>
-                    `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
-                      isActive
-                        ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
-                        : "text-muted-foreground hover:bg-slate-100/80 hover:text-foreground dark:hover:bg-muted/60"
-                    } ${isCollapsed ? "justify-center px-0" : ""}`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <Icon
-                          className={`h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                            isActive
-                              ? "text-primary-foreground"
-                              : "text-muted-foreground group-hover:text-primary"
-                          }`}
-                        />
-                        {!isCollapsed && (
-                          <span className="truncate">{item.title}</span>
-                        )}
-                      </div>
-                      {/* {!isCollapsed &&
-                        (item?.badge && (
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                              isActive
-                                ? "bg-primary-foreground/20 text-primary-foreground"
-                                : "bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-400"
-                            }`}
-                          >
-                            {item .badge}
-                          </span>
-                        ) : (
-                          <ChevronRight
-                            className={`h-3.5 w-3.5 transition-all duration-200 ${
-                              isActive
-                                ? "text-primary-foreground opacity-100"
-                                : "text-muted-foreground opacity-0 group-hover:opacity-100"
-                            }`}
-                          />
-                        ))} */}
-                    </>
-                  )}
-                </NavLink>
-              )
-            })}
-          </nav>
-        </div>
-
-        {/* Management Section */}
-        {filteredManagement.length > 0 && (
+        {/* If Super Admin, show Platform Administration */}
+        {isSuperAdmin ? (
           <div>
             {!isCollapsed && (
               <div className="mb-2.5 flex items-center justify-between px-3">
                 <p className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase">
-                  Management & Admin
+                  Platform Administration
                 </p>
-                <span className="h-1 w-1 rounded-full bg-emerald-500/60" />
+                <span className="h-1 w-1 rounded-full bg-primary/60" />
               </div>
             )}
             <nav className="space-y-1">
-              {filteredManagement.map((item) => {
+              {superAdminNavItems.map((item) => {
                 const Icon = item.icon
                 return (
                   <NavLink
                     key={item.path}
                     to={item.path}
                     onClick={() => setSidebarOpen(false)}
+                    end={item.path === "/"}
                     title={isCollapsed ? item.title : undefined}
                     className={({ isActive }) =>
                       `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
@@ -230,14 +193,16 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                             <span className="truncate">{item.title}</span>
                           )}
                         </div>
-                        {!isCollapsed && (
-                          <ChevronRight
-                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+                        {!isCollapsed && item.badge && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
                               isActive
-                                ? "text-primary-foreground opacity-100"
-                                : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                                ? "bg-primary-foreground/20 text-primary-foreground"
+                                : "bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-400"
                             }`}
-                          />
+                          >
+                            {item.badge}
+                          </span>
                         )}
                       </>
                     )}
@@ -246,6 +211,106 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               })}
             </nav>
           </div>
+        ) : (
+          /* Otherwise show Hospital Workflows & Hospital Management */
+          <>
+            {filteredClinical.length > 0 && (
+              <div>
+                {!isCollapsed && (
+                  <div className="mb-2.5 flex items-center justify-between px-3">
+                    <p className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase">
+                      Clinical Workflows
+                    </p>
+                    <span className="h-1 w-1 rounded-full bg-primary/60" />
+                  </div>
+                )}
+                <nav className="space-y-1">
+                  {filteredClinical.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        end={item.path === "/"}
+                        title={isCollapsed ? item.title : undefined}
+                        className={({ isActive }) =>
+                          `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
+                            isActive
+                              ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
+                              : "text-muted-foreground hover:bg-slate-100/80 hover:text-foreground dark:hover:bg-muted/60"
+                          } ${isCollapsed ? "justify-center px-0" : ""}`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <div className="flex items-center gap-3">
+                            <Icon
+                              className={`h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                                isActive
+                                  ? "text-primary-foreground"
+                                  : "text-muted-foreground group-hover:text-primary"
+                              }`}
+                            />
+                            {!isCollapsed && (
+                              <span className="truncate">{item.title}</span>
+                            )}
+                          </div>
+                        )}
+                      </NavLink>
+                    )
+                  })}
+                </nav>
+              </div>
+            )}
+
+            {filteredManagement.length > 0 && (
+              <div>
+                {!isCollapsed && (
+                  <div className="mb-2.5 flex items-center justify-between px-3">
+                    <p className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase">
+                      Hospital Management
+                    </p>
+                    <span className="h-1 w-1 rounded-full bg-emerald-500/60" />
+                  </div>
+                )}
+                <nav className="space-y-1">
+                  {filteredManagement.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        title={isCollapsed ? item.title : undefined}
+                        className={({ isActive }) =>
+                          `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
+                            isActive
+                              ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
+                              : "text-muted-foreground hover:bg-slate-100/80 hover:text-foreground dark:hover:bg-muted/60"
+                          } ${isCollapsed ? "justify-center px-0" : ""}`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <div className="flex items-center gap-3">
+                            <Icon
+                              className={`h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                                isActive
+                                  ? "text-primary-foreground"
+                                  : "text-muted-foreground group-hover:text-primary"
+                              }`}
+                            />
+                            {!isCollapsed && (
+                              <span className="truncate">{item.title}</span>
+                            )}
+                          </div>
+                        )}
+                      </NavLink>
+                    )
+                  })}
+                </nav>
+              </div>
+            )}
+          </>
         )}
       </div>
 

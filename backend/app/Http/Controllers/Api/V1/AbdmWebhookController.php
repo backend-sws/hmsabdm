@@ -108,8 +108,19 @@ class AbdmWebhookController extends Controller
             }
             $hospitalId = $hospital?->id ?? 1;
 
-            $patient = Patient::where('abha_number', $abhaNumber)
-                ->where('hospital_id', $hospitalId)
+            // Address resolution from ABDM payload
+            $rawAddress = $payload['address'] ?? null;
+            $addressStr = is_array($rawAddress) ? ($rawAddress['line'] ?? implode(', ', array_filter($rawAddress))) : $rawAddress;
+            $district = $payload['district'] ?? $payload['districtName'] ?? ($rawAddress['district'] ?? null);
+            $state = $payload['state'] ?? $payload['stateName'] ?? ($rawAddress['state'] ?? null);
+            $pincode = $payload['pincode'] ?? ($rawAddress['pincode'] ?? null);
+
+            $patient = Patient::where('hospital_id', $hospitalId)
+                ->where(function ($q) use ($abhaNumber, $abhaAddress, $mobile) {
+                    $q->where('abha_number', $abhaNumber);
+                    if ($abhaAddress) $q->orWhere('abha_address', $abhaAddress);
+                    if ($mobile) $q->orWhere('mobile', $mobile);
+                })
                 ->first();
             
             if (!$patient) {
@@ -121,9 +132,24 @@ class AbdmWebhookController extends Controller
                     'abha_address' => $abhaAddress,
                     'gender'       => isset($payload['gender']) ? strtoupper(substr($payload['gender'], 0, 1)) : 'O',
                     'dob'          => isset($payload['yearOfBirth']) ? "{$payload['yearOfBirth']}-01-01" : null,
-                    'address'      => $payload['address'] ?? null,
-                    'pincode'      => $payload['pincode'] ?? null,
+                    'address'      => $addressStr,
+                    'district'     => $district,
+                    'state'        => $state,
+                    'pincode'      => $pincode,
+                    'kyc_verified' => true,
                 ]);
+            } else {
+                // Update missing details if present in ABDM scan share
+                $updates = [];
+                if (empty($patient->abha_number) && $abhaNumber) $updates['abha_number'] = $abhaNumber;
+                if (empty($patient->abha_address) && $abhaAddress) $updates['abha_address'] = $abhaAddress;
+                if (empty($patient->address) && $addressStr) $updates['address'] = $addressStr;
+                if (empty($patient->district) && $district) $updates['district'] = $district;
+                if (empty($patient->state) && $state) $updates['state'] = $state;
+                if (empty($patient->pincode) && $pincode) $updates['pincode'] = $pincode;
+                if (!empty($updates)) {
+                    $patient->update($updates);
+                }
             }
 
             // Generate Queue Token for the Counter (Scan & Share token)

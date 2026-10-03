@@ -1,446 +1,550 @@
-import React, { useState, useMemo, useCallback } from "react"
-import { PageHeader } from "@/components/common/PageHeader"
-import { SectionCard } from "@/components/SectionCard"
-import { FilterBar } from "@/components/filter-bar"
-import { DataTable, type Column } from "@/components/common/DataTable"
-import { StatusBadge } from "@/components/common/StatusBadge"
-import { useSearchFilter } from "@/hooks/useSearchFilter"
-import { useDisclosure } from "@/hooks/useDisclosure"
-import { FormContainer } from "@/components/formContainer"
-import { sectionHeader } from "@/components/sectionHeader"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card } from "@/components/ui/card"
-
-import { QrCode, UserPlus, CheckCircle, Search } from "lucide-react"
+import React, { useState, useCallback } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  QrCode,
+  Smartphone,
+  ShieldCheck,
+  UserPlus,
+  History,
+} from "lucide-react"
 
-interface ReceptionQueueItem {
-  id: string
-  tokenNo: string
-  patientName: string
-  gender: string
-  age: number
-  abhaAddress: string
-  department: string
-  status: "WAITING" | "CONFIRMED" | "COMPLETED" | "CANCELLED"
-  timestamp: string
-}
+import { PageHeader } from "@/components/common/PageHeader"
+import { FormContainer } from "@/components/formContainer"
 
-const mockQueue: ReceptionQueueItem[] = [
-  {
-    id: "REC-101",
-    tokenNo: "TK-042",
-    patientName: "Rajesh Kumar",
-    gender: "Male",
-    age: 42,
-    abhaAddress: "rajesh.kumar@sbx",
-    department: "General Medicine",
-    status: "WAITING",
-    timestamp: "10:15 AM",
-  },
-  {
-    id: "REC-102",
-    tokenNo: "TK-043",
-    patientName: "Priya Sharma",
-    gender: "Female",
-    age: 35,
-    abhaAddress: "priya.sharma@sbx",
-    department: "Orthopedics",
-    status: "WAITING",
-    timestamp: "10:22 AM",
-  },
-  {
-    id: "REC-103",
-    tokenNo: "TK-040",
-    patientName: "Amit Patel",
-    gender: "Male",
-    age: 58,
-    abhaAddress: "amit.patel@sbx",
-    department: "Cardiology",
-    status: "CONFIRMED",
-    timestamp: "09:50 AM",
-  },
-]
+import { receptionService } from "@/services/receptionService"
+import { queryKeys } from "@/constants/queryKeys"
+import type { ScanShareQueueItem, QuickVisitPayload } from "@/types/reception"
 
-const INITIAL_FILTERS = {
-  search: "",
-  status: "",
-  department: "",
-  page: 1,
-  limit: 10,
-}
+import { ScanShareFlow } from "@/components/reception/ScanShareFlow"
+import { AbhaMobileOtpFlow } from "@/components/reception/AbhaMobileOtpFlow"
+import { AadhaarEnrolFlow } from "@/components/reception/AadhaarEnrolFlow"
+import { WalkInFlow } from "@/components/reception/WalkInFlow"
+import { DeptDoctorPicker, type DeptDoctorFormValues } from "@/components/reception/DeptDoctorPicker"
+import { ReceiptCard, type OpdReceiptData } from "@/components/reception/ReceiptCard"
+import { TodayVisitsList } from "@/components/reception/TodayVisitsList"
+
+export type ReceptionTab = "scan-share" | "abha-mobile" | "aadhaar-enrol" | "walk-in" | "history"
 
 export const ReceptionPage: React.FC = () => {
-  const [queue, setQueue] = useState<ReceptionQueueItem[]>(mockQueue)
-  const [tokenSearchInput, setTokenSearchInput] = useState<string>("")
-  const [foundTokenData, setFoundTokenData] =
-    useState<ReceptionQueueItem | null>(null)
+  const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState<ReceptionTab>("scan-share")
 
-  const registerDisclosure = useDisclosure()
-  const visitDisclosure = useDisclosure<ReceptionQueueItem>()
-  const { filter, handleFilter } = useSearchFilter(INITIAL_FILTERS)
+  // Active patient selected for assigning Department & Doctor
+  const [patientForVisit, setPatientForVisit] = useState<{
+    queue_id?: number
+    patient_id?: number
+    uhid?: string
+    name: string
+    gender?: string
+    dob?: string
+    age?: number | string
+    mobile?: string
+    abha_number?: string | null
+    abha_address?: string | null
+    preferred_department?: string | null
+    // Address fields from ABHA/Aadhaar profile
+    address?: string
+    city?: string
+    district?: string
+    state?: string
+    pincode?: string
+    photo?: string
+    kyc_verified?: boolean
+  } | null>(null)
 
-  const handleFilterChange = useCallback(
-    (updates: Record<string, any>) => {
-      handleFilter({ ...updates, page: 1 })
+  // Current Generated OPD Receipt (if present, renders ReceiptCard)
+  const [receiptData, setReceiptData] = useState<OpdReceiptData | null>(null)
+  const [isSearchingToken, setIsSearchingToken] = useState(false)
+
+  // ─── Queries ────────────────────────────────────────────────────────
+  const {
+    data: queueData,
+    isLoading: queueLoading,
+    dataUpdatedAt,
+    refetch: refetchQueue,
+  } = useQuery({
+    queryKey: queryKeys.reception.queue,
+    queryFn: receptionService.getQueue,
+    refetchInterval: 15_000,
+    meta: { showToast: false },
+  })
+
+  const { data: departments = [] } = useQuery({
+    queryKey: queryKeys.reception.departments,
+    queryFn: receptionService.getDepartments,
+    staleTime: 5 * 60_000,
+  })
+
+  const { data: statsData } = useQuery({
+    queryKey: queryKeys.reception.visitStats("today"),
+    queryFn: () => receptionService.getVisitStats(),
+    refetchInterval: 15_000,
+  })
+
+  // Normalize queue list
+  const queueList: ScanShareQueueItem[] = Array.isArray(queueData)
+    ? queueData
+    : (queueData as any)?.data || []
+
+  // ─── Mutations ───────────────────────────────────────────────────────
+  const confirmMutation = useMutation({
+    mutationFn: receptionService.confirmToken,
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.reception.queue })
+      queryClient.invalidateQueries({ queryKey: ["reception", "visits"] })
+      queryClient.invalidateQueries({ queryKey: ["reception", "visitStats"] })
+      setPatientForVisit(null)
+      setReceiptData({
+        queue_token: res.queue_token || res.token_no || 1,
+        opd_number: res.opd_number,
+        uhid: res.uhid,
+        patient_name: res.patient_name,
+        gender: res.gender,
+        age: res.age,
+        mobile: res.mobile,
+        abha_number: res.abha_number,
+        abha_address: res.abha_address,
+        department_name: res.department_name,
+        doctor_name: res.doctor_name,
+        doctor_specialization: res.doctor_specialization,
+        fee_charged: res.fee_charged || 0,
+        amount_paid: res.amount_paid || 0,
+        payment_method: res.payment_method || "cash",
+        payment_status: res.payment_status || "paid",
+        chief_complaint: res.chief_complaint,
+        slot_time: res.slot_time || res.notes,
+        visit_date: res.visit_time || new Date().toISOString(),
+      })
+      toast.success("Visit Confirmed & Token Generated!")
     },
-    [handleFilter]
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to confirm visit. Please try again.")
+    },
+  })
+
+  const quickVisitMutation = useMutation({
+    mutationFn: receptionService.quickVisit,
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.reception.queue })
+      queryClient.invalidateQueries({ queryKey: ["reception", "visits"] })
+      queryClient.invalidateQueries({ queryKey: ["reception", "visitStats"] })
+      setPatientForVisit(null)
+      const data = res?.data || res
+      setReceiptData({
+        queue_token: data.queue_token || 1,
+        opd_number: data.opd_number,
+        uhid: data.uhid,
+        patient_name: data.patient_name || data.name,
+        gender: data.gender,
+        age: data.age,
+        mobile: data.mobile,
+        abha_number: data.abha_number,
+        abha_address: data.abha_address,
+        department_name: data.department_name,
+        doctor_name: data.doctor_name,
+        doctor_specialization: data.doctor_specialization,
+        fee_charged: data.fee_charged || 0,
+        amount_paid: data.amount_paid || 0,
+        payment_method: data.payment_method || "cash",
+        payment_status: data.payment_status || "paid",
+        chief_complaint: data.chief_complaint || data.visit_reason,
+        slot_time: data.slot_time || data.notes,
+        visit_date: data.visit_date || new Date().toISOString(),
+      })
+      toast.success("Patient Registered & OPD Slip Issued!")
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Patient registration failed. Please verify details.")
+    },
+  })
+
+  // ─── Handlers ────────────────────────────────────────────────────────
+  // Token search
+  const handleLookupToken = useCallback(
+    async (token_no: string): Promise<ScanShareQueueItem | null> => {
+      setIsSearchingToken(true)
+      try {
+        const res = await receptionService.lookupToken(token_no)
+        const item: ScanShareQueueItem = {
+          id: res.id,
+          token_no: res.token_no,
+          patient_name: res.patient_name,
+          abha_address: res.abha_address,
+          abha_number: res.abha_number,
+          gender: res.gender,
+          age: res.age,
+          status: res.status as ScanShareQueueItem["status"],
+          preferred_department: res.preferred_department,
+          expires_at: res.expires_at,
+          created_at: new Date().toISOString(),
+        }
+        return item
+      } catch (err: any) {
+        toast.error("Token Search", {
+          description: err.message || "Token not found. Please verify the token number or use the walk-in form.",
+        })
+        return null
+      } finally {
+        setIsSearchingToken(false)
+      }
+    },
+    []
   )
 
-  const handleTokenLookup = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!tokenSearchInput) return
+  // When a Queue Item is clicked to confirm
+  const handleSelectQueueItem = useCallback((item: ScanShareQueueItem) => {
+    setPatientForVisit({
+      queue_id: item.id,
+      name: item.patient_name,
+      gender: item.gender,
+      age: item.age ?? undefined,
+      abha_number: item.abha_number,
+      abha_address: item.abha_address,
+      preferred_department: item.preferred_department,
+    })
+  }, [])
 
-    const matched = queue.find(
-      (item) =>
-        item.tokenNo.toLowerCase() === tokenSearchInput.trim().toLowerCase() ||
-        item.patientName.toLowerCase().includes(tokenSearchInput.toLowerCase())
-    )
+  // When Mobile OTP flow verifies patient
+  const handleAbhaPatientVerified = useCallback((profile: any) => {
+    // Extract address from ABHAProfile nested object if present
+    const abhaProfile = profile.ABHAProfile || profile.profile || {}
+    setPatientForVisit({
+      name: profile.name || abhaProfile.name,
+      mobile: profile.mobile || abhaProfile.mobile,
+      gender: profile.gender || abhaProfile.gender,
+      dob: profile.dob || abhaProfile.dob,
+      abha_number: profile.abha_number || profile.ABHANumber || abhaProfile.ABHANumber,
+      abha_address: profile.abha_address || profile.preferredAbhaAddress || abhaProfile.preferredAbhaAddress,
+      // Address fields from ABHA profile
+      address: profile.address || abhaProfile.address,
+      city: profile.city || abhaProfile.locality || abhaProfile.localityOrPlace,
+      district: profile.district || abhaProfile.districtName,
+      state: profile.state || abhaProfile.stateName,
+      pincode: profile.pincode || abhaProfile.pincode,
+      photo: profile.photo || abhaProfile.profilePhoto,
+      kyc_verified: true,
+    })
+  }, [])
 
-    if (matched) {
-      setFoundTokenData(matched)
+  // When Aadhaar Enrolment finishes
+  const handleAadhaarEnrolled = useCallback((profile: any) => {
+    // Extract address from ABHAProfile nested object if present
+    const abhaProfile = profile.ABHAProfile || profile.profile || {}
+    setPatientForVisit({
+      name: profile.name || abhaProfile.name,
+      mobile: profile.mobile || abhaProfile.mobile,
+      gender: profile.gender || abhaProfile.gender,
+      dob: profile.dob || abhaProfile.dob,
+      abha_number: profile.abha_number || profile.ABHANumber || abhaProfile.ABHANumber,
+      abha_address: profile.abha_address || profile.preferredAbhaAddress || abhaProfile.preferredAbhaAddress,
+      // Address fields from Aadhaar profile
+      address: profile.address || abhaProfile.address,
+      city: profile.city || abhaProfile.locality || abhaProfile.localityOrPlace,
+      district: profile.district || abhaProfile.districtName,
+      state: profile.state || abhaProfile.stateName,
+      pincode: profile.pincode || abhaProfile.pincode,
+      photo: profile.photo || abhaProfile.profilePhoto,
+      kyc_verified: true,
+    })
+  }, [])
+
+  // Final step: Department & Doctor selected
+  const handleDeptDoctorSubmit = (values: DeptDoctorFormValues) => {
+    if (!patientForVisit) return
+
+    // If it came from Scan & Share queue
+    if (patientForVisit.queue_id) {
+      confirmMutation.mutate({
+        queue_id: patientForVisit.queue_id,
+        department_id: values.department_id,
+        doctor_id: values.doctor_id,
+        slot_time: values.slot_time,
+        visit_reason: values.chief_complaint,
+        fee_charged: values.fee_charged,
+        amount_paid: values.fee_charged,
+        payment_method: values.payment_method,
+        payment_status: values.payment_status,
+      })
     } else {
-      // Mock generate new Scan & Share queue token match
-      const newTokenItem: ReceptionQueueItem = {
-        id: `REC-${Date.now().toString().slice(-3)}`,
-        tokenNo: tokenSearchInput.startsWith("TK-")
-          ? tokenSearchInput.toUpperCase()
-          : `TK-${Math.floor(100 + Math.random() * 900)}`,
-        patientName: "Suresh Gupta (Scanned ABHA)",
-        gender: "Male",
-        age: 39,
-        abhaAddress: "suresh.gupta@sbx",
-        department: "General Medicine",
-        status: "WAITING",
-        timestamp: "Just now",
+      // It came from Mobile OTP or Aadhaar Enrolment
+      const payload: QuickVisitPayload = {
+        name: patientForVisit.name,
+        mobile: patientForVisit.mobile,
+        gender: (patientForVisit.gender as any) || "M",
+        age: patientForVisit.age ? Number(patientForVisit.age) : undefined,
+        dob: patientForVisit.dob,
+        abha_number: patientForVisit.abha_number,
+        abha_address: patientForVisit.abha_address,
+        // Save full address and photo from ABHA/Aadhaar profile
+        address: patientForVisit.address,
+        city: patientForVisit.city,
+        district: patientForVisit.district,
+        state: patientForVisit.state,
+        pincode: patientForVisit.pincode,
+        photo: patientForVisit.photo,
+        kyc_verified: patientForVisit.kyc_verified,
+        department_id: values.department_id,
+        doctor_id: values.doctor_id,
+        slot_time: values.slot_time,
+        visit_reason: values.chief_complaint,
+        chief_complaint: values.chief_complaint,
+        fee_charged: values.fee_charged,
+        amount_paid: values.fee_charged,
+        payment_method: values.payment_method,
+        payment_status: values.payment_status,
       }
-      setQueue((prev) => [newTokenItem, ...prev])
-      setFoundTokenData(newTokenItem)
+      quickVisitMutation.mutate(payload)
     }
   }
 
-  const handleConfirmTokenVisit = (item: ReceptionQueueItem) => {
-    setQueue((prev) =>
-      prev.map((q) => (q.id === item.id ? { ...q, status: "CONFIRMED" } : q))
-    )
-    setFoundTokenData(null)
-    setTokenSearchInput("")
+  // Walk-in form submit
+  const handleWalkInSubmit = (payload: QuickVisitPayload) => {
+    quickVisitMutation.mutate(payload)
   }
 
-  const filteredQueue = useMemo(() => {
-    return queue.filter((item) => {
-      const matchesSearch =
-        !filter.search ||
-        item.patientName.toLowerCase().includes(filter.search.toLowerCase()) ||
-        item.tokenNo.toLowerCase().includes(filter.search.toLowerCase()) ||
-        item.abhaAddress.toLowerCase().includes(filter.search.toLowerCase())
+  const lastUpdatedStr = dataUpdatedAt
+    ? new Date(dataUpdatedAt).toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : null
 
-      const matchesStatus = !filter.status || item.status === filter.status
-      return matchesSearch && matchesStatus
-    })
-  }, [queue, filter])
-
-  const columns: Column<ReceptionQueueItem>[] = useMemo(
-    () => [
-      {
-        header: "Token No.",
-        accessorKey: "tokenNo",
-        cell: (row) => (
-          <div>
-            <span className="font-mono text-sm font-bold text-primary">
-              {row.tokenNo}
-            </span>
-            <p className="text-[10px] text-muted-foreground">{row.timestamp}</p>
-          </div>
-        ),
-      },
-      {
-        header: "Patient Details",
-        cell: (row) => (
-          <div>
-            <p className="font-semibold text-foreground">{row.patientName}</p>
-            <p className="text-xs text-muted-foreground">
-              {row.age} yrs / {row.gender} •{" "}
-              <span className="font-mono text-[11px]">{row.abhaAddress}</span>
-            </p>
-          </div>
-        ),
-      },
-      {
-        header: "Target Department",
-        accessorKey: "department",
-        cell: (row) => (
-          <span className="text-xs font-medium text-foreground">
-            {row.department}
-          </span>
-        ),
-      },
-      {
-        header: "Queue Status",
-        cell: (row) => <StatusBadge status={row.status} />,
-      },
-      {
-        header: "Actions",
-        className: "text-right",
-        cell: (row) => (
-          <div className="flex items-center justify-end gap-2">
-            {row.status === "WAITING" && (
-              <Button
-                variant="outline"
-                size="xs"
-                className="text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
-                onClick={() => handleConfirmTokenVisit(row)}
-              >
-                <CheckCircle className="mr-1 h-3.5 w-3.5" /> Confirm Visit
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={() =>
-                visitDisclosure.onOpen({ ...row, viewMode: true } as any)
-              }
-            >
-              Details
-            </Button>
-          </div>
-        ),
-      },
-    ],
-    [visitDisclosure]
-  )
-
+  // ─── Render ──────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      {/* Page Header */}
       <PageHeader
-        title="Reception & Walk-in Desk"
-        subtitle="Manage ABDM Scan & Share waiting queue tokens, instant check-in, and walk-in OPD visit registration."
-        badgeText="ABDM Scan & Share"
-        badgeVariant="success"
-        actions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => registerDisclosure.onOpen(null)}
-            >
-              <UserPlus className="mr-1.5 h-4 w-4" /> Walk-in Register
-            </Button>
-          </>
-        }
+        title="Reception & OPD Desk"
+        subtitle="Unified Patient Registration, ABDM M1 Fast-track, Scan & Share Queue & OPD Slips"
       />
 
-      {/* Top ABDM Token Quick Lookup Bar */}
-      <Card className="border border-border bg-card p-5 shadow-sm">
-        <form
-          onSubmit={handleTokenLookup}
-          className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center"
-        >
-          <div className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap text-foreground">
-            <QrCode className="h-5 w-5 text-primary" />
-            <span>Scan & Share Token Lookup:</span>
-          </div>
-
-          <div className="relative flex-1">
-            <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Enter 4-digit Token No or Patient Name (e.g. TK-042)..."
-              value={tokenSearchInput}
-              onChange={(e) => setTokenSearchInput(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            variant="default"
-            className="shrink-0 font-medium"
-          >
-            Validate Token
-          </Button>
-        </form>
-
-        {foundTokenData && (
-          <div className="animate-fadeIn mt-4 flex flex-col items-start justify-between gap-4 rounded-xl border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-base font-extrabold text-primary">
-                  {foundTokenData.tokenNo}
-                </span>
-                <span className="text-xs font-semibold text-foreground">
-                  {foundTokenData.patientName}
-                </span>
-                <StatusBadge status={foundTokenData.status} />
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                ABHA:{" "}
-                <span className="font-mono">{foundTokenData.abhaAddress}</span>{" "}
-                • Dept: {foundTokenData.department}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => handleConfirmTokenVisit(foundTokenData)}
+      {/* If ReceiptCard is active, display the printable OPD slip directly */}
+      {receiptData ? (
+        <ReceiptCard
+          receipt={receiptData}
+          onNextPatient={() => {
+            setReceiptData(null)
+            setPatientForVisit(null)
+          }}
+          onViewHistory={() => {
+            setReceiptData(null)
+            setPatientForVisit(null)
+            setActiveTab("history")
+          }}
+        />
+      ) : (
+        <>
+          {/* 5-Tab Pathway Navigation */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+            {/* Tab 1: Scan & Share */}
+            <button
+              onClick={() => setActiveTab("scan-share")}
+              className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+                activeTab === "scan-share"
+                  ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              }`}
+            >
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  activeTab === "scan-share"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
               >
-                <CheckCircle className="mr-1.5 h-4 w-4" /> Confirm & Send to OPD
-                Queue
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
+                <QrCode className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold leading-tight truncate text-foreground">
+                  Scan & Share
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  Token No (e.g. 482)
+                </p>
+              </div>
+            </button>
 
-      {/* Main Queue Directory */}
-      <SectionCard
-        title="Live Reception Waiting Queue"
-        description="Filter today's Scan & Share token queue across departments and statuses."
-      >
-        <FilterBar values={filter} onChange={handleFilterChange}>
-          <FilterBar.Search
-            name="search"
-            placeholder="Search token #, patient name, ABHA address..."
-            className="w-72"
-          />
-          <FilterBar.Select
-            name="status"
-            placeholder="All Statuses"
-            options={[
-              { label: "Waiting", value: "WAITING" },
-              { label: "Confirmed", value: "CONFIRMED" },
-              { label: "Completed", value: "COMPLETED" },
-            ]}
-          />
-        </FilterBar>
-
-        <div className="mt-4">
-          <DataTable
-            columns={columns}
-            data={filteredQueue}
-            keyExtractor={(item) => item.id}
-          />
-        </div>
-      </SectionCard>
-
-      {/* Walk-in Registration Form Modal */}
-      <FormContainer
-        open={registerDisclosure.isOpen}
-        onOpenChange={registerDisclosure.onClose}
-        title="Walk-in Patient OPD Visit Registration"
-        description="Register a patient without an ABHA QR code or create a manual visit token."
-        size="lg"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => registerDisclosure.onClose()}
+            {/* Tab 2: Existing ABHA Mobile OTP */}
+            <button
+              onClick={() => setActiveTab("abha-mobile")}
+              className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+                activeTab === "abha-mobile"
+                  ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              }`}
             >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => {
-                const newItem: ReceptionQueueItem = {
-                  id: `REC-${Date.now().toString().slice(-3)}`,
-                  tokenNo: `TK-${Math.floor(100 + Math.random() * 900)}`,
-                  patientName: "New Walk-in Patient",
-                  gender: "Male",
-                  age: 30,
-                  abhaAddress: "manual@hms",
-                  department: "General Medicine",
-                  status: "WAITING",
-                  timestamp: "Just now",
-                }
-                setQueue((prev) => [newItem, ...prev])
-                registerDisclosure.onClose()
-              }}
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  activeTab === "abha-mobile"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <Smartphone className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold leading-tight truncate text-foreground">
+                  Existing ABHA
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  Mobile OTP Login
+                </p>
+              </div>
+            </button>
+
+            {/* Tab 3: New ABHA via Aadhaar */}
+            <button
+              onClick={() => setActiveTab("aadhaar-enrol")}
+              className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+                activeTab === "aadhaar-enrol"
+                  ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              }`}
             >
-              Issue Token & Register
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            {sectionHeader("01", "Patient Demographic Info")}
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Full Name</Label>
-                <Input placeholder="e.g. Ramesh Kumar" />
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  activeTab === "aadhaar-enrol"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <ShieldCheck className="h-4 w-4" />
               </div>
-              <div>
-                <Label>Mobile Number</Label>
-                <Input placeholder="+91 98765 43210" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold leading-tight truncate text-foreground">
+                  New ABHA
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  Aadhaar Enrolment
+                </p>
               </div>
-              <div>
-                <Label>Age</Label>
-                <Input type="number" placeholder="45" />
+            </button>
+
+            {/* Tab 4: Manual Walk-in */}
+            <button
+              onClick={() => setActiveTab("walk-in")}
+              className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+                activeTab === "walk-in"
+                  ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              }`}
+            >
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  activeTab === "walk-in"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <UserPlus className="h-4 w-4" />
               </div>
-              <div>
-                <Label>Gender</Label>
-                <Select defaultValue="Male">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="min-w-0">
+                <p className="text-xs font-bold leading-tight truncate text-foreground">
+                  Manual Walk-in
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  No ABHA / Direct Form
+                </p>
               </div>
-            </div>
+            </button>
+
+            {/* Tab 5: Today's Tokens / History */}
+            <button
+              onClick={() => setActiveTab("history")}
+              className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+                activeTab === "history"
+                  ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              }`}
+            >
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  activeTab === "history"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <History className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold leading-tight truncate text-foreground">
+                    Today's Tokens
+                  </p>
+                  {statsData && statsData.total_issued > 0 && (
+                    <span className="inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-primary text-primary-foreground">
+                      {statsData.total_issued}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  History & Reprint Slip
+                </p>
+              </div>
+            </button>
           </div>
 
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            {sectionHeader("02", "OPD Department & Doctor Selection")}
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Department</Label>
-                <Select defaultValue="General Medicine">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="General Medicine">
-                      General Medicine
-                    </SelectItem>
-                    <SelectItem value="Orthopedics">Orthopedics</SelectItem>
-                    <SelectItem value="Cardiology">Cardiology</SelectItem>
-                    <SelectItem value="Pediatrics">Pediatrics</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Assigned Doctor</Label>
-                <Select defaultValue="Dr. Ananya Roy">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Doctor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Dr. Ananya Roy">
-                      Dr. Ananya Roy (Cardiology)
-                    </SelectItem>
-                    <SelectItem value="Dr. Rajesh Verma">
-                      Dr. Rajesh Verma (Gen Medicine)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+          {/* Active Flow Tab Content */}
+          <div className="pt-2">
+            {activeTab === "scan-share" && (
+              <ScanShareFlow
+                queue={queueList}
+                isLoading={queueLoading}
+                isSearching={isSearchingToken}
+                lastUpdated={lastUpdatedStr}
+                onRefresh={() => refetchQueue()}
+                onLookupToken={handleLookupToken}
+                onSelectQueueItem={handleSelectQueueItem}
+              />
+            )}
+
+            {activeTab === "abha-mobile" && (
+              <AbhaMobileOtpFlow onPatientVerified={handleAbhaPatientVerified} />
+            )}
+
+            {activeTab === "aadhaar-enrol" && (
+              <AadhaarEnrolFlow onPatientEnrolled={handleAadhaarEnrolled} />
+            )}
+
+            {activeTab === "walk-in" && (
+              <WalkInFlow
+                departments={departments}
+                isSubmitting={quickVisitMutation.isPending}
+                onSubmit={handleWalkInSubmit}
+              />
+            )}
+
+            {activeTab === "history" && (
+              <TodayVisitsList
+                onReprintSlip={(receipt) => setReceiptData(receipt)}
+                onRegisterNewPatient={() => setActiveTab("walk-in")}
+              />
+            )}
           </div>
-        </div>
-      </FormContainer>
+
+          {/* Step 2 Modal: Cascading Department & Doctor Selection */}
+          <FormContainer
+            open={!!patientForVisit}
+            onOpenChange={(open) => {
+              if (!open) setPatientForVisit(null)
+            }}
+            title="Assign Department & Issue OPD Token"
+            description="Select department and doctor to generate patient queue token and print OPD slip."
+          >
+            {patientForVisit && (
+              <DeptDoctorPicker
+                departments={departments}
+                patient={patientForVisit}
+                onSubmit={handleDeptDoctorSubmit}
+                onCancel={() => setPatientForVisit(null)}
+                isLoading={confirmMutation.isPending || quickVisitMutation.isPending}
+              />
+            )}
+          </FormContainer>
+        </>
+      )}
     </div>
   )
 }

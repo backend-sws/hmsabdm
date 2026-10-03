@@ -30,6 +30,7 @@ Route::post('/webhook/abdm/v1/scan-and-share', [AbdmWebhookController::class, 'h
 Route::prefix('v1')->group(function () {
     // Public Routes
     Route::post('/login', [AuthController::class, 'login'])->name('login');
+    Route::post('/webhook/abdm/v1/scan-and-share', [AbdmWebhookController::class, 'handleScanAndShare']);
 
     // Protected Routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -113,6 +114,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/register', [ReceptionController::class, 'registerWithoutAbha']);
             Route::post('/visit', [ReceptionController::class, 'createVisit']);
             Route::post('/quick-visit', [ReceptionController::class, 'quickVisit']);
+            Route::get('/visits', [ReceptionController::class, 'getVisits']);
+            Route::get('/visits/stats', [ReceptionController::class, 'getVisitStats']);
             Route::post('/admit-ipd', [\App\Http\Controllers\Api\V1\IpdController::class, 'admit']);
         });
 
@@ -136,6 +139,24 @@ Route::prefix('v1')->group(function () {
             // Bedside Nursing Procedures
             Route::post('/admissions/{id}/procedures', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordProcedure']);
             Route::get('/admissions/{id}/procedures', [\App\Http\Controllers\Api\V1\IpdController::class, 'getProcedures']);
+
+            // Nursing Fluid Balance (Intake / Output Register)
+            Route::post('/admissions/{id}/intake-output', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordIntakeOutput']);
+            Route::get('/admissions/{id}/intake-output', [\App\Http\Controllers\Api\V1\IpdController::class, 'getIntakeOutput']);
+
+            // Nursing MAR (Medication Administration Record / Drug Chart)
+            Route::post('/admissions/{id}/mar', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordMar']);
+            Route::get('/admissions/{id}/mar', [\App\Http\Controllers\Api\V1\IpdController::class, 'getMar']);
+
+            // Nursing Shift Handover Register
+            Route::post('/admissions/{id}/shift-handover', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordShiftHandover']);
+            Route::get('/admissions/{id}/shift-handover', [\App\Http\Controllers\Api\V1\IpdController::class, 'getShiftHandovers']);
+            Route::put('/shift-handover/{id}/acknowledge', [\App\Http\Controllers\Api\V1\IpdController::class, 'acknowledgeShiftHandover']);
+
+            // Final Discharge Billing Settlement & Gate Pass
+            Route::get('/admissions/{id}/discharge-estimate', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'getEstimate']);
+            Route::post('/admissions/{id}/settle-discharge', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'settleAndDischarge']);
+            Route::get('/admissions/{id}/gate-pass', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'gatePass']);
         });
 
 
@@ -203,6 +224,12 @@ Route::prefix('v1')->group(function () {
             Route::put('/triages/{id}/link-patient', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'linkPatient']);
             Route::get('/triages/{id}/mlc-slip', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'mlcSlip']);
             Route::put('/triages/{id}/status', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'updateStatus']);
+        });
+
+        // Final Tax Invoices
+        Route::prefix('invoices')->group(function () {
+            Route::get('/{id}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'show']);
+            Route::get('/patient/{patientId}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'patientInvoices']);
         });
     });
 

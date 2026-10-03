@@ -20,10 +20,16 @@ export interface Patient {
   district?: string
   state?: string
   pincode?: string
+  photo?: string
   custom_fields?: {
     marital_status?: string
     occupation?: string
   }
+  kyc_verified?: boolean
+  last_visit_date?: string | null
+  last_visit_type?: string | null
+  last_department?: string | null
+  last_doctor?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -66,6 +72,8 @@ export type UpdatePatientDto = Partial<CreatePatientDto>
 
 export interface PatientFilter {
   search?: string
+  gender?: string
+  abha_status?: string
   page?: number
   limit?: number
   per_page?: number

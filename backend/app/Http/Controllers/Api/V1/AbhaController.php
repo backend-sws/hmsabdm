@@ -11,11 +11,11 @@ use OpenApi\Attributes as OA;
 
 #[OA\Tag(
     name: "2. ABHA — Mobile Login",
-    description: "Flow A — मरीज़ के पास ABHA पहले से है (Mobile OTP से verify)"
+    description: "Flow A — Patient has existing ABHA (Verify via Mobile OTP)"
 )]
 #[OA\Tag(
     name: "3. ABHA — Aadhaar Enrolment",
-    description: "Flow B — नया ABHA बनाना (Aadhaar OTP से enrolment)"
+    description: "Flow B — Create New ABHA (Enrolment via Aadhaar OTP)"
 )]
 class AbhaController extends Controller
 {
@@ -27,7 +27,7 @@ class AbhaController extends Controller
 
     #[OA\Post(
         path: "/api/v1/abha/generate-otp",
-        summary: "Step A1 — Mobile OTP भेजो",
+        summary: "Step A1 — Send Mobile OTP",
         description: "Initiates the ABHA login flow. Sends a 6-digit OTP to the user's mobile number registered with ABHA.",
         security: [["bearerAuth" => []]],
         tags: ["2. ABHA — Mobile Login"]
@@ -58,7 +58,7 @@ class AbhaController extends Controller
 
     #[OA\Post(
         path: "/api/v1/abha/verify-otp",
-        summary: "Step A2 — Mobile OTP Verify करो",
+        summary: "Step A2 — Verify Mobile OTP",
         description: "Verifies the OTP received by the user. Requires the txnId returned in Step A1.",
         security: [["bearerAuth" => []]],
         tags: ["2. ABHA — Mobile Login"]
@@ -92,7 +92,7 @@ class AbhaController extends Controller
 
     #[OA\Post(
         path: "/api/v1/abha/enrol/aadhaar-otp",
-        summary: "Step B1 — Aadhaar OTP भेजो",
+        summary: "Step B1 — Send Aadhaar OTP",
         description: "Initiates the ABHA Enrolment flow by sending an OTP to the mobile linked with Aadhaar.",
         security: [["bearerAuth" => []]],
         tags: ["3. ABHA — Aadhaar Enrolment"]
@@ -117,7 +117,7 @@ class AbhaController extends Controller
 
     #[OA\Post(
         path: "/api/v1/abha/enrol/verify-aadhaar",
-        summary: "Step B2 — Aadhaar OTP Verify करो",
+        summary: "Step B2 — Verify Aadhaar OTP",
         description: "Verifies Aadhaar OTP. Pass the txnId from Step B1. If verified, ABDM links the provided mobile number.",
         security: [["bearerAuth" => []]],
         tags: ["3. ABHA — Aadhaar Enrolment"]
@@ -136,9 +136,12 @@ class AbhaController extends Controller
     public function verifyAadhaarOtp(Request $request)
     {
         $request->validate([
-            'txnId' => 'required|string',
-            'otp' => 'required|string',
+            'txnId'  => 'required|string',
+            'otp'    => 'required|string',
             'mobile' => 'required|digits:10',
+        ], [
+            'mobile.required' => 'Communication mobile number is required by ABDM to link with the new ABHA account.',
+            'mobile.digits'   => 'Communication mobile must be a valid 10-digit number.',
         ]);
 
         $response = $this->abdmService->verifyAadhaarOtp(
@@ -152,7 +155,7 @@ class AbhaController extends Controller
 
     #[OA\Post(
         path: "/api/v1/abha/enrol/mobile-otp",
-        summary: "Step B3 — Mobile OTP भेजो (Linking)",
+        summary: "Step B3 — Send Mobile OTP (Linking)",
         description: "Sends a secondary OTP to verify the mobile number for linking with the newly created ABHA.",
         security: [["bearerAuth" => []]],
         tags: ["3. ABHA — Aadhaar Enrolment"]
@@ -184,7 +187,7 @@ class AbhaController extends Controller
 
     #[OA\Post(
         path: "/api/v1/abha/enrol/verify-mobile",
-        summary: "Step B4 — Mobile OTP Verify करो (Linking)",
+        summary: "Step B4 — Verify Mobile OTP (Linking)",
         description: "Verifies the Mobile OTP from Step B3 to finalize linking.",
         security: [["bearerAuth" => []]],
         tags: ["3. ABHA — Aadhaar Enrolment"]
@@ -216,7 +219,7 @@ class AbhaController extends Controller
 
     #[OA\Get(
         path: "/api/v1/abha/enrol/suggest-address",
-        summary: "Step B5 — ABHA Address Suggestions लो",
+        summary: "Step B5 — Get ABHA Address Suggestions",
         description: "Fetches a list of available ABHA addresses (usernames) based on user's Aadhaar data.",
         security: [["bearerAuth" => []]],
         tags: ["3. ABHA — Aadhaar Enrolment"]
@@ -238,7 +241,7 @@ class AbhaController extends Controller
 
     #[OA\Post(
         path: "/api/v1/abha/enrol/create-address",
-        summary: "Step B6 — ABHA Address Choose करो",
+        summary: "Step B6 — Select ABHA Address",
         description: "Finalizes the ABHA enrolment by selecting one of the suggested ABHA addresses.",
         security: [["bearerAuth" => []]],
         tags: ["3. ABHA — Aadhaar Enrolment"]
@@ -273,7 +276,7 @@ class AbhaController extends Controller
 
     #[OA\Get(
         path: "/api/v1/abha/profile",
-        summary: "Step B7 — Aadhaar Profile details Fetch karo",
+        summary: "Step B7 — Fetch Aadhaar Profile Details",
         description: "Fetches full ABHA profile details (name, gender, dob, photo, address) using the X-Token from Aadhaar Enrolment verify step (Step B2).",
         security: [["bearerAuth" => []]],
         tags: ["3. ABHA — Aadhaar Enrolment"]
@@ -282,18 +285,19 @@ class AbhaController extends Controller
     #[OA\Response(response: 200, description: "Profile details")]
     public function getProfile(Request $request)
     {
-        $request->validate([
-            'token' => 'required|string',
-        ]);
+        $token = $request->query('token') ?? $request->header('X-Abha-Token') ?? $request->input('token');
+        if (empty($token)) {
+            return $this->errorResponse('Token is required.', null, 422);
+        }
 
-        $response = $this->abdmService->getProfile($request->token);
+        $response = $this->abdmService->getProfile($token);
         
         return $this->successResponse($response, 'Profile fetched successfully');
     }
 
     #[OA\Post(
         path: "/api/v1/abha/search",
-        summary: "Step A0 — Mobile से ABHA खोजो",
+        summary: "Step A0 — Search ABHA by Mobile",
         description: "Searches for ABHA records linked to a specific mobile number before sending login OTP.",
         security: [["bearerAuth" => []]],
         tags: ["2. ABHA — Mobile Login"]
@@ -320,7 +324,7 @@ class AbhaController extends Controller
 
     #[OA\Get(
         path: "/api/v1/abha/card",
-        summary: "Step B8 — ABHA Card (PDF/Image) Download karo",
+        summary: "Step B8 — Download ABHA Card (PDF/Image)",
         description: "Downloads the official ABHA card base64 image/PDF using the X-Token from Step B2.",
         security: [["bearerAuth" => []]],
         tags: ["3. ABHA — Aadhaar Enrolment"]
@@ -340,7 +344,7 @@ class AbhaController extends Controller
 
     #[OA\Get(
         path: "/api/v1/abha/qr-code",
-        summary: "Step B9 — ABHA QR Code Download karo",
+        summary: "Step B9 — Download ABHA QR Code",
         description: "Downloads the ABHA QR Code image using the X-Token from Step B2.",
         security: [["bearerAuth" => []]],
         tags: ["3. ABHA — Aadhaar Enrolment"]

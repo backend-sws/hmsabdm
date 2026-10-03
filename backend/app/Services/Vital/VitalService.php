@@ -165,6 +165,10 @@ class VitalService implements VitalServiceInterface
         $data['hospital_id'] = $hospitalId;
         $data['field_key'] = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $data['field_key']));
 
+        if (isset($data['options']) && is_string($data['options'])) {
+            $data['options'] = array_values(array_filter(array_map('trim', explode(',', $data['options']))));
+        }
+
         return VitalFieldConfig::create($data);
     }
 
@@ -174,6 +178,10 @@ class VitalService implements VitalServiceInterface
 
         if (isset($data['field_key'])) {
             $data['field_key'] = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $data['field_key']));
+        }
+
+        if (isset($data['options']) && is_string($data['options'])) {
+            $data['options'] = array_values(array_filter(array_map('trim', explode(',', $data['options']))));
         }
 
         $config->update($data);

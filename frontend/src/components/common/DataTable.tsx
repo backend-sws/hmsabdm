@@ -199,6 +199,7 @@ export function DataTable<T>({
                 className="h-8 rounded-lg border border-border bg-background px-2 py-1 text-xs font-semibold text-foreground focus:outline-none"
               >
                 <option value={10}>10 per page</option>
+                <option value={15}>15 per page</option>
                 <option value={25}>25 per page</option>
                 <option value={50}>50 per page</option>
               </select>

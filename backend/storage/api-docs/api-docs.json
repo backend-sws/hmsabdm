@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "HMS ABDM Integration API",
-        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from Hospital Admin setup to Reception OPD Slip generation and Doctor consultation.\n\n---\n\n## 🏥 Phase 1: Onboarding & Setup (Hospital Admin)\n\n1. **`POST /api/v1/login`**: Login using Admin credentials (e.g., `admin@hms.com`). Note the `access_token` and pass `Authorization: Bearer <token>` in subsequent requests.\n2. **`POST /api/v1/departments`**: Create medical departments (e.g., General Medicine, Cardiology, Orthopedics).\n3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.\n4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup working schedule and patient limits for doctors.\n\n---\n\n## 📋 Phase 2: Patient Registration (Reception / Front Desk)\n\nWhen a patient arrives at the hospital, there are **3 ways** to verify/register them:\n\n### Option A: Standard Walk-in (No ABHA / Normal Patient)\n* **`POST /api/v1/reception/register`**: Register patient manually with Name, Mobile, DOB, and Gender. Returns `patient.id`.\n\n### Option B: Patient Already Has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/search`**: (Optional) Search ABHA records by mobile number.\n2. **`POST /api/v1/abha/generate-otp`**: Send OTP to patient's mobile (`{ \"mobile\": \"7049711475\" }`). Returns `txnId`.\n3. **`POST /api/v1/abha/verify-otp`**: Verify OTP (`{ \"txnId\": \"...\", \"otp\": \"...\" }`).\n   * **Note:** The response contains full verified KYC details (Name, DOB, Gender, ABHA Number, Photo) in the `accounts` array.\n4. **`POST /api/v1/reception/register`**: Auto-fill and save patient to hospital DB with the returned `abha_number` & `abha_address`. Returns `patient.id`.\n\n### Option C: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send OTP to Aadhaar-linked mobile. Returns `txnId`.\n2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP. Returns `token` (X-Token) & `hasExistingAbha`.\n3. *(If Aadhaar mobile is different)*: **`enrol/mobile-otp`** → **`enrol/verify-mobile`**\n4. *(If fresh enrolment)*: **`GET enrol/suggest-address`** → **`POST enrol/create-address`**\n5. **`GET /api/v1/abha/profile`**: Fetch full Aadhaar profile using `token`.\n6. **`GET /api/v1/abha/card`**: (Optional) Download official Govt ABHA Card (PDF/Image).\n7. **`POST /api/v1/reception/register`**: Save patient to hospital DB. Returns `patient.id`.\n\n---\n\n## 🎟️ Phase 3: OPD Slip Generation (Creating Appointment Visit)\n\nOPD Slip in dono mein se **kisi ek API** se banti hai:\n\n### Method 1: Standard OPD Visit (For Option A, B, and C)\nOnce the patient is registered and you have `patient_id`:\n1. **`GET /api/v1/reception/departments`**: Fetch active departments and available doctors.\n2. **`POST /api/v1/reception/visit`**: **Generate OPD Slip!**\n   * Body: `{ \"patient_id\": 1, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Assigns Queue Token (e.g. `OPD-042`), creates Visit in Doctor's queue, and generates printable OPD Slip.\n\n### Method 2: Scan & Share (ABDM QR Code Fast-Track)\nWhen a patient scans the Hospital Counter QR code using their ABHA App:\n1. ABDM Webhook (**`POST /api/webhook/abdm/v1/scan-and-share`**) automatically receives demographic data and queues the token (valid for 30 min).\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views waiting scanned patients.\n3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Look up specific 3-digit token (e.g. `TK-482`).\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: **Generate OPD Slip!**\n   * Body: `{ \"queue_id\": 5, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Confirms the queue, links doctor/department, and generates printable OPD Slip.\n\n---\n\n## 🩺 Phase 4: Triage & Nurse Station (Vitals Recording)\n\nOnce the OPD token slip is generated, the Nurse / Triage Station notes the patient's vitals before doctor consultation:\n1. **`POST /api/v1/vitals`**: **Record Patient Vitals** (BP, Pulse, Temperature, SpO2, Height, Weight, Blood Glucose).\n   * Body: `{ \"patient_id\": 1, \"opd_visit_id\": 1, \"temperature\": 98.6, \"blood_pressure_sys\": 120, \"blood_pressure_dia\": 80, \"pulse_rate\": 72, \"weight\": 68.5, \"height\": 172.0 }`\n   * **Result:** Saves vitals, auto-calculates BMI ($23.15$), and links to visit/patient.\n2. **`GET /api/v1/vitals/visit/{visitId}`**: View vitals recorded for this specific visit.\n3. **`GET /api/v1/patients/{patientId}/vitals`**: View entire vitals history for a patient.\n\n---\n\n## 👨‍⚕️ Phase 5: Doctor's Panel (Consultation)\n\n1. **`GET /api/v1/opd/queue`**: Doctor views their live OPD queue for today (includes patient details & latest recorded vitals).\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient into the consultation room.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes consultation, adding diagnosis, notes, and prescription.",
+        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from Hospital Admin setup to Reception OPD Slip generation and Doctor consultation.\n\n---\n\n## 🏥 Phase 1: Onboarding & Setup (Hospital Admin)\n\n1. **`POST /api/v1/login`**: Login using Admin credentials (e.g., `admin@hms.com`). Note the `access_token` and pass `Authorization: Bearer <token>` in subsequent requests.\n2. **`POST /api/v1/departments`**: Create medical departments (e.g., General Medicine, Cardiology, Orthopedics).\n3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.\n4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup working schedule and patient limits for doctors.\n\n---\n\n## 📋 Phase 2: Patient Registration (Reception / Front Desk)\n\nWhen a patient arrives at the hospital, there are **3 ways** to verify/register them:\n\n### Option A: Standard Walk-in (No ABHA / Normal Patient)\n* **`POST /api/v1/reception/register`**: Register patient manually with Name, Mobile, DOB, and Gender. Returns `patient.id`.\n\n### Option B: Patient Already Has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/search`**: (Optional) Search ABHA records by mobile number.\n2. **`POST /api/v1/abha/generate-otp`**: Send OTP to patient's mobile (`{ \"mobile\": \"7049711475\" }`). Returns `txnId`.\n3. **`POST /api/v1/abha/verify-otp`**: Verify OTP (`{ \"txnId\": \"...\", \"otp\": \"...\" }`).\n   * **Note:** The response contains full verified KYC details (Name, DOB, Gender, ABHA Number, Photo) in the `accounts` array.\n4. **`POST /api/v1/reception/register`**: Auto-fill and save patient to hospital DB with the returned `abha_number` & `abha_address`. Returns `patient.id`.\n\n### Option C: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send OTP to Aadhaar-linked mobile. Returns `txnId`.\n2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP. Returns `token` (X-Token) & `hasExistingAbha`.\n3. *(If Aadhaar mobile is different)*: **`enrol/mobile-otp`** → **`enrol/verify-mobile`**\n4. *(If fresh enrolment)*: **`GET enrol/suggest-address`** → **`POST enrol/create-address`**\n5. **`GET /api/v1/abha/profile`**: Fetch full Aadhaar profile using `token`.\n6. **`GET /api/v1/abha/card`**: (Optional) Download official Govt ABHA Card (PDF/Image).\n7. **`POST /api/v1/reception/register`**: Save patient to hospital DB. Returns `patient.id`.\n\n---\n\n## 🎟️ Phase 3: OPD Slip Generation (Creating Appointment Visit)\n\nOPD Slips can be generated using either of the following two methods:\n\n### Method 1: Standard OPD Visit (For Option A, B, and C)\nOnce the patient is registered and you have `patient_id`:\n1. **`GET /api/v1/reception/departments`**: Fetch active departments and available doctors.\n2. **`POST /api/v1/reception/visit`**: **Generate OPD Slip!**\n   * Body: `{ \"patient_id\": 1, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Assigns Queue Token (e.g. `OPD-042`), creates Visit in Doctor's queue, and generates printable OPD Slip.\n\n### Method 2: Scan & Share (ABDM QR Code Fast-Track)\nWhen a patient scans the Hospital Counter QR code using their ABHA App:\n1. ABDM Webhook (**`POST /api/webhook/abdm/v1/scan-and-share`**) automatically receives demographic data and queues the token (valid for 30 min).\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views waiting scanned patients.\n3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Look up specific 3-digit token (e.g. `TK-482`).\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: **Generate OPD Slip!**\n   * Body: `{ \"queue_id\": 5, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Confirms the queue, links doctor/department, and generates printable OPD Slip.\n\n---\n\n## 🩺 Phase 4: Triage & Nurse Station (Vitals Recording)\n\nOnce the OPD token slip is generated, the Nurse / Triage Station notes the patient's vitals before doctor consultation:\n1. **`POST /api/v1/vitals`**: **Record Patient Vitals** (BP, Pulse, Temperature, SpO2, Height, Weight, Blood Glucose).\n   * Body: `{ \"patient_id\": 1, \"opd_visit_id\": 1, \"temperature\": 98.6, \"blood_pressure_sys\": 120, \"blood_pressure_dia\": 80, \"pulse_rate\": 72, \"weight\": 68.5, \"height\": 172.0 }`\n   * **Result:** Saves vitals, auto-calculates BMI ($23.15$), and links to visit/patient.\n2. **`GET /api/v1/vitals/visit/{visitId}`**: View vitals recorded for this specific visit.\n3. **`GET /api/v1/patients/{patientId}/vitals`**: View entire vitals history for a patient.\n\n---\n\n## 👨‍⚕️ Phase 5: Doctor's Panel (Consultation)\n\n1. **`GET /api/v1/opd/queue`**: Doctor views their live OPD queue for today (includes patient details & latest recorded vitals).\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient into the consultation room.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes consultation, adding diagnosis, notes, and prescription.",
         "version": "1.0.0"
     },
     "servers": [
@@ -25,7 +25,7 @@
                 "tags": [
                     "2. ABHA — Mobile Login"
                 ],
-                "summary": "Step A1 — Mobile OTP भेजो",
+                "summary": "Step A1 — Send Mobile OTP",
                 "description": "Initiates the ABHA login flow. Sends a 6-digit OTP to the user's mobile number registered with ABHA.",
                 "operationId": "f814722f547bc9fafd8301d4791ecf51",
                 "requestBody": {
@@ -61,7 +61,7 @@
                 "tags": [
                     "2. ABHA — Mobile Login"
                 ],
-                "summary": "Step A2 — Mobile OTP Verify करो",
+                "summary": "Step A2 — Verify Mobile OTP",
                 "description": "Verifies the OTP received by the user. Requires the txnId returned in Step A1.",
                 "operationId": "1d574fd61265e9d0c55d5097a56622a5",
                 "requestBody": {
@@ -100,7 +100,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B1 — Aadhaar OTP भेजो",
+                "summary": "Step B1 — Send Aadhaar OTP",
                 "description": "Initiates the ABHA Enrolment flow by sending an OTP to the mobile linked with Aadhaar.",
                 "operationId": "d90323c551a40268320a6d99200875bf",
                 "requestBody": {
@@ -136,7 +136,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B2 — Aadhaar OTP Verify करो",
+                "summary": "Step B2 — Verify Aadhaar OTP",
                 "description": "Verifies Aadhaar OTP. Pass the txnId from Step B1. If verified, ABDM links the provided mobile number.",
                 "operationId": "d95c22ee14350e9c974b7b076ca23964",
                 "requestBody": {
@@ -179,7 +179,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B3 — Mobile OTP भेजो (Linking)",
+                "summary": "Step B3 — Send Mobile OTP (Linking)",
                 "description": "Sends a secondary OTP to verify the mobile number for linking with the newly created ABHA.",
                 "operationId": "51f9b37b0ca194543f6c390f43761b18",
                 "requestBody": {
@@ -218,7 +218,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B4 — Mobile OTP Verify करो (Linking)",
+                "summary": "Step B4 — Verify Mobile OTP (Linking)",
                 "description": "Verifies the Mobile OTP from Step B3 to finalize linking.",
                 "operationId": "eed76056a12de78a1293189864b69d37",
                 "requestBody": {
@@ -257,7 +257,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B5 — ABHA Address Suggestions लो",
+                "summary": "Step B5 — Get ABHA Address Suggestions",
                 "description": "Fetches a list of available ABHA addresses (usernames) based on user's Aadhaar data.",
                 "operationId": "83747ec87f37dc1fde3d80aa642edd5c",
                 "parameters": [
@@ -296,7 +296,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B6 — ABHA Address Choose करो",
+                "summary": "Step B6 — Select ABHA Address",
                 "description": "Finalizes the ABHA enrolment by selecting one of the suggested ABHA addresses.",
                 "operationId": "4f452a4ba3840c8836257c0595c3ea4c",
                 "requestBody": {
@@ -339,7 +339,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B7 — Aadhaar Profile details Fetch karo",
+                "summary": "Step B7 — Fetch Aadhaar Profile Details",
                 "description": "Fetches full ABHA profile details (name, gender, dob, photo, address) using the X-Token from Aadhaar Enrolment verify step (Step B2).",
                 "operationId": "2f90c338f171c159c0a2da35a08df89c",
                 "parameters": [
@@ -370,7 +370,7 @@
                 "tags": [
                     "2. ABHA — Mobile Login"
                 ],
-                "summary": "Step A0 — Mobile से ABHA खोजो",
+                "summary": "Step A0 — Search ABHA by Mobile",
                 "description": "Searches for ABHA records linked to a specific mobile number before sending login OTP.",
                 "operationId": "68bcef4eda81b64001a262aeab22b648",
                 "requestBody": {
@@ -406,7 +406,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B8 — ABHA Card (PDF/Image) Download karo",
+                "summary": "Step B8 — Download ABHA Card (PDF/Image)",
                 "description": "Downloads the official ABHA card base64 image/PDF using the X-Token from Step B2.",
                 "operationId": "f7b0871ac2119a2d7832f516d77718d3",
                 "parameters": [
@@ -437,7 +437,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B9 — ABHA QR Code Download karo",
+                "summary": "Step B9 — Download ABHA QR Code",
                 "description": "Downloads the ABHA QR Code image using the X-Token from Step B2.",
                 "operationId": "dfaa64c5b9b31833887b4a13b539bb14",
                 "parameters": [
@@ -2788,6 +2788,156 @@
                 ]
             }
         },
+        "/api/v1/ipd/admissions/{id}/discharge-estimate": {
+            "get": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Pre-Discharge Billing Estimate Preview",
+                "description": "Returns unbilled ledger charges, advance deposits paid, and estimated net balance due before discharge.",
+                "operationId": "ed7ef43c416962386d4feab22cfc6ed8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pre-discharge estimate calculated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/settle-discharge": {
+            "post": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Final Settlement, Tax Invoice Generation & Patient Discharge",
+                "description": "1-Click final discharge: settles running ledger, factors in advance deposit, hospital discount, and insurance cashless claim, generates final Tax Invoice (INV-YYYY-XXXXX), frees the bed, and issues official Security Gate Pass (GP-YYYY-XXXXX).",
+                "operationId": "d3db066d7b5ab9f63421facbc87c1605",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bill settled, patient discharged, bed freed, gate pass issued"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/{id}": {
+            "get": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Get Formatted Itemized Tax Invoice",
+                "description": "Retrieves complete invoice data ready for printing / PDF export.",
+                "operationId": "8e26839ec5797200db20667a31142ea0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tax invoice data retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/gate-pass": {
+            "get": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Get Printable Hospital Security Gate Pass",
+                "description": "Returns official security clearance gate pass with patient, ward, bed, and financial clearance stamp.",
+                "operationId": "909d74721e52201215daa3d60e61d8be",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Security Gate Pass slip data"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/patient/{patientId}": {
+            "get": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Get Invoices for Patient",
+                "operationId": "34f9aba38f9492339dd9202af09c588e",
+                "parameters": [
+                    {
+                        "name": "patientId",
+                        "in": "path",
+                        "description": "Patient ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient Invoices"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/ipd/wards": {
             "get": {
                 "tags": [
@@ -3184,6 +3334,508 @@
                 "responses": {
                     "200": {
                         "description": "Patient discharged successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/bed-matrix": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Live Visual Bed Matrix (All Wards & Beds)",
+                "description": "Returns a visual 2D matrix of all hospital wards, their beds (Available, Occupied, Maintenance), patient demographics, attending doctor, elapsed admission time, and live running bills.",
+                "operationId": "6c2c7ab7fa1cc3b37995ca3c7c1a20e5",
+                "responses": {
+                    "200": {
+                        "description": "Bed matrix retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/rounds": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Doctor Daily Rounds History",
+                "operationId": "fc53f44c39594b7b3285cabc1d418999",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Doctor rounds history retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Doctor Inpatient Daily Round (SOAP Note)",
+                "description": "Records attending doctor's bedside clinical round with Subjective, Objective, Assessment, and Plan (SOAP) notes. Automatically triggers and posts doctor round consultation fee to the patient's running bill ledger.",
+                "operationId": "1eb996f1476042a736be41e9582a2177",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "round_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-15"
+                                    },
+                                    "round_type": {
+                                        "type": "string",
+                                        "example": "routine",
+                                        "enum": [
+                                            "routine",
+                                            "specialist_call",
+                                            "emergency",
+                                            "night_round"
+                                        ]
+                                    },
+                                    "subjective": {
+                                        "type": "string",
+                                        "example": "Patient feeling better, mild abdominal discomfort after meal"
+                                    },
+                                    "objective": {
+                                        "type": "string",
+                                        "example": "Abdomen soft, non-tender. Bowel sounds present. Surgical dressing dry."
+                                    },
+                                    "assessment": {
+                                        "type": "string",
+                                        "example": "Post-op Day 2 status post Lap Appendectomy, recovery satisfactory"
+                                    },
+                                    "plan": {
+                                        "type": "string",
+                                        "example": "Step down IV antibiotics to oral, start soft diet, ambulate"
+                                    },
+                                    "diet_advice": {
+                                        "type": "string",
+                                        "example": "soft"
+                                    },
+                                    "clinical_condition": {
+                                        "type": "string",
+                                        "example": "improving",
+                                        "enum": [
+                                            "improving",
+                                            "stable",
+                                            "deteriorating",
+                                            "critical"
+                                        ]
+                                    },
+                                    "is_discharge_planned": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "planned_discharge_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-17"
+                                    },
+                                    "fee_charged": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Doctor round recorded and fee posted"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/procedures": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Bedside Nursing Procedures Log",
+                "operationId": "a39b5e557ff94de4e8d8710c733618ea",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nursing procedures list retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Bedside Nursing Procedure & Charge",
+                "description": "Nurse logs a bedside procedure (e.g. Dressing, Nebulization, Catheterization, IV Cannulation, ECG). Automatically posts the procedure charge to patient running ledger.",
+                "operationId": "f95683879632567ff309dfabf035602b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "procedure_name"
+                                ],
+                                "properties": {
+                                    "procedure_name": {
+                                        "type": "string",
+                                        "example": "Wound Dressing (Minor)"
+                                    },
+                                    "procedure_code": {
+                                        "type": "string",
+                                        "example": "NURS-DRESS-MIN"
+                                    },
+                                    "performed_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-09-15 11:30:00"
+                                    },
+                                    "performed_by_name": {
+                                        "type": "string",
+                                        "example": "Nurse Sunita"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Surgical wound cleaned with betadine, sterile gauze dressing applied"
+                                    },
+                                    "charge_amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 200
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Bedside procedure recorded and charge posted"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/chart": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Inpatient 360 Comprehensive Medical & Financial Chart",
+                "description": "Retrieves complete inpatient clinical profile: admission info, doctor SOAP rounds, vital charts, fluid balance summary, MAR drug chart, bedside procedures, shift handovers, and live running financial bill summary.",
+                "operationId": "fd4946f752e7e2511ef8bb4145aaef8a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inpatient 360 chart retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/intake-output": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Fluid Balance Summary & I/O Logs",
+                "description": "Returns total intake, total output, net fluid balance, category breakdowns, and chronological logs.",
+                "operationId": "5cb6d8175f24dba32468d123949263ef",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-09-30"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fluid balance summary retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Fluid Intake or Output Entry",
+                "description": "Logs fluid intake (IV fluid, oral, RT feed, blood) or output (urine, RT aspirate, drain, vomitus, stool) in ml.",
+                "operationId": "5cdc400fad06382a21aede1114cb3801",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Fluid balance entry recorded"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/mar": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get MAR Drug Chart & Administration Progress",
+                "description": "Returns prescribed medications alongside nurse administration events.",
+                "operationId": "19fb7e55d6583ca94802e759ca166f20",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "MAR drug chart retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Medication Administration Record (MAR / Drug Chart)",
+                "description": "Logs drug administration status (given, omitted, refused, held, vomited) with nurse signature and optional auto-billing.",
+                "operationId": "28db83fd183990fcb3923603be437af3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "MAR administration recorded"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/shift-handover": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Nursing Shift Handovers History",
+                "operationId": "c0bae5bf8e8528d22f06a858067bc0a5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Shift handovers list retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Nursing Shift Handover Note",
+                "description": "Creates a bed-by-bed shift transition note with patient condition, critical alerts, and pending tasks.",
+                "operationId": "f25fa80043f9c59fc3dbf8f2030eaa18",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Shift handover note created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/shift-handover/{id}/acknowledge": {
+            "put": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Acknowledge Shift Handover by Incoming Nurse",
+                "operationId": "5e15f2d54882c3500f5d80484c0b0407",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Shift handover acknowledged"
                     }
                 },
                 "security": [
@@ -4963,6 +5615,136 @@
                 ]
             }
         },
+        "/api/v1/reception/visits": {
+            "get": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Get issued OPD tokens & visits history for reception desk",
+                "description": "Fetches list of OPD visits and issued tokens at reception, filterable by date, doctor, department, status, or search query.",
+                "operationId": "822703148c2cebf50d8e6077cabab968",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Filter by date (YYYY-MM-DD or 'all', default today)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-10-03"
+                        }
+                    },
+                    {
+                        "name": "doctor_id",
+                        "in": "query",
+                        "description": "Filter by doctor ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "department_id",
+                        "in": "query",
+                        "description": "Filter by department ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status: waiting, called, in_consultation, done, cancelled, or all",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "all"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by token, OPD number, patient name, UHID, or mobile",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "description": "Set to true to fetch all records without pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": false
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of issued OPD visits"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/visits/stats": {
+            "get": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Get summary statistics for issued OPD visits",
+                "description": "Returns summary counts (total issued, waiting, in consultation, completed, fees collected) for a specific date (defaults to today).",
+                "operationId": "10c6791035fe65694691cd27398eb9b6",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Date for stats (YYYY-MM-DD, defaults to today)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Visit summary statistics"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/storage/upload-url": {
             "post": {
                 "tags": [
@@ -5701,11 +6483,11 @@
     "tags": [
         {
             "name": "2. ABHA — Mobile Login",
-            "description": "Flow A — मरीज़ के पास ABHA पहले से है (Mobile OTP से verify)"
+            "description": "Flow A — Patient has existing ABHA (Verify via Mobile OTP)"
         },
         {
             "name": "3. ABHA — Aadhaar Enrolment",
-            "description": "Flow B — नया ABHA बनाना (Aadhaar OTP से enrolment)"
+            "description": "Flow B — Create New ABHA (Enrolment via Aadhaar OTP)"
         },
         {
             "name": "4. Reception",
@@ -5758,6 +6540,10 @@
         {
             "name": "Authentication",
             "description": "Authentication"
+        },
+        {
+            "name": "12. Billing & Invoices",
+            "description": "12. Billing & Invoices"
         }
     ]
 }

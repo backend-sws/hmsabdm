@@ -281,16 +281,180 @@ class RealAbdmService implements AbdmServiceInterface
             throw AbdmApiException::fromResponse($responseData ?? ['message' => 'Failed to verify Aadhaar OTP']);
         }
 
-        // Check if ABDM returned an already enrolled ABHA user
-        $jwtToken = $responseData['token'] ?? $responseData['jwtResponse'] ?? null;
+        // 1. Extract Token safely across ABDM response variations
+        $jwtToken = $responseData['token'] 
+            ?? $responseData['tokens']['token'] 
+            ?? $responseData['jwtResponse'] 
+            ?? null;
+        $responseData['token'] = $jwtToken;
+
+        // 2. Decode JWT payload if available
+        $jwtPayload = $jwtToken ? $this->decodeJwtPayload($jwtToken) : [];
+        if ($jwtPayload) {
+            \Illuminate\Support\Facades\Log::info('ABDM byAadhaar JWT Payload:', [
+                'preferredAbhaAddress' => $jwtPayload['preferredAbhaAddress'] ?? null,
+                'abhaNumber' => $jwtPayload['abhaNumber'] ?? null,
+                'name' => $jwtPayload['name'] ?? null,
+            ]);
+        }
+
+        // 3. Try fetching full verified account profile from ABDM /v3/profile/account
+        $fetchedProfile = [];
         if ($jwtToken) {
-            $jwtPayload = $this->decodeJwtPayload($jwtToken);
-            if ($jwtPayload) {
-                $responseData['hasExistingAbha'] = !empty($jwtPayload['preferredAbhaAddress']);
-                $responseData['preferredAbhaAddress'] = $jwtPayload['preferredAbhaAddress'] ?? null;
-                $responseData['abhaNumber'] = $jwtPayload['abhaNumber'] ?? null;
+            try {
+                $fetchedProfile = $this->getProfile($jwtToken);
+                \Illuminate\Support\Facades\Log::info('ABDM byAadhaar Fetched Profile Successfully', [
+                    'name' => $fetchedProfile['name'] ?? null,
+                    'preferredAbhaAddress' => $fetchedProfile['preferredAbhaAddress'] ?? null,
+                    'ABHANumber' => $fetchedProfile['ABHANumber'] ?? null,
+                ]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('ABDM byAadhaar: Profile fetch note: ' . $e->getMessage());
             }
         }
+
+        // 4. Resolve Real Patient Name
+        $name = $fetchedProfile['name'] 
+            ?? $responseData['ABHAProfile']['name'] 
+            ?? $responseData['name'] 
+            ?? $jwtPayload['name'] 
+            ?? null;
+
+        if (!$name) {
+            $fName = $fetchedProfile['firstName'] ?? $responseData['ABHAProfile']['firstName'] ?? $jwtPayload['firstName'] ?? '';
+            $mName = $fetchedProfile['middleName'] ?? $responseData['ABHAProfile']['middleName'] ?? $jwtPayload['middleName'] ?? '';
+            $lName = $fetchedProfile['lastName'] ?? $responseData['ABHAProfile']['lastName'] ?? $jwtPayload['lastName'] ?? '';
+            $assembledName = trim("{$fName} {$mName} {$lName}");
+            if (!empty($assembledName)) {
+                $name = $assembledName;
+            }
+        }
+
+        // 5. Resolve ABHA Number (14-digit)
+        $abhaNumber = $fetchedProfile['ABHANumber'] 
+            ?? $fetchedProfile['abhaNumber'] 
+            ?? $fetchedProfile['healthIdNumber'] 
+            ?? $responseData['ABHANumber'] 
+            ?? $responseData['abhaNumber'] 
+            ?? $responseData['ABHAProfile']['ABHANumber'] 
+            ?? $responseData['ABHAProfile']['abhaNumber'] 
+            ?? $jwtPayload['abhaNumber'] 
+            ?? $jwtPayload['healthIdNumber'] 
+            ?? null;
+
+        // 6. Resolve Preferred ABHA Address Handle (e.g. user@sbx)
+        $preferredAbhaAddress = $fetchedProfile['preferredAbhaAddress'] 
+            ?? $fetchedProfile['abhaAddress'] 
+            ?? $responseData['preferredAbhaAddress'] 
+            ?? $responseData['abhaAddress'] 
+            ?? $responseData['ABHAProfile']['preferredAbhaAddress'] 
+            ?? $responseData['ABHAProfile']['abhaAddress'] 
+            ?? $jwtPayload['preferredAbhaAddress'] 
+            ?? $jwtPayload['abhaAddress'] 
+            ?? null;
+
+        // 7. Resolve Gender & DOB
+        $gender = $fetchedProfile['gender'] 
+            ?? $responseData['ABHAProfile']['gender'] 
+            ?? $responseData['gender'] 
+            ?? $jwtPayload['gender'] 
+            ?? null;
+
+        $dob = $fetchedProfile['dob'] 
+            ?? $responseData['ABHAProfile']['dob'] 
+            ?? $responseData['dob'] 
+            ?? $jwtPayload['dob'] 
+            ?? null;
+
+        if (!$dob) {
+            $yob = $fetchedProfile['yearOfBirth'] ?? $responseData['ABHAProfile']['yearOfBirth'] ?? $jwtPayload['yearOfBirth'] ?? null;
+            $mob = $fetchedProfile['monthOfBirth'] ?? $responseData['ABHAProfile']['monthOfBirth'] ?? $jwtPayload['monthOfBirth'] ?? '01';
+            $dobDay = $fetchedProfile['dayOfBirth'] ?? $responseData['ABHAProfile']['dayOfBirth'] ?? $jwtPayload['dayOfBirth'] ?? '01';
+            if ($yob) {
+                $dob = sprintf('%04d-%02d-%02d', (int)$yob, (int)$mob, (int)$dobDay);
+            }
+        }
+
+        // 8. Determine if patient already has an existing ABHA
+        $isNew = $responseData['isNew'] ?? (empty($preferredAbhaAddress) && empty($abhaNumber));
+        $hasExistingAbha = !empty($preferredAbhaAddress) || ($isNew === false);
+
+        $responseData['hasExistingAbha'] = $hasExistingAbha;
+        $responseData['isNew'] = $isNew;
+        $responseData['preferredAbhaAddress'] = $preferredAbhaAddress;
+        $responseData['abhaAddress'] = $preferredAbhaAddress;
+        $responseData['abhaNumber'] = $abhaNumber;
+        $responseData['ABHANumber'] = $abhaNumber;
+        $responseData['name'] = $name;
+
+        // Resolve robust demographics & photo across ABDM response structures
+        $photo = $fetchedProfile['profilePhoto'] 
+            ?? $fetchedProfile['photo'] 
+            ?? $responseData['ABHAProfile']['profilePhoto'] 
+            ?? $responseData['ABHAProfile']['photo'] 
+            ?? $responseData['profilePhoto'] 
+            ?? $responseData['photo'] 
+            ?? null;
+
+        $address = $fetchedProfile['address'] 
+            ?? $fetchedProfile['addressLine'] 
+            ?? $responseData['ABHAProfile']['address'] 
+            ?? $responseData['ABHAProfile']['addressLine'] 
+            ?? $responseData['address'] 
+            ?? null;
+
+        $district = $fetchedProfile['districtName'] 
+            ?? $fetchedProfile['district'] 
+            ?? $responseData['ABHAProfile']['districtName'] 
+            ?? $responseData['ABHAProfile']['district'] 
+            ?? $responseData['districtName'] 
+            ?? $responseData['district'] 
+            ?? null;
+
+        $state = $fetchedProfile['stateName'] 
+            ?? $fetchedProfile['state'] 
+            ?? $responseData['ABHAProfile']['stateName'] 
+            ?? $responseData['ABHAProfile']['state'] 
+            ?? $responseData['stateName'] 
+            ?? $responseData['state'] 
+            ?? null;
+
+        $pincode = $fetchedProfile['pincode'] 
+            ?? $fetchedProfile['pinCode'] 
+            ?? $responseData['ABHAProfile']['pincode'] 
+            ?? $responseData['ABHAProfile']['pinCode'] 
+            ?? $responseData['pincode'] 
+            ?? null;
+
+        // Build standard profile object
+        $profileData = [
+            'name'                 => $name,
+            'abhaNumber'           => $abhaNumber,
+            'ABHANumber'           => $abhaNumber,
+            'abhaAddress'          => $preferredAbhaAddress,
+            'preferredAbhaAddress' => $preferredAbhaAddress,
+            'gender'               => $gender,
+            'dob'                  => $dob,
+            'mobile'               => $mobile,
+            'address'              => $address,
+            'district'             => $district,
+            'districtName'         => $district,
+            'state'                => $state,
+            'stateName'            => $state,
+            'pincode'              => $pincode,
+            'photo'                => $photo,
+            'profilePhoto'         => $photo,
+            'hasExistingAbha'      => $hasExistingAbha,
+        ];
+
+        $responseData['photo']        = $photo;
+        $responseData['profilePhoto'] = $photo;
+        $responseData['address']      = $address;
+        $responseData['district']     = $district;
+        $responseData['state']        = $state;
+        $responseData['pincode']      = $pincode;
+        $responseData['profile']      = $profileData;
+        $responseData['ABHAProfile']  = $profileData;
 
         return $responseData;
     }
@@ -379,10 +543,13 @@ class RealAbdmService implements AbdmServiceInterface
     public function suggestAbhaAddress(string $txnId, string $token): array
     {
         $headers = $this->getGatewayHeaders();
-        $headers['X-Token'] = "Bearer {$token}";
+        $bearerToken = str_starts_with($token, 'Bearer ') ? $token : "Bearer {$token}";
+        $headers['X-Token'] = $bearerToken;
+        $headers['X-token'] = $bearerToken;
         $headers['Transaction_Id'] = $txnId;
 
-        $jwtPayload = $this->decodeJwtPayload($token);
+        $rawToken = str_starts_with($token, 'Bearer ') ? substr($token, 7) : $token;
+        $jwtPayload = $this->decodeJwtPayload($rawToken);
 
         try {
             $response = $this->httpClient()
@@ -393,10 +560,16 @@ class RealAbdmService implements AbdmServiceInterface
         }
 
         if ($response && $response->successful()) {
-            return $response->json();
+            $data = $response->json();
+            $list = $data['abhaAddressList'] ?? $data['abhaAddresses'] ?? [];
+            return [
+                'txnId' => $txnId,
+                'abhaAddresses' => $list,
+                'abhaAddressList' => $list,
+            ];
         }
 
-        // Edge Case: If ABDM returns error (e.g. ABDM-1220) because ABHA already exists,
+        // Edge Case: If ABDM returns error (e.g. ABDM-1220 or 404) because ABHA already exists,
         // extract the existing preferred address from the transaction JWT so frontend receives it seamlessly.
         if (!empty($jwtPayload['preferredAbhaAddress'])) {
             \Illuminate\Support\Facades\Log::info('ABDM Suggestion: User already has existing ABHA address.', [
@@ -405,6 +578,7 @@ class RealAbdmService implements AbdmServiceInterface
 
             return [
                 'txnId' => $txnId,
+                'abhaAddresses' => [$jwtPayload['preferredAbhaAddress']],
                 'abhaAddressList' => [$jwtPayload['preferredAbhaAddress']],
                 'preferredAbhaAddress' => $jwtPayload['preferredAbhaAddress'],
                 'abhaNumber' => $jwtPayload['abhaNumber'] ?? null,
@@ -420,9 +594,12 @@ class RealAbdmService implements AbdmServiceInterface
     public function createAbhaAddress(string $txnId, string $abhaAddress, string $token): array
     {
         $headers = $this->getGatewayHeaders();
-        $headers['X-Token'] = "Bearer {$token}";
+        $bearerToken = str_starts_with($token, 'Bearer ') ? $token : "Bearer {$token}";
+        $headers['X-Token'] = $bearerToken;
+        $headers['X-token'] = $bearerToken;
 
-        $jwtPayload = $this->decodeJwtPayload($token);
+        $rawToken = str_starts_with($token, 'Bearer ') ? substr($token, 7) : $token;
+        $jwtPayload = $this->decodeJwtPayload($rawToken);
 
         try {
             $response = $this->httpClient()
@@ -437,7 +614,26 @@ class RealAbdmService implements AbdmServiceInterface
         }
 
         if ($response && $response->successful()) {
-            return $response->json();
+            $resData = $response->json();
+            $profile = null;
+            try {
+                $profile = $this->getProfile($rawToken);
+            } catch (\Exception $e) {
+                // Profile fetch is non-fatal here
+            }
+
+            if ($profile) {
+                $resData['profile'] = $profile;
+                $resData['name'] = $profile['name'] ?? null;
+                $resData['ABHANumber'] = $profile['ABHANumber'] ?? $profile['abhaNumber'] ?? null;
+                $resData['gender'] = $profile['gender'] ?? null;
+                $resData['dob'] = $profile['dob'] ?? null;
+            } elseif ($jwtPayload) {
+                $resData['name'] = $jwtPayload['name'] ?? null;
+                $resData['ABHANumber'] = $jwtPayload['abhaNumber'] ?? null;
+            }
+
+            return $resData;
         }
 
         // Edge Case: If already created with this address

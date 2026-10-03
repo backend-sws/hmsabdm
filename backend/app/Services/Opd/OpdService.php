@@ -10,13 +10,17 @@ class OpdService implements OpdServiceInterface
 {
     use CanFilterAndPaginate;
 
-    public function getTodayQueue(int $hospitalId, int $doctorId, $request = null)
+    public function getTodayQueue(int $hospitalId, ?int $doctorId = null, $request = null)
     {
         $req = $request ?? request();
 
-        $query = OpdVisit::where('doctor_id', $doctorId)
+        $query = OpdVisit::where('hospital_id', $hospitalId)
             ->whereDate('visit_date', today())
             ->with(['patient.latestVital', 'department', 'doctor', 'latestVital']);
+
+        if ($doctorId) {
+            $query->where('doctor_id', $doctorId);
+        }
 
         if ($req && $req->filled('status')) {
             $status = $req->query('status');

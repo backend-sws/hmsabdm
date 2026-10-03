@@ -13,6 +13,11 @@ import { OpdQueuePage } from "@/pages/opd/OpdQueuePage"
 import { DoctorsPage } from "@/pages/doctors/DoctorsPage"
 import { DepartmentsPage } from "@/pages/departments/DepartmentsPage"
 import { HospitalsPage } from "@/pages/hospitals/HospitalsPage"
+import { IpdDeskPage } from "@/pages/ipd/IpdDeskPage"
+import { IpdPatientChartPage } from "@/pages/ipd/IpdPatientChartPage"
+import { EmergencyDeskPage } from "@/pages/emergency/EmergencyDeskPage"
+import { BillingDeskPage } from "@/pages/billing/BillingDeskPage"
+import { SettingsPage } from "@/pages/settings/SettingsPage"
 import InputHelperDemoPage from "@/pages/demo/InputHelperDemoPage"
 
 const queryClient = new QueryClient({
@@ -31,7 +36,7 @@ const queryClient = new QueryClient({
     },
   }),
   mutationCache: new MutationCache({
-    onError: (error, variables, context, mutation) => {
+    onError: (error, _variables, _context, mutation) => {
       // Auto-toast mutation errors by default unless marked silent
       if (mutation.meta?.silent) {
         return
@@ -45,7 +50,15 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster richColors position="top-right" closeButton />
+      <Toaster
+        richColors
+        position="top-right"
+        closeButton
+        gap={12}
+        toastOptions={{
+          duration: 4500,
+        }}
+      />
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -61,13 +74,95 @@ export default function App() {
               }
             >
               <Route path="/" element={<DashboardPage />} />
-              <Route path="/reception" element={<ReceptionPage />} />
-              <Route path="/patients" element={<PatientsPage />} />
-
-              <Route path="/opd" element={<OpdQueuePage />} />
-              <Route path="/doctors" element={<DoctorsPage />} />
-              <Route path="/departments" element={<DepartmentsPage />} />
-              <Route path="/hospitals" element={<HospitalsPage />} />
+              <Route
+                path="/reception"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "RECEPTIONIST"]}>
+                    <ReceptionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/abha" element={<Navigate to="/reception" replace />} />
+              <Route
+                path="/patients"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"]}>
+                    <PatientsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/opd"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR"]}>
+                    <OpdQueuePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ipd"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"]}>
+                    <IpdDeskPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ipd/admissions/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"]}>
+                    <IpdPatientChartPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/emergency"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"]}>
+                    <EmergencyDeskPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/billing"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "RECEPTIONIST"]}>
+                    <BillingDeskPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/doctors"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN"]}>
+                    <DoctorsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/departments"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN"]}>
+                    <DepartmentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hospitals"
+                element={
+                  <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
+                    <HospitalsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN"]}>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/demo/input-helper"
                 element={<InputHelperDemoPage />}

@@ -15,6 +15,12 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     case "COMPLETED":
       return <Badge variant="success">{status}</Badge>
 
+    case "WAITING":
+      return <Badge variant="warning">Waiting</Badge>
+
+    case "IN_CONSULTATION":
+      return <Badge variant="default" className="bg-blue-600 text-white hover:bg-blue-700">In Consultation</Badge>
+
     case "PENDING":
     case "LINKED":
     case "IN_PROGRESS":
@@ -24,6 +30,8 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     case "INACTIVE":
     case "FAILED":
     case "REJECTED":
+    case "EXPIRED":
+    case "SKIPPED":
       return <Badge variant="destructive">{status}</Badge>
 
     default:

@@ -7,6 +7,12 @@ use App\Models\CounterQueue;
 use App\Models\IpdAdmission;
 use App\Models\Patient;
 use App\Models\Ward;
+use App\Models\IpdIntakeOutput;
+use App\Models\IpdMarAdministration;
+use App\Models\IpdShiftHandover;
+use App\Models\Prescription;
+use App\Models\PrescriptionItem;
+use App\Models\BillingLedgerItem;
 use App\Services\Patient\PatientServiceInterface;
 use App\Http\Traits\CanFilterAndPaginate;
 use Illuminate\Support\Facades\DB;
@@ -76,11 +82,14 @@ class IpdService implements IpdServiceInterface
                 $patientId = $patient->id;
             } elseif (!empty($data['token'])) {
                 // From Scan & Share Token
-                $queue = CounterQueue::where('link_token', $data['token'])
-                    ->where('hospital_id', $hospitalId)
-                    ->firstOrFail();
+                $queue = CounterQueue::withoutGlobalScopes()
+                    ->where('link_token', $data['token'])
+                    ->first();
+                if (!$queue) {
+                    throw new \Exception("Scan & Share Token '{$data['token']}' not found or is invalid.");
+                }
                 $patientId = $queue->patient_id;
-                $queue->update(['status' => 'confirmed']);
+                $queue->update(['status' => 'confirmed', 'hospital_id' => $hospitalId]);
             } elseif (!empty($data['name'])) {
                 // Direct Patient Registration
                 $data['hospital_id'] = $hospitalId;
@@ -586,6 +595,15 @@ class IpdService implements IpdServiceInterface
                 'nursingProcedures' => function ($q) {
                     $q->orderByDesc('performed_at')->orderByDesc('id');
                 },
+                'intakeOutputs' => function ($q) {
+                    $q->orderByDesc('recorded_at')->orderByDesc('id');
+                },
+                'marAdministrations' => function ($q) {
+                    $q->orderByDesc('administered_at')->orderByDesc('id');
+                },
+                'shiftHandovers' => function ($q) {
+                    $q->orderByDesc('shift_date')->orderByDesc('id');
+                },
                 'prescriptions' => function ($q) {
                     $q->with(['items', 'diagnoses', 'doctor'])->orderByDesc('id');
                 },
@@ -611,6 +629,12 @@ class IpdService implements IpdServiceInterface
                 'total_amount' => (float) $items->sum('total_amount'),
             ];
         })->values();
+
+        // Calculate Fluid Balance Summary
+        $allIO = $admission->intakeOutputs;
+        $totalIntake = (float) $allIO->where('entry_type', 'intake')->sum('quantity_ml');
+        $totalOutput = (float) $allIO->where('entry_type', 'output')->sum('quantity_ml');
+        $netBalance = $totalIntake - $totalOutput;
 
         $admDate = $admission->admission_date ?? $admission->created_at;
 
@@ -640,6 +664,15 @@ class IpdService implements IpdServiceInterface
             'doctor_rounds'      => $admission->doctorRounds,
             'nursing_procedures' => $admission->nursingProcedures,
             'vitals_history'     => $admission->vitals,
+            'fluid_balance_summary' => [
+                'total_intake_ml'  => $totalIntake,
+                'total_output_ml'  => $totalOutput,
+                'net_balance_ml'   => $netBalance,
+                'balance_status'   => $netBalance > 0 ? 'positive' : ($netBalance < 0 ? 'negative' : 'neutral'),
+            ],
+            'intake_outputs'     => $admission->intakeOutputs,
+            'mar_administrations'=> $admission->marAdministrations,
+            'shift_handovers'    => $admission->shiftHandovers,
             'prescriptions'      => $admission->prescriptions,
             'financial_summary'  => [
                 'total_charged'      => $totalCharged,
@@ -649,6 +682,229 @@ class IpdService implements IpdServiceInterface
                 'ledger_items'       => $ledgerItems,
             ],
         ];
+    }
+
+    /**
+     * Record fluid intake or output entry for an inpatient admission.
+     */
+    public function recordIntakeOutput(int $hospitalId, int $admissionId, array $data, ?int $userId = null): array
+    {
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)->findOrFail($admissionId);
+
+        $entry = IpdIntakeOutput::create([
+            'hospital_id'         => $hospitalId,
+            'ipd_admission_id'    => $admission->id,
+            'patient_id'          => $admission->patient_id,
+            'entry_type'          => $data['entry_type'], // 'intake' or 'output'
+            'category'            => $data['category'],
+            'item_name'           => $data['item_name'],
+            'quantity_ml'         => (float) $data['quantity_ml'],
+            'route'               => $data['route'] ?? null,
+            'recorded_at'         => !empty($data['recorded_at']) ? \Carbon\Carbon::parse($data['recorded_at']) : now(),
+            'recorded_by_user_id' => $userId,
+            'recorded_by_name'    => $data['recorded_by_name'] ?? 'Staff Nurse',
+            'remarks'             => $data['remarks'] ?? null,
+        ]);
+
+        return $entry->load(['patient', 'admission'])->toArray();
+    }
+
+    /**
+     * Get 24-hour / date-specific fluid balance summary and chronological logs.
+     */
+    public function getIntakeOutputSummary(int $hospitalId, int $admissionId, ?string $date = null): array
+    {
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)->findOrFail($admissionId);
+
+        $query = IpdIntakeOutput::where('hospital_id', $hospitalId)
+            ->where('ipd_admission_id', $admission->id);
+
+        if (!empty($date)) {
+            $query->whereDate('recorded_at', $date);
+        }
+
+        $entries = $query->orderByDesc('recorded_at')->orderByDesc('id')->get();
+
+        $totalIntake = (float) $entries->where('entry_type', 'intake')->sum('quantity_ml');
+        $totalOutput = (float) $entries->where('entry_type', 'output')->sum('quantity_ml');
+        $netBalance = $totalIntake - $totalOutput;
+
+        $intakeByCategory = $entries->where('entry_type', 'intake')
+            ->groupBy('category')
+            ->map(fn($group) => (float) $group->sum('quantity_ml'));
+
+        $outputByCategory = $entries->where('entry_type', 'output')
+            ->groupBy('category')
+            ->map(fn($group) => (float) $group->sum('quantity_ml'));
+
+        return [
+            'admission_id' => $admission->id,
+            'ipd_number'   => $admission->ipd_number,
+            'filter_date'  => $date ?? 'all',
+            'summary'      => [
+                'total_intake_ml' => $totalIntake,
+                'total_output_ml' => $totalOutput,
+                'net_balance_ml'  => $netBalance,
+                'balance_status'  => $netBalance > 0 ? 'positive' : ($netBalance < 0 ? 'negative' : 'neutral'),
+            ],
+            'breakdown'    => [
+                'intake_by_category'  => $intakeByCategory,
+                'output_by_category' => $outputByCategory,
+            ],
+            'entries'      => $entries,
+        ];
+    }
+
+    /**
+     * Record medication administration (Given, Omitted, Refused) against prescription item or SOS.
+     */
+    public function recordMarAdministration(int $hospitalId, int $admissionId, array $data, ?int $userId = null): array
+    {
+        return DB::transaction(function () use ($hospitalId, $admissionId, $data, $userId) {
+            $admission = IpdAdmission::where('hospital_id', $hospitalId)->findOrFail($admissionId);
+
+            $admin = IpdMarAdministration::create([
+                'hospital_id'            => $hospitalId,
+                'ipd_admission_id'       => $admission->id,
+                'patient_id'             => $admission->patient_id,
+                'prescription_item_id'   => $data['prescription_item_id'] ?? null,
+                'medicine_name'          => $data['medicine_name'],
+                'dosage'                 => $data['dosage'],
+                'route'                  => $data['route'] ?? 'iv',
+                'scheduled_at'           => !empty($data['scheduled_at']) ? \Carbon\Carbon::parse($data['scheduled_at']) : null,
+                'administered_at'        => !empty($data['administered_at']) ? \Carbon\Carbon::parse($data['administered_at']) : now(),
+                'administered_by_user_id'=> $userId,
+                'administered_by_name'   => $data['administered_by_name'] ?? 'Staff Nurse',
+                'status'                 => $data['status'] ?? 'given',
+                'omission_reason'        => $data['omission_reason'] ?? null,
+                'batch_number'           => $data['batch_number'] ?? null,
+                'notes'                  => $data['notes'] ?? null,
+            ]);
+
+            // Optional auto-billing if medicine charge is specified
+            $chargeRate = isset($data['charge_amount']) ? (float) $data['charge_amount'] : (
+                (!empty($data['auto_charge']) && !empty($data['unit_rate'])) ? (float) $data['unit_rate'] : null
+            );
+
+            if ($chargeRate !== null && $chargeRate > 0 && ($data['status'] ?? 'given') === 'given') {
+                $qty = (float) ($data['quantity'] ?? 1.0);
+                $ledgerItem = BillingLedgerItem::create([
+                    'hospital_id'        => $hospitalId,
+                    'patient_id'         => $admission->patient_id,
+                    'encounter_type'     => 'ipd',
+                    'encounter_id'       => $admission->id,
+                    'charge_id'          => null,
+                    'category'           => 'pharmacy',
+                    'item_name'          => $data['medicine_name'] . ' (' . $data['dosage'] . ')',
+                    'unit_price'         => $chargeRate,
+                    'quantity'           => $qty,
+                    'tax_amount'         => 0.00,
+                    'discount_amount'    => 0.00,
+                    'total_amount'       => $chargeRate * $qty,
+                    'charged_at'         => now(),
+                    'charged_by_user_id' => $userId,
+                    'auto_generated'     => true,
+                    'notes'              => "Bedside medication administration by {$admin->administered_by_name}",
+                    'status'             => 'unbilled',
+                ]);
+
+                $admin->update(['billing_ledger_item_id' => $ledgerItem->id]);
+            }
+
+            return $admin->load(['patient', 'prescriptionItem', 'ledgerItem'])->toArray();
+        });
+    }
+
+    /**
+     * Get active MAR drug chart and administration events for an inpatient admission.
+     */
+    public function getMarDrugChart(int $hospitalId, int $admissionId, ?string $date = null): array
+    {
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)->findOrFail($admissionId);
+
+        // Fetch prescriptions for this admission with items
+        $prescriptions = Prescription::where('hospital_id', $hospitalId)
+            ->where('ipd_admission_id', $admission->id)
+            ->with(['items.medicine', 'doctor'])
+            ->orderByDesc('id')
+            ->get();
+
+        // Fetch MAR administrations
+        $marQuery = IpdMarAdministration::where('hospital_id', $hospitalId)
+            ->where('ipd_admission_id', $admission->id);
+
+        if (!empty($date)) {
+            $marQuery->whereDate('administered_at', $date);
+        }
+
+        $administrations = $marQuery->orderByDesc('administered_at')->get();
+
+        return [
+            'admission_id'     => $admission->id,
+            'ipd_number'       => $admission->ipd_number,
+            'filter_date'      => $date ?? 'all',
+            'prescriptions'    => $prescriptions,
+            'administrations'  => $administrations,
+            'summary'          => [
+                'total_administered' => $administrations->where('status', 'given')->count(),
+                'total_omitted'      => $administrations->where('status', 'omitted')->count(),
+                'total_refused'      => $administrations->where('status', 'refused')->count(),
+            ],
+        ];
+    }
+
+    /**
+     * Record nurse shift handover note.
+     */
+    public function recordShiftHandover(int $hospitalId, int $admissionId, array $data): array
+    {
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)->findOrFail($admissionId);
+
+        $handover = IpdShiftHandover::create([
+            'hospital_id'         => $hospitalId,
+            'ward_id'             => $admission->ward_id,
+            'ipd_admission_id'    => $admission->id,
+            'patient_id'          => $admission->patient_id,
+            'shift_name'          => $data['shift_name'], // 'morning', 'evening', 'night'
+            'shift_date'          => $data['shift_date'] ?? now()->toDateString(),
+            'outgoing_nurse_name' => $data['outgoing_nurse_name'],
+            'incoming_nurse_name' => $data['incoming_nurse_name'] ?? null,
+            'patient_condition'   => $data['patient_condition'] ?? 'stable',
+            'handover_notes'      => $data['handover_notes'],
+            'critical_alerts'     => $data['critical_alerts'] ?? null,
+            'pending_tasks'       => $data['pending_tasks'] ?? null,
+            'acknowledged_at'     => !empty($data['incoming_nurse_name']) ? now() : null,
+        ]);
+
+        return $handover->load(['patient', 'ward'])->toArray();
+    }
+
+    /**
+     * Get shift handovers history for an admission.
+     */
+    public function getShiftHandovers(int $hospitalId, int $admissionId): array
+    {
+        return IpdShiftHandover::where('hospital_id', $hospitalId)
+            ->where('ipd_admission_id', $admissionId)
+            ->orderByDesc('shift_date')
+            ->orderByDesc('id')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Acknowledge shift handover by incoming nurse.
+     */
+    public function acknowledgeShiftHandover(int $hospitalId, int $handoverId, string $incomingNurseName): array
+    {
+        $handover = IpdShiftHandover::where('hospital_id', $hospitalId)->findOrFail($handoverId);
+
+        $handover->update([
+            'incoming_nurse_name' => $incomingNurseName,
+            'acknowledged_at'     => now(),
+        ]);
+
+        return $handover->fresh()->load(['patient', 'ward'])->toArray();
     }
 }
 

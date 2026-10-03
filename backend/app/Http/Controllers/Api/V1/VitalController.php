@@ -252,6 +252,15 @@ class VitalController extends Controller
     #[OA\Response(response: 201, description: "Custom vital field created successfully")]
     public function createConfig(Request $request)
     {
+        if ($request->has('field_name') && !$request->has('field_key')) {
+            $request->merge(['field_key' => $request->input('field_name')]);
+        }
+        if (is_string($request->input('options'))) {
+            $request->merge([
+                'options' => array_values(array_filter(array_map('trim', explode(',', $request->input('options')))))
+            ]);
+        }
+
         $validated = $request->validate([
             'field_key'   => 'required|string|max:50',
             'label'       => 'required|string|max:100',
@@ -300,6 +309,15 @@ class VitalController extends Controller
     #[OA\Response(response: 200, description: "Configuration updated successfully")]
     public function updateConfig(Request $request, $id)
     {
+        if ($request->has('field_name') && !$request->has('field_key')) {
+            $request->merge(['field_key' => $request->input('field_name')]);
+        }
+        if (is_string($request->input('options'))) {
+            $request->merge([
+                'options' => array_values(array_filter(array_map('trim', explode(',', $request->input('options')))))
+            ]);
+        }
+
         $validated = $request->validate([
             'label'       => 'sometimes|string|max:100',
             'category'    => 'nullable|string|max:50',

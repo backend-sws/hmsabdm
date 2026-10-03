@@ -19,7 +19,12 @@ class PatientService implements PatientServiceInterface
         $req = $request ?? request();
 
         $hospitalId = $req->user()?->hospital_id ?? $req->query('hospital_id');
-        $patientQuery = Patient::query();
+        $patientQuery = Patient::query()->with([
+            'latestOpdVisit.department',
+            'latestOpdVisit.doctor',
+            'latestIpdAdmission',
+        ]);
+
         if ($hospitalId) {
             $patientQuery->where('hospital_id', $hospitalId);
         }
@@ -42,6 +47,21 @@ class PatientService implements PatientServiceInterface
                   ->orWhere('abha_number', 'like', "%{$search}%")
                   ->orWhere('abha_address', 'like', "%{$search}%");
             });
+        }
+
+        if ($req && $req->filled('gender')) {
+            $query->where('gender', $req->query('gender'));
+        }
+
+        if ($req && $req->filled('abha_status')) {
+            $status = $req->query('abha_status');
+            if ($status === 'linked') {
+                $query->where(function ($q) {
+                    $q->whereNotNull('abha_number')->orWhereNotNull('abha_address');
+                });
+            } elseif ($status === 'not_linked') {
+                $query->whereNull('abha_number')->whereNull('abha_address');
+            }
         }
 
         return $this->applyPaginationOrAll($query, $req);

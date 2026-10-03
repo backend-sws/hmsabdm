@@ -16,7 +16,13 @@ class ReceptionService implements ReceptionServiceInterface
     public function getWaitingQueues(int $hospitalId, $request = null)
     {
         $req = $request ?? request();
-        $query = CounterQueue::where('status', 'waiting_confirmation')
+        $query = CounterQueue::withoutGlobalScopes()
+            ->where(function ($q) use ($hospitalId) {
+                $q->where('hospital_id', $hospitalId)
+                  ->orWhereNull('hospital_id')
+                  ->orWhere('hospital_id', 1);
+            })
+            ->where('status', 'waiting_confirmation')
             ->where('expires_at', '>', now())
             ->with('patient')
             ->orderBy('created_at', 'desc');
@@ -37,17 +43,22 @@ class ReceptionService implements ReceptionServiceInterface
 
     public function getQueueByToken(int $hospitalId, string $token): array
     {
-        $queue = CounterQueue::where('link_token', $token)
+        $queue = CounterQueue::withoutGlobalScopes()
+            ->where('link_token', $token)
             ->with('patient')
             ->first();
 
         if (!$queue) {
-            throw new \Exception('Token not found or invalid.');
+            throw new \Exception("Token '{$token}' was not found in the waiting queue or is invalid.");
+        }
+
+        if ($queue->status === 'confirmed') {
+            throw new \Exception("Token '{$token}' has already been confirmed and processed.");
         }
 
         if ($queue->expires_at < now() && $queue->status === 'waiting_confirmation') {
             $queue->update(['status' => 'expired']);
-            throw new \Exception('Queue token has expired.');
+            throw new \Exception("Token '{$token}' has expired. Please generate a new token.");
         }
 
         return $queue->toArray();
@@ -58,7 +69,9 @@ class ReceptionService implements ReceptionServiceInterface
         $req = $request ?? request();
         $query = Department::where('is_active', true)
             ->with(['doctors' => function ($q) {
-                $q->where('is_active', true);
+                $q->where('is_active', true)->with(['schedules' => function ($sq) {
+                    $sq->where('is_active', true);
+                }]);
             }]);
 
         if ($req && $req->filled('search')) {
@@ -130,30 +143,55 @@ class ReceptionService implements ReceptionServiceInterface
         return Patient::create($data)->toArray();
     }
 
-    public function confirmQueue(int $hospitalId, int $queueId, int $doctorId, int $departmentId, ?int $appointmentTypeId = null): array
+    public function confirmQueue(int $hospitalId, int $queueId, int $doctorId, int $departmentId, ?int $appointmentTypeId = null, array $extra = []): array
     {
-        return DB::transaction(function () use ($hospitalId, $queueId, $doctorId, $departmentId, $appointmentTypeId) {
-            $queue = CounterQueue::where('id', $queueId)
-                ->where('status', 'waiting_confirmation')
+        return DB::transaction(function () use ($hospitalId, $queueId, $doctorId, $departmentId, $appointmentTypeId, $extra) {
+            $queue = CounterQueue::withoutGlobalScopes()
+                ->where('id', $queueId)
                 ->lockForUpdate()
-                ->firstOrFail();
+                ->first();
 
-            if ($queue->expires_at < now()) {
-                $queue->update(['status' => 'expired']);
-                throw new \Exception('Queue token has expired.');
+            if (!$queue) {
+                // In case queueId passed was link_token
+                $queue = CounterQueue::withoutGlobalScopes()
+                    ->where('link_token', (string) $queueId)
+                    ->lockForUpdate()
+                    ->first();
             }
 
-            // Mark confirmed
-            $queue->update(['status' => 'confirmed']);
+            if (!$queue) {
+                throw new \Exception("Queue record not found (Token/Queue ID '{$queueId}' does not exist).");
+            }
+
+            if ($queue->status === 'confirmed') {
+                throw new \Exception("This queue token has already been confirmed and processed.");
+            }
+
+            if ($queue->status === 'expired' || ($queue->expires_at && $queue->expires_at < now())) {
+                $queue->update(['status' => 'expired']);
+                throw new \Exception("Queue token has expired. Please ask the patient to scan and generate a new token.");
+            }
+
+            if ($queue->status !== 'waiting_confirmation') {
+                throw new \Exception("Queue token is not in a valid waiting status ({$queue->status}).");
+            }
+
+            // Mark confirmed and ensure it belongs to current hospital
+            $queue->update([
+                'status'      => 'confirmed',
+                'hospital_id' => $hospitalId,
+            ]);
+
+            $payload = array_merge([
+                'patient_id'          => $queue->patient_id,
+                'doctor_id'           => $doctorId,
+                'department_id'       => $departmentId,
+                'appointment_type_id' => $appointmentTypeId,
+                'chief_complaint'     => 'Scan & Share Registration',
+            ], $extra);
 
             // Create OPD Visit
-            $visit = $this->createOpdVisit($hospitalId, [
-                'patient_id' => $queue->patient_id,
-                'doctor_id' => $doctorId,
-                'department_id' => $departmentId,
-                'appointment_type_id' => $appointmentTypeId,
-                'chief_complaint' => 'Scan & Share Registration',
-            ]);
+            $visit = $this->createOpdVisit($hospitalId, $payload);
 
             return $visit;
         });
@@ -205,6 +243,9 @@ class ReceptionService implements ReceptionServiceInterface
             'queue_token'         => $nextToken,
             'status'              => 'waiting',
             'chief_complaint'     => $data['chief_complaint'] ?? null,
+            'notes'               => !empty($data['slot_time']) 
+                                      ? "Appointment Slot: {$data['slot_time']}" . (!empty($data['notes']) ? " | {$data['notes']}" : "")
+                                      : ($data['notes'] ?? null),
             'fee_charged'         => $feeCharged,
             'discount'            => $discount,
             'amount_paid'         => $amountPaid,
@@ -365,6 +406,90 @@ class ReceptionService implements ReceptionServiceInterface
                 'days_since_last_visit' => $daysSinceLastVisit,
                 'validity_window_days'  => $validityDays,
             ],
+        ];
+    }
+
+    /**
+     * Get OPD visits / issued tokens history for the reception desk.
+     */
+    public function getVisits(int $hospitalId, $request = null)
+    {
+        $req = $request ?? request();
+        $query = OpdVisit::where('hospital_id', $hospitalId)
+            ->with(['patient', 'doctor', 'department']);
+
+        // Date filtering: default to today unless specified
+        if ($req && $req->filled('date')) {
+            $date = $req->query('date');
+            if ($date !== 'all') {
+                $query->whereDate('visit_date', $date);
+            }
+        } else {
+            $query->whereDate('visit_date', today());
+        }
+
+        // Doctor filter
+        if ($req && $req->filled('doctor_id')) {
+            $query->where('doctor_id', $req->query('doctor_id'));
+        }
+
+        // Department filter
+        if ($req && $req->filled('department_id')) {
+            $query->where('department_id', $req->query('department_id'));
+        }
+
+        // Status filter
+        if ($req && $req->filled('status')) {
+            $status = $req->query('status');
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+        }
+
+        // Search filter (Token, OPD Number, Patient Name, UHID, Mobile, ABHA)
+        if ($req && $req->filled('search')) {
+            $search = trim($req->query('search'));
+            $query->where(function ($q) use ($search) {
+                $q->where('queue_token', 'like', "%{$search}%")
+                  ->orWhere('opd_number', 'ilike', "%{$search}%")
+                  ->orWhereHas('patient', function ($pq) use ($search) {
+                      $pq->where('name', 'ilike', "%{$search}%")
+                         ->orWhere('uhid', 'ilike', "%{$search}%")
+                         ->orWhere('mobile', 'like', "%{$search}%")
+                         ->orWhere('abha_number', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Order latest issued tokens first
+        $query->orderBy('created_at', 'desc')->orderBy('queue_token', 'desc');
+
+        return $this->applyPaginationOrAll($query, $req);
+    }
+
+    /**
+     * Get summary counts for issued OPD tokens on a specific date.
+     */
+    public function getVisitStats(int $hospitalId, ?string $date = null): array
+    {
+        $targetDate = ($date && $date !== 'all') ? $date : today()->toDateString();
+        $baseQuery = OpdVisit::where('hospital_id', $hospitalId)->whereDate('visit_date', $targetDate);
+
+        $total = (clone $baseQuery)->count();
+        $waiting = (clone $baseQuery)->where('status', 'waiting')->count();
+        $inConsultation = (clone $baseQuery)->whereIn('status', ['called', 'in_consultation'])->count();
+        $completed = (clone $baseQuery)->where('status', 'done')->count();
+        $cancelled = (clone $baseQuery)->where('status', 'cancelled')->count();
+        $totalFees = (float) (clone $baseQuery)->sum('amount_paid');
+
+        return [
+            'total_issued'    => $total,
+            'waiting'         => $waiting,
+            'in_consultation' => $inConsultation,
+            'completed'       => $completed,
+            'cancelled'       => $cancelled,
+            'total_fees'      => $totalFees,
+            'date'            => $targetDate,
         ];
     }
 }

@@ -50,7 +50,9 @@ class IpdAdmissionResource extends JsonResource
                 'blood_group'       => $patient->blood_group,
                 'address'           => $patient->address,
                 'city'              => $patient->city,
+                'district'          => $patient->district,
                 'state'             => $patient->state,
+                'pincode'           => $patient->pincode,
             ] : null,
             'doctor'            => $this->doctor ? [
                 'id'             => $this->doctor->id,

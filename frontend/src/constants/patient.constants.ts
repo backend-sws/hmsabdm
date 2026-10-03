@@ -1,8 +1,15 @@
 export const INITIAL_FILTERS = {
   search: "",
+  gender: "",
+  abha_status: "",
   page: 1,
   limit: 10,
 }
+
+export const ABHA_STATUS_OPTIONS = [
+  { label: "ABHA Linked (Digitized)", value: "linked" },
+  { label: "Normal Registry (Non-ABHA)", value: "not_linked" },
+]
 
 export const GENDER_OPTIONS = [
   { label: "Male", value: "M" },

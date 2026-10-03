@@ -122,7 +122,7 @@ export const AppLayout: React.FC = () => {
             style={{ backgroundImage: "url('/medical_pattern.png')" }}
           />
 
-          <div className="relative z-10 mx-auto max-w-[1600px]">
+          <div className="relative z-10 w-full">
             <Outlet />
           </div>
         </main>

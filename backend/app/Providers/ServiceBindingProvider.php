@@ -90,6 +90,11 @@ class ServiceBindingProvider extends ServiceProvider
             \App\Services\Emergency\EmergencyServiceInterface::class,
             \App\Services\Emergency\EmergencyService::class
         );
+
+        $this->app->bind(
+            \App\Services\Billing\DischargeBillingServiceInterface::class,
+            \App\Services\Billing\DischargeBillingService::class
+        );
     }
 
 

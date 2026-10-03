@@ -39,11 +39,21 @@ class OpdController extends Controller
     public function todayQueue(Request $request)
     {
         $request->validate([
-            'doctor_id' => 'required|integer|exists:doctors,id',
+            'doctor_id' => 'nullable|integer|exists:doctors,id',
         ]);
 
+        $doctorId = $request->input('doctor_id');
+
+        // Auto-detect doctor if not explicitly provided
+        if (!$doctorId && $request->user()) {
+            $doctor = \App\Models\Doctor::where('user_id', $request->user()->id)->first();
+            if ($doctor) {
+                $doctorId = $doctor->id;
+            }
+        }
+
         $hospitalId = $this->getHospitalId($request);
-        $queue = $this->opdService->getTodayQueue($hospitalId, $request->doctor_id, $request);
+        $queue = $this->opdService->getTodayQueue($hospitalId, $doctorId ? (int)$doctorId : null, $request);
         
         return $this->paginatedOrSuccessResponse($queue, 'Today\'s OPD Queue');
     }

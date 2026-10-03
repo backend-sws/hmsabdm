@@ -62,11 +62,24 @@ class PatientFieldConfigController extends Controller
     #[OA\Response(response: 201, description: "Custom patient field created successfully")]
     public function createConfig(Request $request)
     {
+        // Support field_name alias for field_key, and field_type alias for input_type
+        if ($request->has('field_name') && !$request->has('field_key')) {
+            $request->merge(['field_key' => $request->input('field_name')]);
+        }
+        if ($request->has('field_type') && !$request->has('input_type')) {
+            $request->merge(['input_type' => $request->input('field_type')]);
+        }
+        if (is_string($request->input('options'))) {
+            $request->merge([
+                'options' => array_values(array_filter(array_map('trim', explode(',', $request->input('options')))))
+            ]);
+        }
+
         $validated = $request->validate([
             'label'        => 'required|string|max:255',
             'field_key'    => 'nullable|string|max:100',
             'category'     => 'nullable|string|max:50',
-            'input_type'   => 'nullable|string|in:text,number,select,date,boolean,textarea',
+            'input_type'   => 'nullable|string|in:text,number,select,date,boolean,textarea,checkbox',
             'options'      => 'nullable|array',
             'placeholder'  => 'nullable|string|max:255',
             'is_required'  => 'nullable|boolean',
@@ -105,11 +118,23 @@ class PatientFieldConfigController extends Controller
     #[OA\Response(response: 200, description: "Custom patient field updated successfully")]
     public function updateConfig(Request $request, $id)
     {
+        if ($request->has('field_name') && !$request->has('field_key')) {
+            $request->merge(['field_key' => $request->input('field_name')]);
+        }
+        if ($request->has('field_type') && !$request->has('input_type')) {
+            $request->merge(['input_type' => $request->input('field_type')]);
+        }
+        if (is_string($request->input('options'))) {
+            $request->merge([
+                'options' => array_values(array_filter(array_map('trim', explode(',', $request->input('options')))))
+            ]);
+        }
+
         $validated = $request->validate([
             'label'        => 'sometimes|required|string|max:255',
             'field_key'    => 'nullable|string|max:100',
             'category'     => 'nullable|string|max:50',
-            'input_type'   => 'nullable|string|in:text,number,select,date,boolean,textarea',
+            'input_type'   => 'nullable|string|in:text,number,select,date,boolean,textarea,checkbox',
             'options'      => 'nullable|array',
             'placeholder'  => 'nullable|string|max:255',
             'is_required'  => 'nullable|boolean',

@@ -9,9 +9,17 @@ import {
 import { useAuth } from "@/context/AuthContext"
 import { OpdQueueWidget } from "@/components/dashboard/OpdQueueWidget"
 import { AbdmComplianceWidget } from "@/components/dashboard/AbdmComplianceWidget"
+import { SuperAdminDashboardView } from "@/components/dashboard/SuperAdminDashboardView"
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth()
+
+  const rawRole = (user?.role || user?.roles?.[0] || "").toUpperCase().replace(/[\s_-]+/g, "")
+  const isSuperAdmin = rawRole.includes("SUPER")
+
+  if (isSuperAdmin) {
+    return <SuperAdminDashboardView />
+  }
 
   // Get current time greeting
   const getGreeting = () => {
