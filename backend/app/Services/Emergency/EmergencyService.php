@@ -329,9 +329,9 @@ class EmergencyService implements EmergencyServiceInterface
             if ($request->filled('search')) {
                 $search = $request->query('search');
                 $query->where(function ($q) use ($search) {
-                    $q->where('triage_number', 'like', "%{$search}%")
-                      ->orWhere('mlc_number', 'like', "%{$search}%")
-                      ->orWhere('patient_name', 'like', "%{$search}%");
+                    $q->where('triage_number', 'ilike', "%{$search}%")
+                      ->orWhere('mlc_number', 'ilike', "%{$search}%")
+                      ->orWhere('patient_name', 'ilike', "%{$search}%");
                 });
             }
         }

@@ -57,8 +57,8 @@ export interface PatientFieldConfig {
   field_key: string     // backend field (was field_name)
   field_name?: string   // frontend alias kept for compat
   label: string
-  field_type?: "text" | "number" | "select" | "date" | "checkbox"  // frontend compat
-  input_type?: "text" | "number" | "select" | "date" | "checkbox" | "boolean"  // backend field
+  field_type?: "text" | "number" | "select" | "date" | "checkbox" | "boolean" | "textarea" | string  // frontend compat
+  input_type?: "text" | "number" | "select" | "date" | "checkbox" | "boolean" | "textarea" | string  // backend field
   category?: string | null
   placeholder?: string | null
   options?: string[] | null

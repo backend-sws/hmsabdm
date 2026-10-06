@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from "react"
-import { Smartphone, ShieldCheck, ArrowRight, RefreshCw, KeyRound, CheckCircle2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Smartphone, RefreshCw, KeyRound, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { abhaService } from "@/services/abhaService"
+import { receptionService } from "@/services/receptionService"
+import { OfficialAbhaCard } from "@/components/common"
 
 interface AbhaMobileOtpFlowProps {
   onPatientVerified: (patient: {
@@ -28,6 +29,7 @@ export const AbhaMobileOtpFlow: React.FC<AbhaMobileOtpFlowProps> = ({ onPatientV
   const [timer, setTimer] = useState(0)
   const [resendCount, setResendCount] = useState(0)
   const [verifiedProfile, setVerifiedProfile] = useState<any | null>(null)
+  const [token, setToken] = useState<string | null>(null)
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -92,6 +94,18 @@ export const AbhaMobileOtpFlow: React.FC<AbhaMobileOtpFlowProps> = ({ onPatientV
     setIsVerifying(true)
     try {
       const res: any = await abhaService.verifyOtp(txnId, otp.trim())
+      const tokenReceived = 
+        res?.account_token ||
+        res?.token || 
+        res?.tokens?.token || 
+        res?.jwtResponse || 
+        res?.accounts?.[0]?.token || 
+        res?.accounts?.[0]?.tokens?.token || 
+        res?.accounts?.[0]?.jwtResponse || 
+        res?.authResult?.token || 
+        res?.data?.token || 
+        null
+      setToken(tokenReceived)
       // Check accounts array or profile
       const account = res?.accounts?.[0] || res?.ABHAProfile || res?.profile || res
       const resolvedName = 
@@ -99,19 +113,57 @@ export const AbhaMobileOtpFlow: React.FC<AbhaMobileOtpFlowProps> = ({ onPatientV
         [account?.firstName, account?.middleName, account?.lastName].filter(Boolean).join(" ") ||
         "Patient"
 
-      const profileData = {
+      const abhaNum = account?.ABHANumber || account?.abha_number || account?.abhaNumber
+      const profileData: any = {
         name: resolvedName,
         mobile: mobile,
         gender: account?.gender || "M",
         dob: account?.dob || (account?.yearOfBirth ? `${account.yearOfBirth}-01-01` : undefined),
-        abha_number: account?.ABHANumber || account?.abha_number || account?.abhaNumber,
+        abha_number: abhaNum,
         abha_address: account?.preferredAbhaAddress || account?.abhaAddress || account?.abha_address,
         address: account?.address || account?.addressLine,
         district: account?.districtName || account?.district,
         state: account?.stateName || account?.state,
         pincode: account?.pincode || account?.pinCode,
         photo: account?.profilePhoto || account?.photo,
+        abha_card_base64: res?.abha_card_base64 || account?.abha_card_base64 || undefined,
       }
+
+      // Check if patient is already in hospital PostgreSQL database
+      try {
+        const checkRes = await receptionService.checkRevisitEligibility({
+          abha_number: abhaNum,
+          mobile: mobile,
+        })
+        if (checkRes?.found && checkRes.patient) {
+          profileData.id = checkRes.patient.id
+          profileData.uhid = checkRes.patient.uhid
+          if (checkRes.patient.abha_card_pdf && !profileData.abha_card_base64) {
+            profileData.abha_card_base64 = checkRes.patient.abha_card_pdf
+          }
+        }
+      } catch (checkErr) {
+        console.warn("Could not lookup patient in hospital DB:", checkErr)
+      }
+
+      // If token is available and card not in DB, download directly from ABDM
+      if (tokenReceived && !profileData.abha_card_base64) {
+        try {
+          const cardRes: any = await abhaService.downloadCard(tokenReceived, {
+            patient_id: profileData.id || undefined,
+            abha_number: abhaNum || undefined,
+            mobile: mobile || undefined,
+            txnId: txnId || undefined,
+          })
+          const cardB64 = cardRes?.data?.data || cardRes?.data
+          if (cardB64 && typeof cardB64 === "string" && cardB64.length > 50) {
+            profileData.abha_card_base64 = cardB64
+          }
+        } catch (cardErr) {
+          console.warn("Could not prefetch official ABHA card:", cardErr)
+        }
+      }
+
       setVerifiedProfile(profileData)
       toast.success("ABHA Profile Verified Successfully!")
     } catch (err: any) {
@@ -121,9 +173,10 @@ export const AbhaMobileOtpFlow: React.FC<AbhaMobileOtpFlowProps> = ({ onPatientV
     }
   }
 
-  const handleProceed = () => {
-    if (verifiedProfile) {
-      onPatientVerified(verifiedProfile)
+  const handleProceed = (patientWithCard?: any) => {
+    const finalProfile = patientWithCard || verifiedProfile
+    if (finalProfile) {
+      onPatientVerified(finalProfile)
     }
   }
 
@@ -251,98 +304,42 @@ export const AbhaMobileOtpFlow: React.FC<AbhaMobileOtpFlowProps> = ({ onPatientV
           </div>
         </div>
       ) : (
-        /* Verified Profile Display */
-        <div className="rounded-2xl border border-emerald-500/30 bg-card p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b pb-4">
+        /* Verified Profile Display: Authentic Official Government ABHA Card */
+        <div className="space-y-6">
+          <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-                <CheckCircle2 className="h-6 w-6" />
-              </div>
+              <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
               <div>
-                <h3 className="text-base font-bold text-foreground">ABHA Profile Verified!</h3>
+                <h4 className="font-bold text-sm text-foreground">ABHA Profile Verified!</h4>
                 <p className="text-xs text-muted-foreground">
-                  Patient verified via National Health Authority ABDM.
+                  Patient verified via National Health Authority ABDM network.
                 </p>
               </div>
             </div>
-            <Badge className="bg-emerald-600 text-white font-mono text-xs">
-              <ShieldCheck className="mr-1 h-3.5 w-3.5" />
-              VERIFIED
-            </Badge>
-          </div>
-
-          {verifiedProfile.photo && (
-            <div className="flex items-center gap-4 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-              <img
-                src={verifiedProfile.photo.startsWith("data:") ? verifiedProfile.photo : `data:image/jpeg;base64,${verifiedProfile.photo}`}
-                alt={verifiedProfile.name}
-                className="h-16 w-16 rounded-xl object-cover border-2 border-emerald-500 shadow-xs shrink-0"
-              />
-              <div className="min-w-0">
-                <p className="font-bold text-sm text-foreground">{verifiedProfile.name}</p>
-                <p className="text-xs text-muted-foreground font-mono">ABHA: {verifiedProfile.abha_number || "Verified"}</p>
-                {(verifiedProfile.address || verifiedProfile.district || verifiedProfile.state) && (
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    📍 {[verifiedProfile.address, verifiedProfile.district, verifiedProfile.state, verifiedProfile.pincode].filter(Boolean).join(", ")}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            <div className="rounded-xl bg-muted/40 p-3">
-              <span className="text-muted-foreground">Full Name (Locked):</span>
-              <p className="font-bold text-sm text-foreground mt-0.5">{verifiedProfile.name}</p>
-            </div>
-
-            <div className="rounded-xl bg-muted/40 p-3">
-              <span className="text-muted-foreground">Gender & DOB:</span>
-              <p className="font-semibold text-foreground mt-0.5">
-                {verifiedProfile.gender || "—"} {verifiedProfile.dob ? `• ${verifiedProfile.dob}` : ""}
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-muted/40 p-3">
-              <span className="text-muted-foreground">ABHA Number:</span>
-              <p className="font-mono font-bold text-foreground mt-0.5">
-                {verifiedProfile.abha_number || "Not assigned"}
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-muted/40 p-3">
-              <span className="text-muted-foreground">ABHA Address:</span>
-              <p className="font-mono font-bold text-primary mt-0.5">
-                {verifiedProfile.abha_address || "None"}
-              </p>
-            </div>
-
-            {(verifiedProfile.address || verifiedProfile.district || verifiedProfile.state || verifiedProfile.pincode) && !verifiedProfile.photo && (
-              <div className="rounded-xl bg-muted/40 p-3 sm:col-span-2 lg:col-span-4">
-                <span className="text-muted-foreground">Registered Address:</span>
-                <p className="font-medium text-foreground mt-0.5">
-                  {[verifiedProfile.address, verifiedProfile.district, verifiedProfile.state, verifiedProfile.pincode].filter(Boolean).join(", ")}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-2">
             <Button
+              type="button"
               variant="outline"
+              size="sm"
               onClick={() => {
                 setVerifiedProfile(null)
                 setTxnId(null)
                 setOtp("")
+                setToken(null)
+                setMobile("")
               }}
+              className="text-xs font-semibold"
             >
               Verify Another Mobile
             </Button>
-            <Button onClick={handleProceed} className="bg-primary text-primary-foreground font-semibold">
-              Assign Department & Issue OPD Slip
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
+
+          <OfficialAbhaCard
+            patient={verifiedProfile}
+            token={token}
+            onProceed={handleProceed}
+            proceedText="Assign Department & Issue OPD Slip"
+            showProceedButton={true}
+          />
         </div>
       )}
     </div>

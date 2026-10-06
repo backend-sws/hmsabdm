@@ -1,13 +1,15 @@
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import {
   Eye,
+  Pencil,
   Plus,
   Users,
   ShieldCheck,
   Activity,
   CalendarDays,
   RotateCcw,
+  FileText,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
@@ -26,7 +28,7 @@ import {
   ABHA_STATUS_OPTIONS,
   GENDER_OPTIONS,
 } from "@/constants/patient.constants"
-import { PatientAvatar } from "@/components/common"
+import { PatientAvatar, AbhaCardModal, LinkAbhaModal } from "@/components/common"
 import PatientEdit from "@/components/modals/patientEdit"
 import type { Patient } from "@/types/patient"
 
@@ -34,6 +36,8 @@ export const PatientsPage: React.FC = () => {
   const navigate = useNavigate()
   const { filter, handleFilter } = useSearchFilter(INITIAL_FILTERS)
   const patientDisclosure = useDisclosure<Patient & { viewMode?: boolean }>()
+  const [selectedAbhaPatient, setSelectedAbhaPatient] = useState<Patient | null>(null)
+  const [patientToLink, setPatientToLink] = useState<Patient | null>(null)
 
   // Fetch patients list
   const { data, isLoading } = useQuery({
@@ -83,14 +87,19 @@ export const PatientsPage: React.FC = () => {
     [handleFilter]
   )
 
-  // Calculate stats based on fetched roster
+  // Fetch hospital-wide patient stats
+  const { data: statsData } = useQuery({
+    queryKey: ["patients", "stats"],
+    queryFn: patientService.getStats,
+    refetchInterval: 30_000,
+  })
+
+  // Calculate stats based on accurate hospital-wide counts
   const stats: StatItem[] = useMemo(() => {
-    const total = meta.total || patientsList.length || 0
-    const maleCount = patientsList.filter((p) => p.gender === "M").length
-    const femaleCount = patientsList.filter((p) => p.gender === "F").length
-    const abhaLinked = patientsList.filter(
-      (p) => !!p.abha_number || !!p.abha_address
-    ).length
+    const total = statsData?.total ?? meta.total ?? patientsList.length ?? 0
+    const maleCount = statsData?.male ?? 0
+    const femaleCount = statsData?.female ?? 0
+    const abhaLinked = statsData?.abha_linked ?? 0
 
     return [
       {
@@ -131,7 +140,7 @@ export const PatientsPage: React.FC = () => {
         colorScheme: "emerald",
       },
     ]
-  }, [meta, patientsList])
+  }, [statsData, meta.total, patientsList.length])
 
   // Helper age calculator
   const calculateAge = (dobString?: string) => {
@@ -274,23 +283,67 @@ export const PatientsPage: React.FC = () => {
         key: "actions",
         header: "Actions",
         className: "text-right",
-        render: (row) => (
-          <div className="flex items-center justify-end">
-            <Button
-              variant="outline"
-              size="xs"
-              className="transition-all hover:bg-blue-50 hover:text-blue-600 active:scale-[0.98]"
-              onClick={() =>
-                patientDisclosure.onOpen({ ...row, viewMode: true })
-              }
-            >
-              <Eye className="mr-1 h-3.5 w-3.5" /> View Profile
-            </Button>
-          </div>
-        ),
+        render: (row) => {
+          const hasAbha = Boolean(row.abha_number || row.abha_address)
+          return (
+            <div className="flex items-center justify-end gap-1.5">
+              {hasAbha ? (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="transition-all border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 active:scale-[0.98] text-[11px] gap-1 font-semibold"
+                  onClick={() => setSelectedAbhaPatient(row)}
+                  title="View & Download Official ABHA Card"
+                >
+                  <FileText className="h-3 w-3" /> ABHA Card
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="transition-all border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 active:scale-[0.98] text-[11px] gap-1 font-semibold"
+                  onClick={() => setPatientToLink(row)}
+                  title="Link Existing Patient with ABHA"
+                >
+                  <ShieldCheck className="h-3 w-3" /> Link ABHA
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="xs"
+                className="transition-all border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 active:scale-[0.98] text-[11px] gap-1 font-semibold"
+                onClick={() => navigate(`/reception?tab=revisit&uhid=${encodeURIComponent(row.uhid)}`)}
+                title="Issue Revisit OPD Slip"
+              >
+                <RotateCcw className="h-3 w-3" /> Revisit Slip
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                className="transition-all border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-[0.98] text-[11px] gap-1 font-semibold"
+                onClick={() =>
+                  patientDisclosure.onOpen({ ...row, viewMode: false })
+                }
+                title="Edit Patient Details"
+              >
+                <Pencil className="h-3 w-3" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                className="transition-all hover:bg-blue-50 hover:text-blue-600 active:scale-[0.98] text-[11px]"
+                onClick={() =>
+                  patientDisclosure.onOpen({ ...row, viewMode: true })
+                }
+              >
+                <Eye className="mr-1 h-3.5 w-3.5" /> View
+              </Button>
+            </div>
+          )
+        },
       },
     ],
-    [patientDisclosure]
+    [navigate, patientDisclosure, setSelectedAbhaPatient, setPatientToLink]
   )
 
   const isFiltered = Boolean(filter.search || filter.abha_status || filter.gender)
@@ -384,6 +437,20 @@ export const PatientsPage: React.FC = () => {
         open={patientDisclosure.isOpen}
         onClose={patientDisclosure.onClose}
         patient={patientDisclosure.data}
+      />
+
+      {/* Official ABHA Card Modal */}
+      <AbhaCardModal
+        open={Boolean(selectedAbhaPatient)}
+        onClose={() => setSelectedAbhaPatient(null)}
+        patient={selectedAbhaPatient}
+      />
+
+      {/* Link ABHA to Existing Patient Modal */}
+      <LinkAbhaModal
+        open={Boolean(patientToLink)}
+        onClose={() => setPatientToLink(null)}
+        patient={patientToLink}
       />
     </div>
   )

@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react"
+import { useSearchParams } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import {
@@ -7,6 +8,7 @@ import {
   ShieldCheck,
   UserPlus,
   History,
+  RotateCcw,
 } from "lucide-react"
 
 import { PageHeader } from "@/components/common/PageHeader"
@@ -20,15 +22,22 @@ import { ScanShareFlow } from "@/components/reception/ScanShareFlow"
 import { AbhaMobileOtpFlow } from "@/components/reception/AbhaMobileOtpFlow"
 import { AadhaarEnrolFlow } from "@/components/reception/AadhaarEnrolFlow"
 import { WalkInFlow } from "@/components/reception/WalkInFlow"
+import { RevisitFlow } from "@/components/reception/RevisitFlow"
 import { DeptDoctorPicker, type DeptDoctorFormValues } from "@/components/reception/DeptDoctorPicker"
 import { ReceiptCard, type OpdReceiptData } from "@/components/reception/ReceiptCard"
 import { TodayVisitsList } from "@/components/reception/TodayVisitsList"
 
-export type ReceptionTab = "scan-share" | "abha-mobile" | "aadhaar-enrol" | "walk-in" | "history"
+export type ReceptionTab = "revisit" | "scan-share" | "abha-mobile" | "aadhaar-enrol" | "walk-in" | "history"
 
 export const ReceptionPage: React.FC = () => {
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState<ReceptionTab>("scan-share")
+  const [searchParams] = useSearchParams()
+  const initialUhidParam = searchParams.get("uhid")
+  const requestedTab = searchParams.get("tab") as ReceptionTab | null
+
+  const [activeTab, setActiveTab] = useState<ReceptionTab>(
+    requestedTab || (initialUhidParam ? "revisit" : "revisit")
+  )
 
   // Active patient selected for assigning Department & Doctor
   const [patientForVisit, setPatientForVisit] = useState<{
@@ -51,6 +60,7 @@ export const ReceptionPage: React.FC = () => {
     pincode?: string
     photo?: string
     kyc_verified?: boolean
+    abha_card_base64?: string
   } | null>(null)
 
   // Current Generated OPD Receipt (if present, renders ReceiptCard)
@@ -223,6 +233,7 @@ export const ReceptionPage: React.FC = () => {
       state: profile.state || abhaProfile.stateName,
       pincode: profile.pincode || abhaProfile.pincode,
       photo: profile.photo || abhaProfile.profilePhoto,
+      abha_card_base64: profile.abha_card_base64 || profile.abha_card_pdf,
       kyc_verified: true,
     })
   }, [])
@@ -245,6 +256,7 @@ export const ReceptionPage: React.FC = () => {
       state: profile.state || abhaProfile.stateName,
       pincode: profile.pincode || abhaProfile.pincode,
       photo: profile.photo || abhaProfile.profilePhoto,
+      abha_card_base64: profile.abha_card_base64 || profile.abha_card_pdf,
       kyc_verified: true,
     })
   }, [])
@@ -283,6 +295,7 @@ export const ReceptionPage: React.FC = () => {
         state: patientForVisit.state,
         pincode: patientForVisit.pincode,
         photo: patientForVisit.photo,
+        abha_card_base64: patientForVisit.abha_card_base64,
         kyc_verified: patientForVisit.kyc_verified,
         department_id: values.department_id,
         doctor_id: values.doctor_id,
@@ -336,9 +349,37 @@ export const ReceptionPage: React.FC = () => {
         />
       ) : (
         <>
-          {/* 5-Tab Pathway Navigation */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-            {/* Tab 1: Scan & Share */}
+          {/* 6-Tab Pathway Navigation */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            {/* Tab 1: Re-visit / Follow-up */}
+            <button
+              onClick={() => setActiveTab("revisit")}
+              className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+                activeTab === "revisit"
+                  ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              }`}
+            >
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  activeTab === "revisit"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <RotateCcw className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold leading-tight truncate text-foreground">
+                  Re-visit OPD
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  UHID / 15-Day Free
+                </p>
+              </div>
+            </button>
+
+            {/* Tab 2: Scan & Share */}
             <button
               onClick={() => setActiveTab("scan-share")}
               className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
@@ -366,7 +407,7 @@ export const ReceptionPage: React.FC = () => {
               </div>
             </button>
 
-            {/* Tab 2: Existing ABHA Mobile OTP */}
+            {/* Tab 3: Existing ABHA Mobile OTP */}
             <button
               onClick={() => setActiveTab("abha-mobile")}
               className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
@@ -394,7 +435,7 @@ export const ReceptionPage: React.FC = () => {
               </div>
             </button>
 
-            {/* Tab 3: New ABHA via Aadhaar */}
+            {/* Tab 4: New ABHA via Aadhaar */}
             <button
               onClick={() => setActiveTab("aadhaar-enrol")}
               className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
@@ -422,7 +463,7 @@ export const ReceptionPage: React.FC = () => {
               </div>
             </button>
 
-            {/* Tab 4: Manual Walk-in */}
+            {/* Tab 5: Manual Walk-in */}
             <button
               onClick={() => setActiveTab("walk-in")}
               className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
@@ -450,7 +491,7 @@ export const ReceptionPage: React.FC = () => {
               </div>
             </button>
 
-            {/* Tab 5: Today's Tokens / History */}
+            {/* Tab 6: Today's Tokens / History */}
             <button
               onClick={() => setActiveTab("history")}
               className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
@@ -488,6 +529,36 @@ export const ReceptionPage: React.FC = () => {
 
           {/* Active Flow Tab Content */}
           <div className="pt-2">
+            {activeTab === "revisit" && (
+              <RevisitFlow
+                departments={departments}
+                initialUhid={initialUhidParam}
+                onSuccess={(data) => {
+                  setReceiptData({
+                    queue_token: data.queue_token || 1,
+                    opd_number: data.opd_number,
+                    uhid: data.uhid,
+                    patient_name: data.patient_name || data.name,
+                    gender: data.gender,
+                    age: data.age,
+                    mobile: data.mobile,
+                    abha_number: data.abha_number,
+                    abha_address: data.abha_address,
+                    department_name: data.department_name,
+                    doctor_name: data.doctor_name,
+                    doctor_specialization: data.doctor_specialization,
+                    fee_charged: data.fee_charged || 0,
+                    amount_paid: data.amount_paid || 0,
+                    payment_method: data.payment_method || "cash",
+                    payment_status: data.payment_status || "paid",
+                    chief_complaint: data.chief_complaint,
+                    slot_time: data.slot_time || data.notes,
+                    visit_date: data.visit_date || new Date().toISOString(),
+                  })
+                }}
+              />
+            )}
+
             {activeTab === "scan-share" && (
               <ScanShareFlow
                 queue={queueList}

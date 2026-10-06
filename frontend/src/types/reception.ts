@@ -83,6 +83,8 @@ export interface WalkInRegisterPayload {
   blood_group?: string
   photo?: string
   kyc_verified?: boolean
+  abha_card_base64?: string
+  custom_fields?: Record<string, any>
 }
 
 export interface WalkInRegisterResponse {

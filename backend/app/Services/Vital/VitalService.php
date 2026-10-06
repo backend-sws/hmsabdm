@@ -80,9 +80,9 @@ class VitalService implements VitalServiceInterface
         if ($req && $req->filled('search')) {
             $search = $req->query('search');
             $query->whereHas('patient', function ($pq) use ($search) {
-                $pq->where('name', 'like', "%{$search}%")
-                   ->orWhere('mobile', 'like', "%{$search}%")
-                   ->orWhere('abha_number', 'like', "%{$search}%");
+                $pq->where('name', 'ilike', "%{$search}%")
+                   ->orWhere('mobile', 'ilike', "%{$search}%")
+                   ->orWhere('abha_number', 'ilike', "%{$search}%");
             });
         }
 

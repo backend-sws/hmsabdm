@@ -30,7 +30,7 @@ class ReceptionService implements ReceptionServiceInterface
         if ($req && $req->filled('search')) {
             $search = $req->query('search');
             $query->where(function ($q) use ($search) {
-                $q->where('link_token', 'like', "%{$search}%")
+                $q->where('link_token', 'ilike', "%{$search}%")
                   ->orWhereHas('patient', function ($pq) use ($search) {
                       $pq->where('name', 'ilike', "%{$search}%")
                          ->orWhere('mobile', 'ilike', "%{$search}%");
@@ -267,16 +267,16 @@ class ReceptionService implements ReceptionServiceInterface
     /**
      * Fast-track 1-click Re-visit token generation for existing patients with free follow-up rule check.
      */
-    public function quickRevisit(int $hospitalId, array $data): array
+    public function quickRevisit(?int $hospitalId, array $data): array
     {
         // 1. Resolve Patient
         $patient = null;
         if (!empty($data['patient_id'])) {
-            $patient = Patient::where('hospital_id', $hospitalId)->find($data['patient_id']);
+            $patient = Patient::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->find($data['patient_id']);
         } elseif (!empty($data['uhid'])) {
-            $patient = Patient::where('hospital_id', $hospitalId)->where('uhid', $data['uhid'])->first();
+            $patient = Patient::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->where('uhid', $data['uhid'])->first();
         } elseif (!empty($data['mobile'])) {
-            $matches = Patient::where('hospital_id', $hospitalId)->where('mobile', $data['mobile'])->get();
+            $matches = Patient::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->where('mobile', $data['mobile'])->get();
             if ($matches->count() > 1 && empty($data['patient_id'])) {
                 return [
                     'requires_selection' => true,
@@ -304,14 +304,17 @@ class ReceptionService implements ReceptionServiceInterface
             throw new \Exception('Department ID is required as doctor has no assigned department.');
         }
 
-        // 3. Free Follow-up Policy Check
-        $validityDays = (int) \App\Models\HospitalSetting::get($hospitalId, 'revisit_validity_days', 7);
+        // 3. Free Follow-up Policy Check (15-day validity timeline)
+        $validityDays = (int) \App\Models\HospitalSetting::get($hospitalId, 'revisit_validity_days', 15);
         $date = now()->toDateString();
         $cutoffDate = now()->subDays($validityDays)->toDateString();
 
         $lastVisitWithDoctor = OpdVisit::where('hospital_id', $hospitalId)
             ->where('patient_id', $patient->id)
-            ->where('doctor_id', $doctor->id)
+            ->where(function ($q) use ($doctor, $departmentId) {
+                $q->where('doctor_id', $doctor->id)
+                  ->orWhere('department_id', $departmentId);
+            })
             ->where('visit_date', '>=', $cutoffDate)
             ->where('visit_date', '<=', $date)
             ->orderByDesc('visit_date')
@@ -410,6 +413,100 @@ class ReceptionService implements ReceptionServiceInterface
     }
 
     /**
+     * Check if an existing patient is eligible for free follow-up (15-day policy).
+     */
+    public function checkRevisitEligibility(?int $hospitalId, array $data): array
+    {
+        $patient = null;
+        if (!empty($data['patient_id'])) {
+            $patient = Patient::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->find($data['patient_id']);
+        } elseif (!empty($data['uhid'])) {
+            $patient = Patient::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->where('uhid', $data['uhid'])->first();
+        } elseif (!empty($data['abha_number'])) {
+            $patient = Patient::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->where('abha_number', $data['abha_number'])->orderByDesc('id')->first();
+        } elseif (!empty($data['mobile'])) {
+            $patient = Patient::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->where('mobile', $data['mobile'])->orderByDesc('id')->first();
+        }
+
+        if (!$patient) {
+            return [
+                'found'   => false,
+                'message' => 'Patient record not found for the given identifier.',
+            ];
+        }
+
+        $hospitalId = $hospitalId ?: (int) $patient->hospital_id;
+        $validityDays = (int) \App\Models\HospitalSetting::get($hospitalId, 'revisit_validity_days', 15);
+        $date = now()->toDateString();
+        $cutoffDate = now()->subDays($validityDays)->toDateString();
+
+        $query = OpdVisit::where('hospital_id', $hospitalId)
+            ->where('patient_id', $patient->id)
+            ->with(['doctor', 'department']);
+
+        if (!empty($data['doctor_id'])) {
+            $query->where('doctor_id', $data['doctor_id']);
+        } elseif (!empty($data['department_id'])) {
+            $query->where('department_id', $data['department_id']);
+        }
+
+        $lastVisit = (clone $query)->orderByDesc('visit_date')->orderByDesc('id')->first();
+
+        $isEligible = false;
+        $daysSinceLastVisit = null;
+        $daysRemaining = null;
+
+        if ($lastVisit && $lastVisit->visit_date) {
+            $visitDateStr = $lastVisit->visit_date instanceof \Carbon\Carbon
+                ? $lastVisit->visit_date->toDateString()
+                : substr((string)$lastVisit->visit_date, 0, 10);
+
+            $daysSince = (int) abs(now()->diffInDays(\Carbon\Carbon::parse($visitDateStr)));
+            $daysSinceLastVisit = $daysSince;
+
+            if ($visitDateStr >= $cutoffDate && $visitDateStr <= $date) {
+                $isEligible = true;
+                $daysRemaining = max(0, $validityDays - $daysSince);
+            }
+        }
+
+        return [
+            'found'                         => true,
+            'patient'                       => [
+                'id'            => $patient->id,
+                'uhid'          => $patient->uhid,
+                'name'          => $patient->name,
+                'gender'        => $patient->gender,
+                'dob'           => $patient->dob?->format('Y-m-d'),
+                'mobile'        => $patient->mobile,
+                'abha_number'   => $patient->abha_number,
+                'abha_address'  => $patient->abha_address,
+                'address'       => $patient->address,
+                'city'          => $patient->city,
+                'state'         => $patient->state,
+                'pincode'       => $patient->pincode,
+                'photo'         => $patient->photo,
+                'abha_card_pdf' => $patient->abha_card_pdf,
+            ],
+            'is_eligible_for_free_followup' => $isEligible,
+            'validity_days'                 => $validityDays,
+            'days_since_last_visit'         => $daysSinceLastVisit,
+            'days_remaining'                => $daysRemaining,
+            'last_visit'                    => $lastVisit ? [
+                'id'              => $lastVisit->id,
+                'opd_number'      => $lastVisit->opd_number,
+                'visit_date'      => $lastVisit->visit_date instanceof \Carbon\Carbon ? $lastVisit->visit_date->format('Y-m-d') : substr((string)$lastVisit->visit_date, 0, 10),
+                'doctor_id'       => $lastVisit->doctor_id,
+                'doctor_name'     => $lastVisit->doctor?->name,
+                'department_id'   => $lastVisit->department_id,
+                'department_name' => $lastVisit->department?->name,
+            ] : null,
+            'suggested_fee'                 => $isEligible ? 0.00 : 500.00,
+            'suggested_payment_status'      => $isEligible ? 'waived' : 'paid',
+        ];
+    }
+
+    /**
      * Get OPD visits / issued tokens history for the reception desk.
      */
     public function getVisits(int $hospitalId, $request = null)
@@ -450,13 +547,13 @@ class ReceptionService implements ReceptionServiceInterface
         if ($req && $req->filled('search')) {
             $search = trim($req->query('search'));
             $query->where(function ($q) use ($search) {
-                $q->where('queue_token', 'like', "%{$search}%")
+                $q->where('queue_token', 'ilike', "%{$search}%")
                   ->orWhere('opd_number', 'ilike', "%{$search}%")
                   ->orWhereHas('patient', function ($pq) use ($search) {
                       $pq->where('name', 'ilike', "%{$search}%")
                          ->orWhere('uhid', 'ilike', "%{$search}%")
-                         ->orWhere('mobile', 'like', "%{$search}%")
-                         ->orWhere('abha_number', 'like', "%{$search}%");
+                         ->orWhere('mobile', 'ilike', "%{$search}%")
+                         ->orWhere('abha_number', 'ilike', "%{$search}%");
                   });
             });
         }

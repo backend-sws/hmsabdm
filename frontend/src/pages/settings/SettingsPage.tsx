@@ -10,6 +10,7 @@ import {
   Save,
   Plus,
   Trash2,
+  Pencil,
   RefreshCw,
   ShieldCheck,
 } from "lucide-react"
@@ -285,6 +286,7 @@ export const SettingsPage: React.FC = () => {
 
   // ─── Tab 4: Custom Patient Fields Modal & Mutation ───────────────────
   const [fieldModalOpen, setFieldModalOpen] = useState(false)
+  const [editingField, setEditingField] = useState<PatientFieldConfig | null>(null)
   const [fieldPayload, setFieldPayload] = useState({
     field_key: "",
     label: "",
@@ -319,6 +321,7 @@ export const SettingsPage: React.FC = () => {
       toast.success("Patient registration field added!")
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.patientFields })
       setFieldModalOpen(false)
+      setEditingField(null)
       setFieldPayload({
         field_key: "",
         label: "",
@@ -329,6 +332,43 @@ export const SettingsPage: React.FC = () => {
       })
     },
     onError: (err: any) => toast.error(err.message || "Failed to add field"),
+  })
+
+  const updateFieldMutation = useMutation({
+    mutationFn: () => {
+      if (!editingField) return Promise.reject(new Error("No field selected for update"))
+      const options =
+        fieldPayload.input_type === "select"
+          ? fieldPayload.options_text
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : undefined
+
+      return settingsService.updatePatientFieldConfig(editingField.id, {
+        field_key: fieldPayload.field_key.trim(),
+        label: fieldPayload.label.trim(),
+        input_type: fieldPayload.input_type,
+        options: options && options.length > 0 ? options : undefined,
+        placeholder: fieldPayload.placeholder?.trim() || undefined,
+        is_required: fieldPayload.is_required,
+      })
+    },
+    onSuccess: () => {
+      toast.success("Patient registration field updated!")
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.patientFields })
+      setFieldModalOpen(false)
+      setEditingField(null)
+      setFieldPayload({
+        field_key: "",
+        label: "",
+        input_type: "text",
+        options_text: "",
+        placeholder: "",
+        is_required: false,
+      })
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to update field"),
   })
 
   const deleteFieldMutation = useMutation({
@@ -519,20 +559,43 @@ export const SettingsPage: React.FC = () => {
     {
       key: "actions",
       header: "Actions",
-      className: "w-[80px] text-right",
+      className: "w-[90px] text-right",
       cell: (row) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-          onClick={() => {
-            if (confirm(`Remove field "${row.label}"?`)) {
-              deleteFieldMutation.mutate(row.id)
-            }
-          }}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+            title="Edit Field"
+            onClick={() => {
+              setEditingField(row)
+              setFieldPayload({
+                field_key: row.field_key || row.field_name || "",
+                label: row.label || "",
+                input_type: (row.input_type || row.field_type || "text") as any,
+                options_text: Array.isArray(row.options) ? row.options.join(", ") : "",
+                placeholder: row.placeholder || "",
+                is_required: Boolean(row.is_required),
+              })
+              setFieldModalOpen(true)
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+            title="Delete Field"
+            onClick={() => {
+              if (confirm(`Remove field "${row.label}"?`)) {
+                deleteFieldMutation.mutate(row.id)
+              }
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       ),
     },
   ]
@@ -1059,7 +1122,18 @@ export const SettingsPage: React.FC = () => {
             <Button
               size="sm"
               className="gap-1.5 text-xs"
-              onClick={() => setFieldModalOpen(true)}
+              onClick={() => {
+                setEditingField(null)
+                setFieldPayload({
+                  field_key: "",
+                  label: "",
+                  input_type: "text",
+                  options_text: "",
+                  placeholder: "",
+                  is_required: false,
+                })
+                setFieldModalOpen(true)
+              }}
             >
               <Plus className="h-4 w-4" /> Add Intake Field
             </Button>
@@ -1361,17 +1435,30 @@ export const SettingsPage: React.FC = () => {
       </FormContainer>
 
       {/* ────────────────────────────────────────────────────────────────
-          MODAL: ADD CUSTOM PATIENT INTAKE FIELD
+          MODAL: ADD / EDIT CUSTOM PATIENT INTAKE FIELD
          ──────────────────────────────────────────────────────────────── */}
       <FormContainer
         open={fieldModalOpen}
-        onOpenChange={setFieldModalOpen}
-        title="Add Custom Patient Intake Demographic Field"
-        description="Add custom registration attribute to patient profiles"
+        onOpenChange={(open) => {
+          setFieldModalOpen(open)
+          if (!open) setEditingField(null)
+        }}
+        title={editingField ? "Edit Custom Patient Intake Field" : "Add Custom Patient Intake Demographic Field"}
+        description={
+          editingField
+            ? "Modify field form label, type, dropdown choices, and walk-in requirement"
+            : "Add custom registration attribute to patient profiles"
+        }
         size="md"
         footer={
           <div className="flex justify-end gap-2 w-full">
-            <Button variant="outline" onClick={() => setFieldModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFieldModalOpen(false)
+                setEditingField(null)
+              }}
+            >
               Cancel
             </Button>
             <Button
@@ -1388,12 +1475,18 @@ export const SettingsPage: React.FC = () => {
                   toast.error("Please enter dropdown choices separated by commas")
                   return
                 }
-                createFieldMutation.mutate()
+                if (editingField) {
+                  updateFieldMutation.mutate()
+                } else {
+                  createFieldMutation.mutate()
+                }
               }}
-              disabled={createFieldMutation.isPending}
+              disabled={createFieldMutation.isPending || updateFieldMutation.isPending}
             >
-              {createFieldMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-1" />}
-              Save Intake Field
+              {(createFieldMutation.isPending || updateFieldMutation.isPending) && (
+                <RefreshCw className="h-4 w-4 animate-spin mr-1" />
+              )}
+              {editingField ? "Update Intake Field" : "Save Intake Field"}
             </Button>
           </div>
         }
@@ -1403,13 +1496,18 @@ export const SettingsPage: React.FC = () => {
             <Label>Field Form Label *</Label>
             <Input
               value={fieldPayload.label}
-              onChange={(e) =>
-                setFieldPayload({
-                  ...fieldPayload,
-                  label: e.target.value,
-                  field_key: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "_"),
-                })
-              }
+              onChange={(e) => {
+                const newLabel = e.target.value
+                if (editingField) {
+                  setFieldPayload((prev) => ({ ...prev, label: newLabel }))
+                } else {
+                  setFieldPayload((prev) => ({
+                    ...prev,
+                    label: newLabel,
+                    field_key: newLabel.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+                  }))
+                }
+              }}
               placeholder="e.g. Marital Status or Occupation"
               className="mt-1 text-xs"
             />

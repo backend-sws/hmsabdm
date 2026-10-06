@@ -138,4 +138,32 @@ export const settingsService = {
       method: "DELETE",
     })
   },
+
+  async updatePatientFieldConfig(
+    id: number,
+    data: {
+      field_key?: string
+      field_name?: string
+      label: string
+      input_type?: string
+      field_type?: string
+      category?: string
+      placeholder?: string
+      options?: string[]
+      is_required?: boolean
+      is_active?: boolean
+      sort_order?: number
+    }
+  ): Promise<PatientFieldConfig> {
+    const payload = {
+      ...data,
+      field_key: data.field_key || data.field_name,
+      input_type: data.input_type || data.field_type || "text",
+    }
+    return apiClient<PatientFieldConfig>(`/patient-fields/configs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    })
+  },
 }
+

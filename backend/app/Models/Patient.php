@@ -33,6 +33,7 @@ class Patient extends Model
         'photo',
         'kyc_verified',
         'custom_fields',
+        'abha_card_pdf',
     ];
 
     protected $casts = [

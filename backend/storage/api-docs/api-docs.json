@@ -95,6 +95,26 @@
                 ]
             }
         },
+        "/api/v1/abha/verify-user": {
+            "post": {
+                "tags": [
+                    "3. ABHA — Mobile Login"
+                ],
+                "summary": "Exchange Transfer token for Account token by selecting ABHA number",
+                "description": "Exchanges Transfer token (from mobile login) for Account token and fetches the official ABHA card.",
+                "operationId": "10d41bb6b752ed0e90e24dc6f26e04d0",
+                "responses": {
+                    "200": {
+                        "description": "Account token exchanged successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/abha/enrol/aadhaar-otp": {
             "post": {
                 "tags": [
@@ -407,7 +427,7 @@
                     "3. ABHA — Aadhaar Enrolment"
                 ],
                 "summary": "Step B8 — Download ABHA Card (PDF/Image)",
-                "description": "Downloads the official ABHA card base64 image/PDF using the X-Token from Step B2.",
+                "description": "Downloads the official ABHA card base64 image/PDF using the X-Token from Step B2. Optionally pass patient_id or abha_number to auto-save the card to DB.",
                 "operationId": "f7b0871ac2119a2d7832f516d77718d3",
                 "parameters": [
                     {
@@ -415,6 +435,24 @@
                         "in": "query",
                         "description": "X-Token from Step B2 (verify-aadhaar)",
                         "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "description": "Optional: Hospital patient ID to auto-save card to DB",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "abha_number",
+                        "in": "query",
+                        "description": "Optional: ABHA number to auto-save card to DB",
+                        "required": false,
                         "schema": {
                             "type": "string"
                         }
@@ -4223,6 +4261,26 @@
                 ]
             }
         },
+        "/api/v1/patients/stats": {
+            "get": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Get aggregate patient statistics",
+                "description": "Retrieves aggregate counts for total registered, male, female, other, and ABHA linked patients across the hospital.",
+                "operationId": "3f409b676128a50fd199eca6c821e097",
+                "responses": {
+                    "200": {
+                        "description": "Patient statistics retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/patients/{id}": {
             "get": {
                 "tags": [
@@ -4448,6 +4506,133 @@
                 "responses": {
                     "200": {
                         "description": "Patient 360 history retrieved successfully"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/patients/{id}/abha-card": {
+            "get": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Get Official ABHA Card PDF for Patient from Database",
+                "description": "Returns the stored official NHA ABHA Card PDF for this patient directly from PostgreSQL DB. Card is only stored when downloaded from ABDM API.",
+                "operationId": "c406c74bbc41e94aa867072c830317dd",
+                "responses": {
+                    "200": {
+                        "description": "Official ABHA card retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Store Official ABHA Card PDF in PostgreSQL DB",
+                "description": "Saves official Base64 PDF card for patient directly into database column.",
+                "operationId": "80b3f267964682cf8e14ea0b7372f2e4",
+                "responses": {
+                    "200": {
+                        "description": "Official ABHA card saved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/patients/{id}/link-abha": {
+            "post": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Link existing patient with ABHA account",
+                "description": "Links an existing hospital patient to their official ABHA Number / Address, downloads their authentic card if token is passed, and marks kyc_verified.",
+                "operationId": "1ac57926b17bb9499d5263d71c239de0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "abha_number"
+                                ],
+                                "properties": {
+                                    "abha_number": {
+                                        "type": "string",
+                                        "example": "91-1234-5678-9012"
+                                    },
+                                    "abha_address": {
+                                        "type": "string",
+                                        "example": "ramesh@sbx"
+                                    },
+                                    "token": {
+                                        "description": "Optional: ABDM transaction token to auto-fetch card",
+                                        "type": "string"
+                                    },
+                                    "txnId": {
+                                        "description": "Optional: ABDM txnId",
+                                        "type": "string"
+                                    },
+                                    "abha_card_base64": {
+                                        "description": "Optional: Pre-fetched base64 card",
+                                        "type": "string"
+                                    },
+                                    "photo": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "city": {
+                                        "type": "string"
+                                    },
+                                    "district": {
+                                        "type": "string"
+                                    },
+                                    "state": {
+                                        "type": "string"
+                                    },
+                                    "pincode": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient linked to ABHA successfully"
+                    },
+                    "422": {
+                        "description": "Validation error or ABHA conflict"
                     },
                     "404": {
                         "description": "Patient not found"
@@ -5615,6 +5800,183 @@
                 ]
             }
         },
+        "/api/v1/reception/revisit/check": {
+            "get": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Check if an existing patient is eligible for free follow-up (15-day timeline)",
+                "description": "Checks whether a patient has visited this doctor/department within the hospital follow-up policy (default 15 days), returning previous visit history and fee waiver suggestion.",
+                "operationId": "53f666029d2071fcceb872f8dd2c9b60",
+                "parameters": [
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "description": "Patient Database ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "uhid",
+                        "in": "query",
+                        "description": "Patient UHID",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "mobile",
+                        "in": "query",
+                        "description": "Patient 10-digit mobile number",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "doctor_id",
+                        "in": "query",
+                        "description": "Selected Doctor ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "department_id",
+                        "in": "query",
+                        "description": "Selected Department ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Revisit follow-up eligibility data"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/quick-revisit": {
+            "post": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Issue Re-visit OPD token for existing patient with 15-day free follow-up policy",
+                "description": "Direct 1-click OPD token generation for an existing registered patient using UHID or Mobile. Automatically checks 15-day follow-up policy and sets fee to ₹0 (waived) if within timeline.",
+                "operationId": "b5adb5fba5b7961a752d2d955004e003",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "doctor_id"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "integer",
+                                        "example": 10,
+                                        "nullable": true
+                                    },
+                                    "uhid": {
+                                        "type": "string",
+                                        "example": "HOSP-2026-01070",
+                                        "nullable": true
+                                    },
+                                    "mobile": {
+                                        "type": "string",
+                                        "example": "9876543210",
+                                        "nullable": true
+                                    },
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "department_id": {
+                                        "type": "integer",
+                                        "example": 2,
+                                        "nullable": true
+                                    },
+                                    "appointment_type_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "chief_complaint": {
+                                        "type": "string",
+                                        "example": "Routine Follow-up",
+                                        "nullable": true
+                                    },
+                                    "fee_charged": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "nullable": true
+                                    },
+                                    "discount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "nullable": true
+                                    },
+                                    "amount_paid": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "nullable": true
+                                    },
+                                    "payment_status": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "pending",
+                                            "paid",
+                                            "partial",
+                                            "waived"
+                                        ]
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "cash",
+                                            "card",
+                                            "upi",
+                                            "insurance",
+                                            "split",
+                                            "cheque",
+                                            "other"
+                                        ]
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Re-visit OPD slip issued"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/reception/visits": {
             "get": {
                 "tags": [
@@ -6536,6 +6898,10 @@
         {
             "name": "13. E-Prescription & Master Catalogs",
             "description": "Doctor E-Prescriptions with WHO ICD-10 Diagnosis Codes and 200,000 Indian Medicines Autocomplete"
+        },
+        {
+            "name": "3. ABHA — Mobile Login",
+            "description": "3. ABHA — Mobile Login"
         },
         {
             "name": "Authentication",

@@ -33,6 +33,20 @@ export const abhaService = {
   },
 
   /**
+   * Flow A3: Exchange Transfer Token for Account Token
+   */
+  verifyUser: async (
+    token: string,
+    txnId: string,
+    abhaNumber: string
+  ): Promise<{ token: string; expiresIn: number; abha_card_base64?: string }> => {
+    return apiClient("/abha/verify-user", {
+      method: "POST",
+      body: JSON.stringify({ token, txnId, abhaNumber }),
+    })
+  },
+
+  /**
    * Flow B1: Request Aadhaar OTP for ABHA enrolment
    */
   generateAadhaarOtp: async (aadhaar: string): Promise<AbhaOtpResponse> => {
@@ -122,10 +136,17 @@ export const abhaService = {
   },
 
   /**
-   * Flow Card: Download ABHA Card (base64)
+   * Flow Card: Download ABHA Card (base64) — optionally auto-saves to DB
    */
-  downloadCard: async (token: string): Promise<AbhaCardResponse> => {
+  downloadCard: async (
+    token: string,
+    opts?: { patient_id?: number | string; abha_number?: string; mobile?: string; txnId?: string }
+  ): Promise<AbhaCardResponse> => {
     const params = new URLSearchParams({ token })
+    if (opts?.patient_id !== undefined) params.set("patient_id", String(opts.patient_id))
+    if (opts?.abha_number) params.set("abha_number", opts.abha_number)
+    if (opts?.mobile) params.set("mobile", opts.mobile)
+    if (opts?.txnId) params.set("txnId", opts.txnId)
     return apiClient<AbhaCardResponse>(`/abha/card?${params.toString()}`)
   },
 

@@ -224,13 +224,39 @@ export const AbhaPage: React.FC = () => {
   })
 
   // ─── Download Mutations ──────────────────────────────────────────────
+  /**
+   * Downloads ABHA card live from ABDM API.
+   * Also auto-saves base64 to DB if abha_number is provided.
+   */
   const downloadCardMutation = useMutation({
-    mutationFn: (token: string) => abhaService.downloadCard(token),
+    mutationFn: (opts: { token: string; abha_number?: string; patient_id?: number | string }) =>
+      abhaService.downloadCard(opts.token, {
+        abha_number: opts.abha_number,
+        patient_id: opts.patient_id,
+      }),
     onSuccess: (res) => {
       downloadBase64(res.data, "ABHA_Card.pdf", "application/pdf")
-      toast.success("ABHA Card download started!")
+      toast.success("ABHA Card downloaded & saved to hospital database!")
     },
-    onError: () => toast.error("Could not download ABHA card."),
+    onError: () => toast.error("Could not download ABHA card from ABDM."),
+  })
+
+  /**
+   * Downloads ABHA card from hospital DB (base64 → decoded PDF).
+   * Uses the officially stored ABDM card, no custom design.
+   */
+  const downloadCardFromDbMutation = useMutation({
+    mutationFn: (opts: { patientId: number | string; token?: string }) =>
+      patientService.getAbhaCard(opts.patientId, { token: opts.token }),
+    onSuccess: (res) => {
+      if (!res?.data) {
+        toast.error("No ABHA card found in database. Download from ABDM first.")
+        return
+      }
+      downloadBase64(res.data, "ABHA_Card_Official.pdf", "application/pdf")
+      toast.success("Official ABHA Card downloaded from hospital database!")
+    },
+    onError: () => toast.error("Could not retrieve ABHA card from database."),
   })
 
   const downloadQrMutation = useMutation({
@@ -457,7 +483,18 @@ export const AbhaPage: React.FC = () => {
               <AbhaProfileDisplayCard
                 profile={loginProfile}
                 token={loginToken}
-                onDownloadCard={(t) => downloadCardMutation.mutate(t)}
+                onDownloadCard={(t) =>
+                  downloadCardMutation.mutate({
+                    token: t,
+                    abha_number: loginProfile?.abhaNumber,
+                  })
+                }
+                onDownloadCardFromDb={(patientId) =>
+                  downloadCardFromDbMutation.mutate({
+                    patientId,
+                    token: loginToken ?? undefined,
+                  })
+                }
                 onDownloadQr={(t) => downloadQrMutation.mutate(t)}
                 onRegisterPatient={() => openRegistrationConsent(loginProfile)}
                 onReset={() => {
@@ -807,7 +844,13 @@ export const AbhaPage: React.FC = () => {
                   <AbhaProfileDisplayCard
                     profile={enrolProfile}
                     token={enrolToken}
-                    onDownloadCard={(t) => downloadCardMutation.mutate(t)}
+                    onDownloadCard={(t) =>
+                      downloadCardMutation.mutate({
+                        token: t,
+                        abha_number: enrolProfile?.abhaNumber,
+                      })
+                    }
+                    onDownloadCardFromDb={undefined}
                     onDownloadQr={(t) => downloadQrMutation.mutate(t)}
                     onRegisterPatient={() => openRegistrationConsent(enrolProfile)}
                     onReset={() => {
@@ -1045,9 +1088,11 @@ export const AbhaPage: React.FC = () => {
 // Helper Component: Rich Official-Style ABHA Profile Display Card
 // ──────────────────────────────────────────────────────────────────────
 interface AbhaProfileDisplayCardProps {
-  profile: AbhaProfile
+  profile: AbhaProfile & { id?: number | string; patient_id?: number | string }
   token: string | null
   onDownloadCard: (token: string) => void
+  /** Download the stored ABDM card directly from hospital DB (base64 decoded to PDF) */
+  onDownloadCardFromDb?: (patientId: number | string) => void
   onDownloadQr: (token: string) => void
   onRegisterPatient: () => void
   onReset: () => void
@@ -1057,6 +1102,7 @@ const AbhaProfileDisplayCard: React.FC<AbhaProfileDisplayCardProps> = ({
   profile,
   token,
   onDownloadCard,
+  onDownloadCardFromDb,
   onDownloadQr,
   onRegisterPatient,
   onReset,
@@ -1162,6 +1208,18 @@ const AbhaProfileDisplayCard: React.FC<AbhaProfileDisplayCardProps> = ({
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div className="flex flex-wrap items-center gap-2">
+            {/* Primary: download stored official ABDM card from DB */}
+            {(profile.id ?? profile.patient_id) && onDownloadCardFromDb && (
+              <Button
+                size="sm"
+                onClick={() => onDownloadCardFromDb!((profile.id ?? profile.patient_id)!)}
+                className="gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <FileText className="h-3.5 w-3.5" /> Download ABHA Card (PDF)
+              </Button>
+            )}
+
+            {/* Fallback: download live from ABDM and auto-save to DB */}
             {token && (
               <>
                 <Button
@@ -1169,8 +1227,10 @@ const AbhaProfileDisplayCard: React.FC<AbhaProfileDisplayCardProps> = ({
                   size="sm"
                   onClick={() => onDownloadCard(token)}
                   className="gap-1.5 text-xs"
+                  title="Download directly from ABDM (also saves to hospital DB)"
                 >
-                  <FileText className="h-3.5 w-3.5" /> Download Card (PDF)
+                  <FileText className="h-3.5 w-3.5" />
+                  {(profile.id ?? profile.patient_id) ? "Refresh & Download" : "Download Card (PDF)"}
                 </Button>
                 <Button
                   variant="outline"

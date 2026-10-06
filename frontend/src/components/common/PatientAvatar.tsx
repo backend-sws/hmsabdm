@@ -100,26 +100,26 @@ export function PatientAvatar({
         createPortal(
           <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
             <div
-              className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
               onClick={() => setIsPreviewOpen(false)}
             />
-            <div className="relative z-10 w-full max-w-sm rounded-2xl border border-slate-700/50 bg-slate-900 p-5 shadow-2xl text-white animate-in zoom-in-95 duration-200">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <div className="relative z-10 w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-primary" />
-                  <h3 className="font-semibold text-sm">Patient Photo Preview</h3>
+                  <h3 className="font-semibold text-sm text-foreground">Patient Photo Preview</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsPreviewOpen(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
               <div className="flex flex-col items-center text-center">
-                <div className="relative overflow-hidden rounded-xl border-2 border-primary/40 shadow-xl bg-slate-950 p-1">
+                <div className="relative overflow-hidden rounded-xl border-2 border-primary/30 shadow-md bg-muted p-1">
                   <img
                     src={photoSrc}
                     alt={name}
@@ -133,22 +133,22 @@ export function PatientAvatar({
                   )}
                 </div>
 
-                <h4 className="mt-4 font-bold text-base text-slate-100">{name}</h4>
+                <h4 className="mt-4 font-bold text-base text-foreground">{name}</h4>
                 {uhid && (
                   <span className="mt-1 font-mono text-xs font-semibold text-primary px-2.5 py-0.5 rounded-md bg-primary/10 border border-primary/20">
                     {uhid}
                   </span>
                 )}
                 {subtitle && (
-                  <p className="mt-2 text-xs text-slate-400 max-w-xs">{subtitle}</p>
+                  <p className="mt-2 text-xs text-muted-foreground max-w-xs">{subtitle}</p>
                 )}
               </div>
 
-              <div className="mt-5 pt-3 border-t border-slate-800 flex justify-end">
+              <div className="mt-5 pt-3 border-t border-border flex justify-end">
                 <button
                   type="button"
                   onClick={() => setIsPreviewOpen(false)}
-                  className="px-4 py-1.5 rounded-lg bg-slate-800 text-xs font-medium text-slate-200 hover:bg-slate-700 transition-colors"
+                  className="px-4 py-1.5 rounded-lg border border-border bg-background text-xs font-medium text-foreground hover:bg-muted transition-colors"
                 >
                   Close Preview
                 </button>

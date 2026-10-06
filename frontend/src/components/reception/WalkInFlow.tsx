@@ -1,13 +1,18 @@
-import React, { useMemo } from "react"
+import React, { useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { UserPlus, RefreshCw } from "lucide-react"
+import { UserPlus, RefreshCw, Sparkles } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { DobAgePicker } from "@/components/common/DobAgePicker"
+import { settingsService } from "@/services/settingsService"
+import { queryKeys } from "@/constants/queryKeys"
 import type { QuickVisitPayload } from "@/types/reception"
 
 export const walkInSchema = z.object({
@@ -18,6 +23,7 @@ export const walkInSchema = z.object({
     .optional()
     .or(z.literal("")),
   gender: z.enum(["M", "F", "O"]).default("M"),
+  dob: z.string().optional(),
   age: z
     .union([z.string(), z.number()])
     .optional()
@@ -77,11 +83,22 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
       payment_status: "paid",
       fee_charged: 0,
       slot_time: "",
+      dob: "",
+      age: undefined,
     },
   })
 
+  // Dynamic Custom Patient Demographic Fields from Settings
+  const { data: patientFieldConfigs = [] } = useQuery({
+    queryKey: queryKeys.settings.patientFields,
+    queryFn: () => settingsService.getPatientFieldConfigs(),
+  })
+  const [customFields, setCustomFields] = useState<Record<string, any>>({})
+
   const selectedDeptId = watch("department_id")
   const selectedDoctorId = watch("doctor_id")
+  const currentDob = watch("dob")
+  const currentAge = watch("age")
 
   const availableDoctors = useMemo(() => {
     if (!selectedDeptId) return []
@@ -112,10 +129,24 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
   }, [selectedDoctor, setValue])
 
   const handleFormSubmit = (data: WalkInFormValues) => {
+    // Validate required custom intake fields
+    if (patientFieldConfigs && patientFieldConfigs.length > 0) {
+      for (const f of patientFieldConfigs) {
+        const key = f.field_key || f.field_name || `field_${f.id}`
+        const isReq = Boolean(f.is_required)
+        const val = customFields[key]
+        if (isReq && (val === undefined || val === null || String(val).trim() === "")) {
+          toast.error(`Please provide required field: ${f.label}`)
+          return
+        }
+      }
+    }
+
     const payload: QuickVisitPayload = {
       name: data.name,
       mobile: data.mobile || undefined,
       gender: data.gender,
+      dob: data.dob || undefined,
       age: data.age,
       department_id: data.department_id,
       doctor_id: data.doctor_id || undefined,
@@ -133,6 +164,7 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
       amount_paid: data.fee_charged,
       payment_method: data.payment_method,
       payment_status: data.payment_status,
+      custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
     }
     onSubmit(payload)
   }
@@ -176,16 +208,6 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
             </div>
 
             <div className="sm:col-span-1 lg:col-span-1">
-              <Label className="text-xs font-semibold">Age (Years)</Label>
-              <Input
-                type="number"
-                placeholder="45"
-                className="mt-1 text-xs"
-                {...register("age")}
-              />
-            </div>
-
-            <div className="sm:col-span-1 lg:col-span-1">
               <Label className="text-xs font-semibold">Gender</Label>
               <select
                 {...register("gender")}
@@ -195,6 +217,18 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
                 <option value="F">Female</option>
                 <option value="O">Other</option>
               </select>
+            </div>
+
+            {/* Reusable Bidirectional DOB & Age (Years, Months, Days) Picker */}
+            <div className="sm:col-span-2 lg:col-span-4 p-4 rounded-xl border border-border/80 bg-muted/20">
+              <DobAgePicker
+                dobValue={currentDob}
+                ageValue={currentAge}
+                onChange={(val) => {
+                  setValue("dob", val.dob || "", { shouldValidate: true })
+                  setValue("age", val.age !== undefined ? val.age : (undefined as any), { shouldValidate: true })
+                }}
+              />
             </div>
 
             <div className="sm:col-span-1 lg:col-span-1">
@@ -221,7 +255,7 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
               />
             </div>
 
-            <div className="sm:col-span-1 lg:col-span-1">
+            <div className="sm:col-span-1 lg:col-span-2">
               <Label className="text-xs font-semibold">Guardian Mobile</Label>
               <Input
                 placeholder="Guardian mobile"
@@ -261,11 +295,112 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
           </div>
         </div>
 
-        {/* Section 02: OPD Assignment & Billing */}
+        {/* Section 02: Dynamic Custom Demographics configured in Settings */}
+        {patientFieldConfigs && patientFieldConfigs.length > 0 && (
+          <div className="w-full rounded-2xl border bg-card p-6 shadow-xs space-y-5">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary text-[11px] font-bold">
+                  02
+                </span>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Additional Patient Intake Demographics
+                </h3>
+              </div>
+              <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                Custom Fields from Settings
+              </span>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {patientFieldConfigs.map((f) => {
+                const key = f.field_key || f.field_name || `field_${f.id}`
+                const val = customFields[key] ?? ""
+                const isReq = Boolean(f.is_required)
+
+                if (f.input_type === "select") {
+                  return (
+                    <div key={f.id} className="sm:col-span-1 lg:col-span-2">
+                      <Label className="text-xs font-semibold">
+                        {f.label} {isReq && <span className="text-destructive">*</span>}
+                      </Label>
+                      <select
+                        value={val}
+                        onChange={(e) => setCustomFields((prev) => ({ ...prev, [key]: e.target.value }))}
+                        className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs"
+                      >
+                        <option value="">{f.placeholder || `-- Select ${f.label} --`}</option>
+                        {Array.isArray(f.options) &&
+                          f.options.map((opt, i) => (
+                            <option key={i} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )
+                }
+
+                if (f.input_type === "boolean") {
+                  return (
+                    <div key={f.id} className="sm:col-span-1 lg:col-span-2 flex items-center pt-5">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-foreground">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(val)}
+                          onChange={(e) => setCustomFields((prev) => ({ ...prev, [key]: e.target.checked }))}
+                          className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <span>
+                          {f.label} {isReq && <span className="text-destructive">*</span>}
+                        </span>
+                      </label>
+                    </div>
+                  )
+                }
+
+                if (f.input_type === "textarea") {
+                  return (
+                    <div key={f.id} className="sm:col-span-2 lg:col-span-4">
+                      <Label className="text-xs font-semibold">
+                        {f.label} {isReq && <span className="text-destructive">*</span>}
+                      </Label>
+                      <textarea
+                        rows={2}
+                        value={val}
+                        onChange={(e) => setCustomFields((prev) => ({ ...prev, [key]: e.target.value }))}
+                        placeholder={f.placeholder || `Enter ${f.label}`}
+                        className="mt-1 flex w-full rounded-md border border-input bg-background p-2 text-xs shadow-xs"
+                      />
+                    </div>
+                  )
+                }
+
+                return (
+                  <div key={f.id} className="sm:col-span-1 lg:col-span-2">
+                    <Label className="text-xs font-semibold">
+                      {f.label} {isReq && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Input
+                      type={f.input_type === "number" ? "number" : f.input_type === "date" ? "date" : "text"}
+                      value={val}
+                      onChange={(e) => setCustomFields((prev) => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={f.placeholder || `Enter ${f.label}`}
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Section 03: OPD Assignment & Billing */}
         <div className="w-full rounded-2xl border bg-card p-6 shadow-xs space-y-5">
           <div className="flex items-center gap-2 border-b pb-3">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-              02
+              {patientFieldConfigs && patientFieldConfigs.length > 0 ? "03" : "02"}
             </span>
             <h3 className="text-sm font-semibold text-foreground">OPD Department, Doctor & Billing</h3>
           </div>

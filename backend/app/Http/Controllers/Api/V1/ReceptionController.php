@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Traits\HasApiResponse;
 use App\Http\Traits\AbdmValidatable;
 use App\Models\Patient;
+use App\Models\OpdVisit;
 use App\Services\Abdm\AbdmServiceInterface;
 use App\Services\Reception\ReceptionServiceInterface;
 use Illuminate\Http\Request;
@@ -406,6 +407,7 @@ class ReceptionController extends Controller
             'payment_ref'         => 'nullable|string|max:255',
             'payment_breakdown'   => 'nullable|array',
             'slot_time'           => 'nullable|string|max:100',
+            'custom_fields'       => 'nullable|array',
         ]);
 
         if (empty($validated['patient_id']) && empty($validated['uhid']) && empty($validated['mobile']) && empty($validated['name'])) {
@@ -426,6 +428,10 @@ class ReceptionController extends Controller
                 $patient = Patient::where('hospital_id', $hospitalId)->find($validated['patient_id']);
             } elseif (!empty($validated['uhid'])) {
                 $patient = Patient::where('hospital_id', $hospitalId)->where('uhid', $validated['uhid'])->first();
+            } elseif (!empty($validated['abha_number'])) {
+                $patient = Patient::where('hospital_id', $hospitalId)->where('abha_number', $validated['abha_number'])->first();
+            } elseif (!empty($validated['abha_address'])) {
+                $patient = Patient::where('hospital_id', $hospitalId)->where('abha_address', $validated['abha_address'])->first();
             }
 
             // Case 2: If new walk-in patient with name
@@ -450,6 +456,7 @@ class ReceptionController extends Controller
                     'kyc_verified'      => $validated['kyc_verified'] ?? false,
                     'abha_number'       => $validated['abha_number'] ?? null,
                     'abha_address'      => $validated['abha_address'] ?? null,
+                    'custom_fields'     => $validated['custom_fields'] ?? null,
                 ];
                 $registered = $this->receptionService->registerPatient($hospitalId, array_filter($patientData, fn($v) => $v !== null));
                 $patient = Patient::where('hospital_id', $hospitalId)->find($registered['id']);
@@ -462,6 +469,10 @@ class ReceptionController extends Controller
                     if (!empty($validated[$f]) && empty($patient->{$f})) {
                         $updates[$f] = $validated[$f];
                     }
+                }
+                if (!empty($validated['custom_fields']) && is_array($validated['custom_fields'])) {
+                    $existingCustom = is_array($patient->custom_fields) ? $patient->custom_fields : [];
+                    $updates['custom_fields'] = array_merge($existingCustom, $validated['custom_fields']);
                 }
                 if (!empty($updates)) {
                     $patient->update($updates);
@@ -489,6 +500,24 @@ class ReceptionController extends Controller
 
             if (!$patient) {
                 return $this->errorResponse('Patient not found. Please provide name to register or check UHID/mobile.', null, 404);
+            }
+
+            // Auto-store Official ABHA Card PDF directly in PostgreSQL Database (patients.abha_card_pdf)
+            $cardInput = $request->input('abha_card_base64') ?? $request->input('abha_card_pdf');
+            if (!empty($cardInput)) {
+                $raw = trim($cardInput);
+                if (!preg_match('~^[a-zA-Z0-9+/=\s]+$~', $raw)) {
+                    $raw = base64_encode($raw);
+                }
+                $binary = base64_decode($raw, true);
+                if ($binary !== false && (str_starts_with($binary, 'JVBER') || str_starts_with($binary, '"JVBER') || str_starts_with($binary, 'iVBOR'))) {
+                    $raw = trim($binary, '"');
+                }
+                $patient->abha_card_pdf = $raw;
+                $custom = $patient->custom_fields ?? [];
+                $custom['has_abha_card'] = true;
+                $patient->custom_fields = $custom;
+                $patient->save();
             }
 
             // Resolve Doctor and Department
@@ -528,6 +557,27 @@ class ReceptionController extends Controller
             $validated['doctor_id'] = $doctorId;
             $validated['department_id'] = $departmentId;
 
+            // If existing patient and fee_charged not explicitly provided, check 15-day free follow-up
+            if (!isset($validated['fee_charged'])) {
+                $validityDays = (int) \App\Models\HospitalSetting::get($hospitalId, 'revisit_validity_days', 15);
+                $cutoffDate = now()->subDays($validityDays)->toDateString();
+                $recentVisit = OpdVisit::where('hospital_id', $hospitalId)
+                    ->where('patient_id', $patient->id)
+                    ->where(function ($q) use ($doctorId, $departmentId) {
+                        $q->where('doctor_id', $doctorId)->orWhere('department_id', $departmentId);
+                    })
+                    ->where('visit_date', '>=', $cutoffDate)
+                    ->where('visit_date', '<=', now()->toDateString())
+                    ->orderByDesc('visit_date')
+                    ->first();
+                if ($recentVisit) {
+                    $validated['fee_charged'] = 0.00;
+                    $validated['amount_paid'] = 0.00;
+                    $validated['payment_status'] = 'waived';
+                    $validated['notes'] = "Free Follow-up Re-visit within {$validityDays} days (Previous visit: {$recentVisit->opd_number})";
+                }
+            }
+
             $visit = $this->receptionService->createOpdVisit($hospitalId, $validated);
 
             $formattedResponse = [
@@ -560,6 +610,138 @@ class ReceptionController extends Controller
             ];
 
             return $this->successResponse($formattedResponse, 'Patient Registered & OPD Visit Created Successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/reception/revisit/check",
+        summary: "Check if an existing patient is eligible for free follow-up (15-day timeline)",
+        description: "Checks whether a patient has visited this doctor/department within the hospital follow-up policy (default 15 days), returning previous visit history and fee waiver suggestion.",
+        security: [["bearerAuth" => []]],
+        tags: ["4. Reception"]
+    )]
+    #[OA\Parameter(name: "patient_id", in: "query", description: "Patient Database ID", required: false, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "uhid", in: "query", description: "Patient UHID", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "mobile", in: "query", description: "Patient 10-digit mobile number", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "doctor_id", in: "query", description: "Selected Doctor ID", required: false, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "department_id", in: "query", description: "Selected Department ID", required: false, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Revisit follow-up eligibility data")]
+    public function checkRevisitEligibility(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_id'    => 'nullable|integer',
+            'uhid'          => 'nullable|string',
+            'mobile'        => 'nullable|string',
+            'abha_number'   => 'nullable|string',
+            'doctor_id'     => 'nullable|integer',
+            'department_id' => 'nullable|integer',
+        ]);
+
+        if (empty($validated['patient_id']) && empty($validated['uhid']) && empty($validated['mobile']) && empty($validated['abha_number'])) {
+            return $this->errorResponse('Please provide patient_id, uhid, mobile number, or abha_number.', null, 422);
+        }
+
+        $hospitalId = $this->getHospitalId($request);
+        $result = $this->receptionService->checkRevisitEligibility($hospitalId, $validated);
+
+        return $this->successResponse($result, 'Revisit eligibility checked');
+    }
+
+    #[OA\Post(
+        path: "/api/v1/reception/quick-revisit",
+        summary: "Issue Re-visit OPD token for existing patient with 15-day free follow-up policy",
+        description: "Direct 1-click OPD token generation for an existing registered patient using UHID or Mobile. Automatically checks 15-day follow-up policy and sets fee to ₹0 (waived) if within timeline.",
+        security: [["bearerAuth" => []]],
+        tags: ["4. Reception"]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["doctor_id"],
+            properties: [
+                new OA\Property(property: "patient_id", type: "integer", nullable: true, example: 10),
+                new OA\Property(property: "uhid", type: "string", nullable: true, example: "HOSP-2026-01070"),
+                new OA\Property(property: "mobile", type: "string", nullable: true, example: "9876543210"),
+                new OA\Property(property: "doctor_id", type: "integer", example: 5),
+                new OA\Property(property: "department_id", type: "integer", nullable: true, example: 2),
+                new OA\Property(property: "appointment_type_id", type: "integer", nullable: true),
+                new OA\Property(property: "chief_complaint", type: "string", nullable: true, example: "Routine Follow-up"),
+                new OA\Property(property: "fee_charged", type: "number", format: "float", nullable: true),
+                new OA\Property(property: "discount", type: "number", format: "float", nullable: true),
+                new OA\Property(property: "amount_paid", type: "number", format: "float", nullable: true),
+                new OA\Property(property: "payment_status", type: "string", nullable: true, enum: ["pending", "paid", "partial", "waived"]),
+                new OA\Property(property: "payment_method", type: "string", nullable: true, enum: ["cash", "card", "upi", "insurance", "split", "cheque", "other"]),
+                new OA\Property(property: "notes", type: "string", nullable: true)
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: "Re-visit OPD slip issued")]
+    public function quickRevisit(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_id'          => 'nullable|integer|exists:patients,id',
+            'uhid'                => 'nullable|string',
+            'mobile'              => 'nullable|string|max:15',
+            'doctor_id'           => 'required|integer|exists:doctors,id',
+            'department_id'       => 'nullable|integer|exists:departments,id',
+            'appointment_type_id' => 'nullable|integer|exists:appointment_types,id',
+            'chief_complaint'     => 'nullable|string',
+            'fee_charged'         => 'nullable|numeric|min:0',
+            'discount'            => 'nullable|numeric|min:0',
+            'amount_paid'         => 'nullable|numeric|min:0',
+            'payment_status'      => 'nullable|string|in:pending,paid,partial,waived',
+            'payment_method'      => 'nullable|string|in:cash,card,upi,insurance,split,cheque,other',
+            'payment_ref'         => 'nullable|string|max:255',
+            'notes'               => 'nullable|string',
+        ]);
+
+        if (empty($validated['patient_id']) && empty($validated['uhid']) && empty($validated['mobile'])) {
+            return $this->errorResponse('Please provide patient_id, uhid, or mobile number.', null, 422);
+        }
+
+        $hospitalId = $this->getHospitalId($request);
+
+        try {
+            $result = $this->receptionService->quickRevisit($hospitalId, $validated);
+
+            if (!empty($result['requires_selection'])) {
+                return $this->successResponse($result, 'Multiple patients found. Please select one.');
+            }
+
+            $visit = $result['visit'];
+            $formatted = [
+                'id'                    => $visit['id'],
+                'visit_id'              => $visit['id'],
+                'opd_number'            => $visit['opd_number'] ?? null,
+                'queue_token'           => $visit['queue_token'] ?? null,
+                'token_no'              => (string) ($visit['queue_token'] ?? ''),
+                'patient_id'            => $visit['patient_id'],
+                'patient_name'          => $visit['patient']['name'] ?? null,
+                'uhid'                  => $visit['patient']['uhid'] ?? null,
+                'gender'                => $visit['patient']['gender'] ?? null,
+                'dob'                   => $visit['patient']['dob'] ?? null,
+                'mobile'                => $visit['patient']['mobile'] ?? null,
+                'abha_number'           => $visit['patient']['abha_number'] ?? null,
+                'abha_address'          => $visit['patient']['abha_address'] ?? null,
+                'department_id'         => $visit['department_id'],
+                'department_name'       => $visit['department']['name'] ?? null,
+                'doctor_id'             => $visit['doctor_id'],
+                'doctor_name'           => $visit['doctor']['name'] ?? null,
+                'doctor_specialization' => $visit['doctor']['specialization'] ?? null,
+                'visit_date'            => $visit['visit_date'] ?? now()->toIso8601String(),
+                'fee_charged'           => $visit['fee_charged'] ?? 0,
+                'amount_paid'           => $visit['amount_paid'] ?? 0,
+                'payment_status'        => $visit['payment_status'] ?? 'paid',
+                'payment_method'        => $visit['payment_method'] ?? 'cash',
+                'chief_complaint'       => $visit['chief_complaint'] ?? null,
+                'status'                => $visit['status'] ?? 'waiting',
+                'revisit_info'          => $result['revisit_info'] ?? null,
+                'visit'                 => $visit,
+            ];
+
+            return $this->successResponse($formatted, 'Re-visit OPD Slip Issued Successfully');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), null, 400);
         }

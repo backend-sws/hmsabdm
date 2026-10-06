@@ -9,6 +9,8 @@ export interface Patient {
   guardian_relation?: string
   guardian_phone?: string
   mobile?: string
+  id_proof_type?: string
+  id_proof_number?: string
   abha_number?: string
   abha_address?: string
   email?: string
@@ -21,10 +23,7 @@ export interface Patient {
   state?: string
   pincode?: string
   photo?: string
-  custom_fields?: {
-    marital_status?: string
-    occupation?: string
-  }
+  custom_fields?: Record<string, any>
   kyc_verified?: boolean
   last_visit_date?: string | null
   last_visit_type?: string | null
@@ -37,6 +36,8 @@ export interface Patient {
 export interface CreatePatientDto {
   name: string
   mobile?: string
+  id_proof_type?: string
+  id_proof_number?: string
   abha_number?: string
   abha_address?: string
   email?: string
@@ -54,6 +55,9 @@ export interface RegisterPatientWithoutAbhaDto {
   guardian_relation?: string
   guardian_phone?: string
   mobile?: string
+  email?: string
+  id_proof_type?: string
+  id_proof_number?: string
   gender?: "M" | "F" | "O"
   dob?: string
   blood_group?: string
@@ -62,13 +66,19 @@ export interface RegisterPatientWithoutAbhaDto {
   district?: string
   state?: string
   pincode?: string
-  custom_fields?: {
-    marital_status?: string
-    occupation?: string
-  }
+  custom_fields?: Record<string, any>
 }
 
-export type UpdatePatientDto = Partial<CreatePatientDto>
+export type UpdatePatientDto = Partial<CreatePatientDto> & {
+  guardian_name?: string
+  guardian_relation?: string
+  guardian_phone?: string
+  id_proof_type?: string
+  id_proof_number?: string
+  district?: string
+  state?: string
+  custom_fields?: Record<string, any>
+}
 
 export interface PatientFilter {
   search?: string

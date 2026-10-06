@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react"
-import { ShieldCheck, ArrowRight, RefreshCw, KeyRound, CheckCircle2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ShieldCheck, RefreshCw, KeyRound, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Input } from "@/components/ui/input"
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { abhaService } from "@/services/abhaService"
+import { OfficialAbhaCard } from "@/components/common"
 
 interface AadhaarEnrolFlowProps {
   onPatientEnrolled: (patient: {
@@ -170,11 +171,28 @@ export const AadhaarEnrolFlow: React.FC<AadhaarEnrolFlowProps> = ({ onPatientEnr
         Boolean(extractedAbhaAddress && extractedAbhaAddress.includes("@"))
 
       if (hasExistingAbha && extractedAbhaAddress) {
+        let cardB64: string | undefined = undefined
+        if (tokenReceived) {
+          try {
+            const cardRes: any = await abhaService.downloadCard(tokenReceived, {
+              abha_number: verifiedData.abha_number || undefined,
+              mobile: cleanMobile || undefined,
+            })
+            const b64 = cardRes?.data?.data || cardRes?.data
+            if (b64 && typeof b64 === "string" && b64.length > 50) {
+              cardB64 = b64
+            }
+          } catch (e) {
+            console.warn("Could not prefetch card in AadhaarEnrolFlow:", e)
+          }
+        }
+
         // Skip address creation completely — patient already has an active ABHA!
         setCreatedProfile({
           ...verifiedData,
           name: extractedName || "Verified Patient",
           abha_address: extractedAbhaAddress,
+          abha_card_base64: cardB64,
           isExisting: true,
         })
         setStep(5)
@@ -213,10 +231,48 @@ export const AadhaarEnrolFlow: React.FC<AadhaarEnrolFlowProps> = ({ onPatientEnr
     }
   }
 
+// NHA CRT_ABHA_112: ABHA Address validation rules
+const validateAbhaHandle = (handle: string): { valid: boolean; message?: string } => {
+  const clean = handle.replace(/@.*$/, "").trim()
+  if (clean.length < 8 || clean.length > 18) {
+    return { valid: false, message: "Custom handle must be between 8 and 18 characters (NHA CRT_ABHA_112)." }
+  }
+  if (!/^[a-zA-Z0-9]/.test(clean)) {
+    return { valid: false, message: "Handle must start with a letter or digit." }
+  }
+  if (!/[a-zA-Z0-9]$/.test(clean)) {
+    return { valid: false, message: "Handle must end with a letter or digit." }
+  }
+  if (!/^[a-zA-Z0-9._]+$/.test(clean)) {
+    return { valid: false, message: "Only letters, numbers, dot (.) and underscore (_) are allowed." }
+  }
+  const dotCount = (clean.match(/\./g) || []).length
+  const underscoreCount = (clean.match(/_/g) || []).length
+  if (dotCount > 1) {
+    return { valid: false, message: "Only 1 dot (.) is allowed in ABHA handle." }
+  }
+  if (underscoreCount > 1) {
+    return { valid: false, message: "Only 1 underscore (_) is allowed in ABHA handle." }
+  }
+  if (/\._|_\.|\.\.|__/.test(clean)) {
+    return { valid: false, message: "Dot and underscore cannot be consecutive." }
+  }
+  return { valid: true }
+}
+
   // Step 4: Create Address & Finalize ABHA
   const handleCreateAddress = async (e: React.FormEvent) => {
     e.preventDefault()
-    const finalAddress = (customAddress.trim() ? `${customAddress.trim()}@sbx` : selectedAddress).trim()
+    let finalAddress = selectedAddress
+    if (customAddress.trim()) {
+      const val = validateAbhaHandle(customAddress.trim())
+      if (!val.valid) {
+        toast.error(val.message)
+        return
+      }
+      finalAddress = `${customAddress.trim()}@sbx`
+    }
+    finalAddress = finalAddress.trim()
     if (!finalAddress) {
       toast.error("Please select or enter an ABHA Address.")
       return
@@ -269,9 +325,10 @@ export const AadhaarEnrolFlow: React.FC<AadhaarEnrolFlowProps> = ({ onPatientEnr
     }
   }
 
-  const handleProceedToVisit = () => {
-    if (createdProfile) {
-      onPatientEnrolled(createdProfile)
+  const handleProceedToVisit = (patientWithCard?: any) => {
+    const finalProfile = patientWithCard || createdProfile
+    if (finalProfile) {
+      onPatientEnrolled(finalProfile)
     }
   }
 
@@ -515,6 +572,9 @@ export const AadhaarEnrolFlow: React.FC<AadhaarEnrolFlowProps> = ({ onPatientEnr
                   @sbx
                 </span>
               </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Rule (CRT_ABHA_112): 8–18 characters, alphanumeric, only 1 dot (.) or underscore (_).
+              </p>
             </div>
 
             <Button type="submit" disabled={isLoading} className="w-full h-10 font-semibold">
@@ -530,11 +590,11 @@ export const AadhaarEnrolFlow: React.FC<AadhaarEnrolFlowProps> = ({ onPatientEnr
           </form>
         )}
 
-        {/* STEP 5: Success & Proceed */}
+        {/* STEP 5: Success & Official ABHA Card */}
         {step === 5 && createdProfile && (
           <div className="space-y-6">
             <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+              <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
               <div>
                 <h4 className="font-bold text-sm text-foreground">
                   {createdProfile?.isExisting
@@ -543,59 +603,20 @@ export const AadhaarEnrolFlow: React.FC<AadhaarEnrolFlowProps> = ({ onPatientEnr
                 </h4>
                 <p className="text-xs text-muted-foreground">
                   {createdProfile?.isExisting
-                    ? "Patient ABHA profile retrieved and linked. Ready for OPD registration."
+                    ? "Patient ABHA profile retrieved and linked. Official ABHA card ready."
                     : "Patient is now registered on the ABDM network."}
                 </p>
               </div>
             </div>
 
-            {createdProfile.photo && (
-              <div className="flex items-center gap-4 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-                <img
-                  src={createdProfile.photo.startsWith("data:") ? createdProfile.photo : `data:image/jpeg;base64,${createdProfile.photo}`}
-                  alt={createdProfile.name}
-                  className="h-16 w-16 rounded-xl object-cover border-2 border-emerald-500 shadow-xs shrink-0"
-                />
-                <div className="min-w-0">
-                  <p className="font-bold text-sm text-foreground">{createdProfile.name}</p>
-                  <p className="text-xs text-muted-foreground font-mono">ABHA: {createdProfile.abha_number}</p>
-                  {(createdProfile.address || createdProfile.district || createdProfile.state) && (
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      📍 {[createdProfile.address, createdProfile.district, createdProfile.state, createdProfile.pincode].filter(Boolean).join(", ")}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="rounded-xl bg-muted/40 p-3">
-                <span className="text-muted-foreground">Patient Name:</span>
-                <p className="font-bold text-sm text-foreground mt-0.5">{createdProfile.name || "Patient"}</p>
-              </div>
-              <div className="rounded-xl bg-muted/40 p-3">
-                <span className="text-muted-foreground">ABHA Number:</span>
-                <p className="font-mono font-bold text-foreground mt-0.5">{createdProfile.abha_number || "—"}</p>
-              </div>
-              <div className="rounded-xl bg-muted/40 p-3">
-                <span className="text-muted-foreground">ABHA Address:</span>
-                <p className="font-mono font-bold text-primary text-sm mt-0.5">{createdProfile.abha_address || "—"}</p>
-              </div>
-            </div>
-
-            {(createdProfile.address || createdProfile.district || createdProfile.state || createdProfile.pincode) && !createdProfile.photo && (
-              <div className="rounded-xl bg-muted/40 p-3 text-xs">
-                <span className="text-muted-foreground">Registered Address:</span>
-                <p className="font-medium text-foreground mt-0.5">
-                  {[createdProfile.address, createdProfile.district, createdProfile.state, createdProfile.pincode].filter(Boolean).join(", ")}
-                </p>
-              </div>
-            )}
-
-            <Button onClick={handleProceedToVisit} className="w-full h-11 text-sm font-semibold">
-              Assign Department & Issue OPD Slip
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            {/* Authentic Government Official ABHA Card directly on screen */}
+            <OfficialAbhaCard
+              patient={createdProfile}
+              token={token}
+              onProceed={handleProceedToVisit}
+              proceedText="Assign Department & Issue OPD Slip"
+              showProceedButton={true}
+            />
           </div>
         )}
       </div>

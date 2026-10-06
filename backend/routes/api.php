@@ -70,8 +70,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [AuthController::class, 'me']);
         
-        // Patients (CRUD & 360 History)
+        // Patients (CRUD, 360 History & Official ABHA Card)
+        Route::get('patients/stats', [PatientController::class, 'stats']);
         Route::get('patients/{id}/history', [PatientController::class, 'history']);
+        Route::get('patients/{id}/abha-card', [PatientController::class, 'getAbhaCard']);
+        Route::post('patients/{id}/abha-card', [PatientController::class, 'saveAbhaCard']);
+        Route::post('patients/{id}/link-abha', [PatientController::class, 'linkAbha']);
         Route::apiResource('patients', PatientController::class);
         
         // Storage (R2 / S3 Presigned URLs)
@@ -89,6 +93,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('abha')->group(function () {
             Route::post('/generate-otp', [AbhaController::class, 'generateOtp']);
             Route::post('/verify-otp', [AbhaController::class, 'verifyOtp']);
+            Route::post('/verify-user', [AbhaController::class, 'verifyUser']);
             
             // Aadhaar Enrollment
             Route::post('/enrol/aadhaar-otp', [AbhaController::class, 'generateAadhaarOtp']);
@@ -114,6 +119,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/register', [ReceptionController::class, 'registerWithoutAbha']);
             Route::post('/visit', [ReceptionController::class, 'createVisit']);
             Route::post('/quick-visit', [ReceptionController::class, 'quickVisit']);
+            Route::post('/quick-revisit', [ReceptionController::class, 'quickRevisit']);
+            Route::get('/revisit/check', [ReceptionController::class, 'checkRevisitEligibility']);
             Route::get('/visits', [ReceptionController::class, 'getVisits']);
             Route::get('/visits/stats', [ReceptionController::class, 'getVisitStats']);
             Route::post('/admit-ipd', [\App\Http\Controllers\Api\V1\IpdController::class, 'admit']);

@@ -37,7 +37,12 @@ interface ReceptionServiceInterface
     /**
      * Fast-track 1-click Re-visit token generation for existing patients with free follow-up rule check
      */
-    public function quickRevisit(int $hospitalId, array $data): array;
+    public function quickRevisit(?int $hospitalId, array $data): array;
+
+    /**
+     * Check if an existing patient is eligible for free follow-up (15-day validity)
+     */
+    public function checkRevisitEligibility(?int $hospitalId, array $data): array;
 
     /**
      * Get OPD visits / issued tokens history for the reception desk

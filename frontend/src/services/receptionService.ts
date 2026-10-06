@@ -99,6 +99,73 @@ export const receptionService = {
   },
 
   /**
+   * Check if an existing patient is eligible for free follow-up (15-day policy).
+   * GET /reception/revisit/check
+   */
+  checkRevisitEligibility: async (params: {
+    patient_id?: number
+    uhid?: string
+    mobile?: string
+    abha_number?: string
+    doctor_id?: number
+    department_id?: number
+  }): Promise<{
+    found: boolean
+    message?: string
+    patient?: any
+    is_eligible_for_free_followup: boolean
+    validity_days: number
+    days_since_last_visit: number | null
+    days_remaining: number | null
+    last_visit: {
+      id: number
+      opd_number: string
+      visit_date: string
+      doctor_id?: number
+      doctor_name?: string
+      department_id?: number
+      department_name?: string
+    } | null
+    suggested_fee: number
+    suggested_payment_status: string
+  }> => {
+    const query = new URLSearchParams()
+    if (params.patient_id) query.set("patient_id", String(params.patient_id))
+    if (params.uhid) query.set("uhid", params.uhid)
+    if (params.mobile) query.set("mobile", params.mobile)
+    if (params.abha_number) query.set("abha_number", params.abha_number)
+    if (params.doctor_id) query.set("doctor_id", String(params.doctor_id))
+    if (params.department_id) query.set("department_id", String(params.department_id))
+    const res = await apiClient<any>(`/reception/revisit/check?${query.toString()}`)
+    return res?.data || res
+  },
+
+  /**
+   * 1-Click Revisit OPD slip creation for existing patients with 15-day policy.
+   * POST /reception/quick-revisit
+   */
+  quickRevisit: async (payload: {
+    patient_id?: number
+    uhid?: string
+    mobile?: string
+    doctor_id: number
+    department_id?: number
+    appointment_type_id?: number
+    chief_complaint?: string
+    fee_charged?: number
+    discount?: number
+    amount_paid?: number
+    payment_status?: string
+    payment_method?: string
+    notes?: string
+  }): Promise<CreateVisitResponse> => {
+    return apiClient<CreateVisitResponse>("/reception/quick-revisit", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  /**
    * Get issued OPD visits / tokens history.
    * GET /reception/visits
    */
