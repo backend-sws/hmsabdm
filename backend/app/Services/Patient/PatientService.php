@@ -237,7 +237,16 @@ class PatientService implements PatientServiceInterface
         $patient = $query->with([
             'latestVital',
             'opdVisits' => function ($q) {
-                $q->with(['doctor', 'department', 'vitals', 'latestVital'])
+                $q->with([
+                    'doctor',
+                    'department',
+                    'vitals',
+                    'latestVital',
+                    'prescription.doctor',
+                    'prescription.items',
+                    'prescription.diagnoses',
+                    'prescription.investigations',
+                ])
                   ->orderByDesc('visit_date')
                   ->orderByDesc('id');
             },
@@ -247,7 +256,7 @@ class PatientService implements PatientServiceInterface
                   ->orderByDesc('id');
             },
             'prescriptions' => function ($q) {
-                $q->with(['doctor', 'items', 'diagnoses'])
+                $q->with(['doctor', 'items', 'diagnoses', 'investigations'])
                   ->orderByDesc('id');
             },
             'vitals' => function ($q) {

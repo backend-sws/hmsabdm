@@ -694,6 +694,7 @@ class ReceptionController extends Controller
             'payment_status'      => 'nullable|string|in:pending,paid,partial,waived',
             'payment_method'      => 'nullable|string|in:cash,card,upi,insurance,split,cheque,other',
             'payment_ref'         => 'nullable|string|max:255',
+            'slot_time'           => 'nullable|string|max:100',
             'notes'               => 'nullable|string',
         ]);
 
@@ -736,6 +737,7 @@ class ReceptionController extends Controller
                 'payment_status'        => $visit['payment_status'] ?? 'paid',
                 'payment_method'        => $visit['payment_method'] ?? 'cash',
                 'chief_complaint'       => $visit['chief_complaint'] ?? null,
+                'slot_time'             => $validated['slot_time'] ?? null,
                 'status'                => $visit['status'] ?? 'waiting',
                 'revisit_info'          => $result['revisit_info'] ?? null,
                 'visit'                 => $visit,

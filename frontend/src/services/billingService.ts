@@ -126,4 +126,32 @@ export const billingService = {
   async getPatientInvoices(patientId: number): Promise<Invoice[]> {
     return apiClient<Invoice[]>(`/invoices/patient/${patientId}`)
   },
+
+  // ─── 6. OPD Quick Billing Counter ────────────────────────────────────
+  async getOpdPendingOrders(params?: {
+    search?: string
+    date?: string
+    status?: "all" | "pending" | "billed"
+  }): Promise<import("@/types/billing").OpdPendingOrder[]> {
+    const query = new URLSearchParams()
+    if (params?.search) query.set("search", params.search)
+    if (params?.date) query.set("date", params.date)
+    if (params?.status) query.set("status", params.status)
+    const queryString = query.toString() ? `?${query.toString()}` : ""
+    const res = await apiClient<any>(`/billing/opd-pending-orders${queryString}`)
+    return Array.isArray(res) ? res : res?.data || []
+  },
+
+  async createOpdBill(payload: import("@/types/billing").CreateOpdBillPayload): Promise<import("@/types/billing").OpdReceiptData> {
+    const res = await apiClient<any>("/billing/opd-bill", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+    return res?.data || res
+  },
+
+  async getOpdReferrals(): Promise<import("@/types/billing").OpdAdmissionReferral[]> {
+    const res = await apiClient<any>("/ipd/opd-referrals")
+    return Array.isArray(res) ? res : res?.data || []
+  },
 }

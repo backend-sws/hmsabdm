@@ -9,7 +9,7 @@ import { LoginPage } from "@/pages/login/LoginPage"
 import { DashboardPage } from "@/pages/dashboard/DashboardPage"
 import { ReceptionPage } from "@/pages/reception/ReceptionPage"
 import { PatientsPage } from "@/pages/patients/PatientsPage"
-import { OpdQueuePage } from "@/pages/opd/OpdQueuePage"
+import { OpdPage } from "@/pages/opd/OpdPage"
 import { DoctorsPage } from "@/pages/doctors/DoctorsPage"
 import { DepartmentsPage } from "@/pages/departments/DepartmentsPage"
 import { HospitalsPage } from "@/pages/hospitals/HospitalsPage"
@@ -94,11 +94,12 @@ export default function App() {
               <Route
                 path="/opd"
                 element={
-                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR"]}>
-                    <OpdQueuePage />
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"]}>
+                    <OpdPage />
                   </ProtectedRoute>
                 }
               />
+              <Route path="/triage" element={<Navigate to="/opd?tab=triage" replace />} />
               <Route
                 path="/ipd"
                 element={

@@ -13,11 +13,14 @@ export interface IpdWard {
   code: string
   floor?: string
   daily_charge: number
+  gender_type?: "all" | "male" | "female"
   description?: string
   is_active: boolean
   total_beds?: number
   available_beds?: number
   occupied_beds?: number
+  maintenance_beds?: number
+  beds?: IpdBed[]
   created_at?: string
   updated_at?: string
 }
@@ -30,9 +33,55 @@ export interface IpdBed {
   status: BedStatus
   daily_charge?: number
   current_admission_id?: number | null
+  currentAdmission?: any | null
+  ward?: IpdWard | null
   is_active: boolean
   created_at?: string
   updated_at?: string
+}
+
+export interface CreateWardPayload {
+  name: string
+  code?: string
+  floor?: string
+  gender_type?: "all" | "male" | "female"
+  daily_charge: number
+  is_active?: boolean
+  initial_beds_count?: number
+  bed_prefix?: string
+}
+
+export interface UpdateWardPayload {
+  name?: string
+  code?: string
+  floor?: string
+  gender_type?: "all" | "male" | "female"
+  daily_charge?: number
+  is_active?: boolean
+  sync_bed_charges?: boolean
+}
+
+export interface CreateBedPayload {
+  ward_id: number
+  bed_number: string
+  daily_charge?: number
+  status?: BedStatus
+  is_active?: boolean
+}
+
+export interface BatchCreateBedsPayload {
+  ward_id: number
+  prefix?: string
+  start_number: number
+  end_number: number
+  daily_charge?: number
+}
+
+export interface UpdateBedPayload {
+  bed_number?: string
+  daily_charge?: number
+  status?: BedStatus
+  is_active?: boolean
 }
 
 export interface BedMatrixAdmission {

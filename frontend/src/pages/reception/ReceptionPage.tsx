@@ -83,7 +83,8 @@ export const ReceptionPage: React.FC = () => {
   const { data: departments = [] } = useQuery({
     queryKey: queryKeys.reception.departments,
     queryFn: receptionService.getDepartments,
-    staleTime: 5 * 60_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
   })
 
   const { data: statsData } = useQuery({
@@ -104,6 +105,7 @@ export const ReceptionPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.reception.queue })
       queryClient.invalidateQueries({ queryKey: ["reception", "visits"] })
       queryClient.invalidateQueries({ queryKey: ["reception", "visitStats"] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.reception.departments })
       setPatientForVisit(null)
       setReceiptData({
         queue_token: res.queue_token || res.token_no || 1,
@@ -139,6 +141,7 @@ export const ReceptionPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.reception.queue })
       queryClient.invalidateQueries({ queryKey: ["reception", "visits"] })
       queryClient.invalidateQueries({ queryKey: ["reception", "visitStats"] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.reception.departments })
       setPatientForVisit(null)
       const data = res?.data || res
       setReceiptData({

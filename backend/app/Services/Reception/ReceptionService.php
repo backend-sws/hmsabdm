@@ -69,9 +69,21 @@ class ReceptionService implements ReceptionServiceInterface
         $req = $request ?? request();
         $query = Department::where('is_active', true)
             ->with(['doctors' => function ($q) {
-                $q->where('is_active', true)->with(['schedules' => function ($sq) {
-                    $sq->where('is_active', true);
-                }]);
+                $q->where('is_active', true)
+                    ->withCount([
+                        'opdVisits as today_waiting_count' => function ($vq) {
+                            $vq->whereDate('visit_date', today())->where('status', 'waiting');
+                        },
+                        'opdVisits as today_consulting_count' => function ($vq) {
+                            $vq->whereDate('visit_date', today())->whereIn('status', ['called', 'in_consultation']);
+                        },
+                        'opdVisits as today_total_count' => function ($vq) {
+                            $vq->whereDate('visit_date', today());
+                        }
+                    ])
+                    ->with(['schedules' => function ($sq) {
+                        $sq->where('is_active', true);
+                    }]);
             }]);
 
         if ($req && $req->filled('search')) {
@@ -335,8 +347,9 @@ class ReceptionService implements ReceptionServiceInterface
             $discount = 0.00;
             $amountPaid = 0.00;
             $paymentStatus = 'waived';
-            $paymentMethod = null;
-            $notes = $data['notes'] ?? "Free Follow-up Re-visit within {$validityDays} days (Previous visit: {$lastVisitWithDoctor->opd_number})";
+            $slotPrefix = !empty($data['slot_time']) ? "Appointment Slot: {$data['slot_time']} | " : "";
+            $freeNote = $data['notes'] ?? "Free Follow-up Re-visit within {$validityDays} days (Previous visit: {$lastVisitWithDoctor->opd_number})";
+            $notes = $slotPrefix . $freeNote;
         } else {
             if (isset($data['fee_charged'])) {
                 $feeCharged = (float) $data['fee_charged'];
@@ -367,7 +380,9 @@ class ReceptionService implements ReceptionServiceInterface
             }
 
             $paymentMethod = $data['payment_method'] ?? ($amountPaid > 0 ? 'cash' : null);
-            $notes = $data['notes'] ?? 'Follow-up Consultation';
+            $slotPrefix = !empty($data['slot_time']) ? "Appointment Slot: {$data['slot_time']} | " : "";
+            $defaultNote = $data['notes'] ?? 'Follow-up Consultation';
+            $notes = $slotPrefix . $defaultNote;
         }
 
         // 5. Generate Queue Token for Doctor for Today

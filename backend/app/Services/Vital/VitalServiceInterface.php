@@ -44,6 +44,11 @@ interface VitalServiceInterface
     public function deleteVital(int $hospitalId, int $id): bool;
 
     /**
+     * Update an existing vital entry
+     */
+    public function updateVital(int $hospitalId, int $userId, int $id, array $data): Vital;
+
+    /**
      * Get custom vital field definitions configured for a hospital
      */
     public function getFieldConfigs(int $hospitalId, bool $activeOnly = true): Collection;

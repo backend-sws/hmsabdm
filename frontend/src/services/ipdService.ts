@@ -20,6 +20,11 @@ import type {
   SettleDischargePayload,
   GatePass,
   InpatientChart,
+  CreateWardPayload,
+  UpdateWardPayload,
+  CreateBedPayload,
+  BatchCreateBedsPayload,
+  UpdateBedPayload,
 } from "@/types/ipd"
 
 export const ipdService = {
@@ -28,7 +33,8 @@ export const ipdService = {
    */
   getWards: async (search?: string): Promise<IpdWard[]> => {
     const params = search ? `?search=${encodeURIComponent(search)}` : ""
-    return apiClient<IpdWard[]>(`/ipd/wards${params}`)
+    const res = await apiClient<any>(`/ipd/wards${params}`)
+    return Array.isArray(res) ? res : res?.data || []
   },
 
   /**
@@ -36,7 +42,8 @@ export const ipdService = {
    */
   getAvailableBeds: async (wardId?: number): Promise<IpdBed[]> => {
     const params = wardId ? `?ward_id=${wardId}` : ""
-    return apiClient<IpdBed[]>(`/ipd/beds/available${params}`)
+    const res = await apiClient<any>(`/ipd/beds/available${params}`)
+    return Array.isArray(res) ? res : res?.data || []
   },
 
   /**
@@ -69,7 +76,8 @@ export const ipdService = {
       })
     }
     const qs = params.toString() ? `?${params.toString()}` : ""
-    return apiClient<IpdAdmission[]>(`/ipd/admissions${qs}`)
+    const res = await apiClient<any>(`/ipd/admissions${qs}`)
+    return Array.isArray(res) ? res : res?.data || []
   },
 
   /**
@@ -237,5 +245,109 @@ export const ipdService = {
    */
   getGatePass: async (id: number): Promise<GatePass> => {
     return apiClient<GatePass>(`/ipd/admissions/${id}/gate-pass`)
+  },
+
+  /**
+   * Get pending OPD doctor admission referrals
+   */
+  getOpdReferrals: async (): Promise<any[]> => {
+    const res = await apiClient<any>("/ipd/opd-referrals")
+    return Array.isArray(res) ? res : res?.data || []
+  },
+
+  /**
+   * Get all hospital wards with bed list and occupancy stats
+   */
+  getAllWards: async (params?: { search?: string; is_active?: boolean }): Promise<any[]> => {
+    const q = new URLSearchParams()
+    if (params?.search) q.set("search", params.search)
+    if (params?.is_active !== undefined) q.set("is_active", String(params.is_active))
+    const res = await apiClient<any>(`/wards?${q.toString()}`)
+    return Array.isArray(res) ? res : res?.data || []
+  },
+
+  /**
+   * Create a new Ward with daily pricing
+   */
+  createWard: async (payload: CreateWardPayload): Promise<any> => {
+    const res = await apiClient<any>("/wards", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+    return res?.data || res
+  },
+
+  /**
+   * Update Ward details and room rent / bed pricing
+   */
+  updateWard: async (id: number, payload: UpdateWardPayload): Promise<any> => {
+    const res = await apiClient<any>(`/wards/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    })
+    return res?.data || res
+  },
+
+  /**
+   * Delete Ward and its vacant beds
+   */
+  deleteWard: async (id: number): Promise<any> => {
+    return apiClient<any>(`/wards/${id}`, {
+      method: "DELETE",
+    })
+  },
+
+  /**
+   * Get all beds list with optional ward/status filter
+   */
+  getBeds: async (params?: { ward_id?: number; status?: string; search?: string }): Promise<any[]> => {
+    const q = new URLSearchParams()
+    if (params?.ward_id) q.set("ward_id", String(params.ward_id))
+    if (params?.status) q.set("status", params.status)
+    if (params?.search) q.set("search", params.search)
+    const res = await apiClient<any>(`/beds?${q.toString()}`)
+    return Array.isArray(res) ? res : res?.data || []
+  },
+
+  /**
+   * Create a single bed
+   */
+  createBed: async (payload: CreateBedPayload): Promise<any> => {
+    const res = await apiClient<any>("/beds", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+    return res?.data || res
+  },
+
+  /**
+   * Batch create multiple beds for a ward
+   */
+  batchCreateBeds: async (payload: BatchCreateBedsPayload): Promise<any> => {
+    const res = await apiClient<any>("/beds/batch", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+    return res?.data || res
+  },
+
+  /**
+   * Update bed details or pricing override
+   */
+  updateBed: async (id: number, payload: UpdateBedPayload): Promise<any> => {
+    const res = await apiClient<any>(`/beds/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    })
+    return res?.data || res
+  },
+
+  /**
+   * Delete a vacant bed
+   */
+  deleteBed: async (id: number): Promise<any> => {
+    return apiClient<any>(`/beds/${id}`, {
+      method: "DELETE",
+    })
   },
 }

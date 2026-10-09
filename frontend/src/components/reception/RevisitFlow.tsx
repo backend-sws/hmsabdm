@@ -19,6 +19,10 @@ import { PatientAvatar } from "@/components/common/PatientAvatar"
 import { LinkAbhaModal } from "@/components/common/LinkAbhaModal"
 import { receptionService } from "@/services/receptionService"
 import { patientService } from "@/services/patientService"
+import { settingsService } from "@/services/settingsService"
+import { generateDoctorSlots } from "@/utils/slotGenerator"
+import { DoctorQueueLoadCard } from "@/components/reception/DoctorQueueLoadCard"
+import { SlotPicker } from "@/components/reception/SlotPicker"
 import type { ReceptionDepartment } from "@/types/reception"
 
 interface RevisitFlowProps {
@@ -40,6 +44,7 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
   const [feeCharged, setFeeCharged] = useState<number>(0)
   const [paymentStatus, setPaymentStatus] = useState<string>("waived")
   const [paymentMethod, setPaymentMethod] = useState<string>("cash")
+  const [slotTime, setSlotTime] = useState<string>("")
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isLinkAbhaOpen, setIsLinkAbhaOpen] = useState(false)
@@ -94,6 +99,44 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
       setSelectedDoctorId(String(availableDoctors[0].id))
     }
   }, [availableDoctors, selectedDoctorId])
+
+  // Selected doctor object for workload analysis
+  const selectedDoctor = useMemo(() => {
+    if (!selectedDoctorId) return null
+    return availableDoctors.find((doc: any) => String(doc.id) === String(selectedDoctorId)) || null
+  }, [selectedDoctorId, availableDoctors])
+
+  // OPD Slot Duration Settings from Hospital Configuration
+  const { data: opdSlotConfig } = useQuery({
+    queryKey: ["settings", "opd_slot"],
+    queryFn: () => settingsService.getSettings("opd_slot"),
+  })
+
+  // Dynamic appointment slots based on doctor shift & settings
+  const dynamicSlots = useMemo(() => {
+    const slotDuration = Number(opdSlotConfig?.slot_duration_minutes || 15)
+    let startTime = opdSlotConfig?.morning_start || "09:00"
+    let endTime = opdSlotConfig?.morning_end || "13:00"
+
+    if (selectedDoctor?.schedules && selectedDoctor.schedules.length > 0) {
+      const sched = selectedDoctor.schedules[0]
+      if (sched.start_time && sched.end_time) {
+        startTime = sched.start_time.slice(0, 5)
+        endTime = sched.end_time.slice(0, 5)
+      }
+    }
+
+    return generateDoctorSlots({
+      startTime,
+      endTime,
+      slotDurationMinutes: slotDuration,
+      includeLiveToken: true,
+      defaultMorningStart: opdSlotConfig?.morning_start || "09:00",
+      defaultMorningEnd: opdSlotConfig?.morning_end || "13:00",
+      defaultEveningStart: opdSlotConfig?.evening_start || "17:00",
+      defaultEveningEnd: opdSlotConfig?.evening_end || "21:00",
+    })
+  }, [selectedDoctor, opdSlotConfig])
 
   const selectPatient = (patient: any) => {
     setSelectedPatient(patient)
@@ -173,6 +216,7 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
       uhid: selectedPatient.uhid,
       doctor_id: Number(selectedDoctorId),
       department_id: selectedDeptId ? Number(selectedDeptId) : undefined,
+      slot_time: slotTime,
       chief_complaint: chiefComplaint,
       fee_charged: feeCharged,
       amount_paid: feeCharged,
@@ -474,13 +518,34 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
                       ? "No active doctors in this department"
                       : "Select Doctor"}
                   </option>
-                  {availableDoctors.map((doc) => (
+                  {availableDoctors.map((doc: any) => (
                     <option key={doc.id} value={String(doc.id)}>
-                      {doc.name} {doc.specialization ? `— ${doc.specialization}` : ""}
+                      {doc.name} {doc.specialization ? `— ${doc.specialization}` : ""} {typeof doc.today_waiting_count === 'number' ? `• [${doc.today_waiting_count} waiting]` : ""}
                     </option>
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Doctor Live Queue & Load Status Card */}
+            {selectedDeptId && availableDoctors.length > 0 && (
+              <DoctorQueueLoadCard
+                selectedDoctor={selectedDoctor}
+                availableDoctors={availableDoctors}
+                slotDurationMinutes={Number(opdSlotConfig?.slot_duration_minutes || 15)}
+                onSelectDoctor={(docId) => setSelectedDoctorId(docId ? String(docId) : "")}
+              />
+            )}
+
+            {/* Appointment Slot / Session Selection */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold block">Appointment Slot / Token Allocation</Label>
+              <SlotPicker
+                slots={dynamicSlots}
+                value={slotTime}
+                onChange={(val) => setSlotTime(val)}
+                slotDurationMinutes={Number(opdSlotConfig?.slot_duration_minutes || 15)}
+              />
             </div>
 
             {/* Chief Complaint / Notes */}

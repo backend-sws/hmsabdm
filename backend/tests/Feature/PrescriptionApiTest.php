@@ -239,4 +239,115 @@ class PrescriptionApiTest extends TestCase
             ->assertJsonPath('success', true);
         $this->assertNotEmpty($listResponse->json('data'));
     }
+
+    public function test_can_save_prescription_as_draft_without_closing_visit(): void
+    {
+        $department = Department::first();
+        $visit = OpdVisit::create([
+            'hospital_id'     => $this->hospital->id,
+            'patient_id'      => $this->patient->id,
+            'doctor_id'       => $this->doctor->id,
+            'department_id'   => $department->id,
+            'opd_number'      => 'OPD-TEST-DRAFT',
+            'queue_token'     => '99',
+            'status'          => 'in_consultation',
+            'visit_date'      => now()->toDateString(),
+            'chief_complaint' => 'Mild cold',
+        ]);
+
+        $payload = [
+            'patient_id'       => $this->patient->id,
+            'doctor_id'        => $this->doctor->id,
+            'opd_visit_id'     => $visit->id,
+            'status'           => 'draft',
+            'chief_complaints' => ['Mild cold', 'Sneezing'],
+            'clinical_notes'   => 'Draft clinical evaluation in progress.',
+            'items'            => [
+                [
+                    'medicine_name' => 'Tab. Cetirizine 10mg',
+                    'dosage'        => '1 tab',
+                    'frequency'     => 'OD',
+                    'duration_days' => 3,
+                ]
+            ],
+        ];
+
+        $response = $this->postJson('/api/v1/prescriptions', $payload);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.status', 'draft');
+
+        $prescriptionId = $response->json('data.id');
+
+        // Visit must NOT be marked done; it remains in_consultation
+        $visit->refresh();
+        $this->assertEquals('in_consultation', $visit->status);
+
+        // Fetch visit prescription endpoint
+        $visitRxResponse = $this->getJson("/api/v1/prescriptions/visit/{$visit->id}");
+        $visitRxResponse->assertStatus(200)
+            ->assertJsonPath('data.id', $prescriptionId)
+            ->assertJsonPath('data.status', 'draft');
+    }
+
+    public function test_can_update_prescription_and_recomplete_visit_idempotently(): void
+    {
+        $department = Department::first();
+        $visit = OpdVisit::create([
+            'hospital_id'     => $this->hospital->id,
+            'patient_id'      => $this->patient->id,
+            'doctor_id'       => $this->doctor->id,
+            'department_id'   => $department->id,
+            'opd_number'      => 'OPD-TEST-UPDATE',
+            'queue_token'     => '100',
+            'status'          => 'done', // Already completed
+            'visit_date'      => now()->toDateString(),
+            'chief_complaint' => 'Chest tightness',
+        ]);
+
+        // 1. Initial prescription
+        $initPayload = [
+            'patient_id'       => $this->patient->id,
+            'doctor_id'        => $this->doctor->id,
+            'opd_visit_id'     => $visit->id,
+            'status'           => 'active',
+            'chief_complaints' => ['Chest tightness'],
+            'clinical_notes'   => 'ECG normal.',
+        ];
+        $createRes = $this->postJson('/api/v1/prescriptions', $initPayload);
+        $createRes->assertStatus(201);
+        $prescriptionId = $createRes->json('data.id');
+
+        // 2. Doctor re-opens and updates prescription
+        $updatePayload = [
+            'status'           => 'active',
+            'chief_complaints' => ['Chest tightness', 'Acidity'],
+            'clinical_notes'   => 'ECG normal. GERD confirmed.',
+            'diet_advice'      => 'Avoid late night oily food.',
+            'items'            => [
+                [
+                    'medicine_name' => 'Cap. Pantoprazole 40mg',
+                    'dosage'        => '1 cap',
+                    'frequency'     => 'OD',
+                    'duration_days' => 14,
+                ]
+            ],
+        ];
+
+        $updateRes = $this->putJson("/api/v1/prescriptions/{$prescriptionId}", $updatePayload);
+        $updateRes->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.diet_advice', 'Avoid late night oily food.');
+
+        // 3. Completing consultation on already done visit must be idempotent and NEVER throw error
+        $completeRes = $this->postJson("/api/v1/opd/visit/{$visit->id}/complete", [
+            'notes' => 'Updated notes after follow-up review',
+        ]);
+        $completeRes->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $visit->refresh();
+        $this->assertEquals('done', $visit->status);
+    }
 }

@@ -151,6 +151,7 @@ export const receptionService = {
     doctor_id: number
     department_id?: number
     appointment_type_id?: number
+    slot_time?: string
     chief_complaint?: string
     fee_charged?: number
     discount?: number

@@ -594,5 +594,59 @@ class IpdController extends Controller
             return $this->errorResponse($e->getMessage(), null, 400);
         }
     }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/opd-referrals",
+        summary: "Get pending OPD doctor admission referrals",
+        description: "Returns patients where the OPD Doctor set disposition to 'admit_ipd' who are not yet admitted.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Response(response: 200, description: "OPD admission referrals retrieved")]
+    public function opdReferrals(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+
+        $referrals = \App\Models\Prescription::where('hospital_id', $hospitalId)
+            ->where('disposition', 'admit_ipd')
+            ->whereDoesntHave('patient.ipdAdmissions', function ($q) {
+                $q->where('status', 'admitted');
+            })
+            ->with([
+                'patient:id,name,uhid,mobile,gender,dob',
+                'doctor:id,name,qualification,department_id',
+                'doctor.department:id,name',
+                'opdVisit:id,queue_token,opd_number,visit_date',
+                'diagnoses',
+            ])
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        $data = $referrals->map(function ($rx) {
+            return [
+                'id'                  => $rx->id,
+                'prescription_id'     => $rx->id,
+                'prescription_number' => $rx->prescription_number,
+                'opd_visit_id'        => $rx->opd_visit_id,
+                'token_no'            => (string) ($rx->opdVisit?->queue_token ?? $rx->opdVisit?->opd_number ?? ''),
+                'opd_number'          => $rx->opdVisit?->opd_number,
+                'patient_id'          => $rx->patient_id,
+                'patient'             => $rx->patient,
+                'doctor_id'           => $rx->doctor_id,
+                'doctor'              => $rx->doctor,
+                'admit_priority'      => $rx->admit_priority ?? 'routine',
+                'recommended_ward'    => $rx->recommended_ward,
+                'disposition_notes'   => $rx->disposition_notes,
+                'diagnoses'           => $rx->diagnoses->map(fn($d) => [
+                    'code' => $d->icd_code,
+                    'name' => $d->diagnosis_name,
+                ]),
+                'referred_at'         => $rx->created_at->toISOString(),
+            ];
+        });
+
+        return $this->successResponse($data, 'OPD admission referrals retrieved successfully');
+    }
 }
 

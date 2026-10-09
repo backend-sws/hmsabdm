@@ -127,6 +127,11 @@ Route::prefix('v1')->group(function () {
         });
 
 
+        // Wards & Beds Master Setup & Pricing Configuration
+        Route::post('/beds/batch', [\App\Http\Controllers\Api\V1\BedController::class, 'batchStore']);
+        Route::apiResource('wards', \App\Http\Controllers\Api\V1\WardController::class);
+        Route::apiResource('beds', \App\Http\Controllers\Api\V1\BedController::class);
+
         // IPD (Inpatient Admissions, Wards, Beds & Visual Bed Matrix)
         Route::prefix('ipd')->group(function () {
             Route::get('/wards', [\App\Http\Controllers\Api\V1\IpdController::class, 'wards']);
@@ -164,6 +169,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/admissions/{id}/discharge-estimate', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'getEstimate']);
             Route::post('/admissions/{id}/settle-discharge', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'settleAndDischarge']);
             Route::get('/admissions/{id}/gate-pass', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'gatePass']);
+
+            // Pending OPD Admission Referrals
+            Route::get('/opd-referrals', [\App\Http\Controllers\Api\V1\IpdController::class, 'opdReferrals']);
         });
 
 
@@ -179,6 +187,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/', [VitalController::class, 'index']);
             Route::post('/', [VitalController::class, 'store']);
             Route::get('/{id}', [VitalController::class, 'show']);
+            Route::put('/{id}', [VitalController::class, 'update']);
             Route::delete('/{id}', [VitalController::class, 'destroy']);
             Route::get('/patient/{patientId}', [VitalController::class, 'patientVitals']);
             Route::get('/visit/{visitId}', [VitalController::class, 'visitVitals']);
@@ -196,13 +205,15 @@ Route::prefix('v1')->group(function () {
             Route::post('/visit/{visitId}/prescribe', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'prescribeVisit']);
         });
 
-        // Fast Autocomplete Search for Medicines & WHO ICD-10 Diagnoses
+        // Fast Autocomplete Search for Medicines, WHO ICD-10 Diagnoses & Diagnostic Investigations
         Route::get('/medicines/search', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'searchMedicines']);
         Route::get('/diagnosis/search', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'searchDiagnoses']);
+        Route::get('/investigations/search', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'searchInvestigations']);
 
         // Structured E-Prescriptions
         Route::prefix('prescriptions')->group(function () {
             Route::post('/', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'store']);
+            Route::put('/{id}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'update']);
             Route::get('/{id}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'show']);
             Route::get('/patient/{patientId}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'patientPrescriptions']);
             Route::get('/visit/{visitId}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'visitPrescription']);
@@ -210,6 +221,10 @@ Route::prefix('v1')->group(function () {
 
         // Hospital Charges Master, Tariff Engine & Patient Running Ledger
         Route::prefix('billing')->group(function () {
+            // OPD Quick Bill Counter
+            Route::get('/opd-pending-orders', [\App\Http\Controllers\Api\V1\OpdBillingController::class, 'getPendingOrders']);
+            Route::post('/opd-bill', [\App\Http\Controllers\Api\V1\OpdBillingController::class, 'createOpdBill']);
+
             Route::get('/charges/categories', [\App\Http\Controllers\Api\V1\ChargeController::class, 'getCategories']);
             Route::post('/charges/categories', [\App\Http\Controllers\Api\V1\ChargeController::class, 'createCategory']);
             Route::get('/charges', [\App\Http\Controllers\Api\V1\ChargeController::class, 'index']);

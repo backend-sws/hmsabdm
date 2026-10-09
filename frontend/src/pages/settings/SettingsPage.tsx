@@ -13,11 +13,19 @@ import {
   Pencil,
   RefreshCw,
   ShieldCheck,
+  Clock,
+  Printer,
+  Sparkles,
 } from "lucide-react"
+
+import { generateDoctorSlots } from "@/utils/slotGenerator"
 
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable, type Column } from "@/components/common/DataTable"
 import { FormContainer } from "@/components/formContainer"
+import { TriageSectionsSettingsCard } from "@/components/settings/TriageSectionsSettingsCard"
+import { PrescriptionPrintSettingsCard } from "@/components/settings/PrescriptionPrintSettingsCard"
+import { RxPresetsSettingsCard } from "@/components/settings/RxPresetsSettingsCard"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,7 +48,7 @@ export const SettingsPage: React.FC = () => {
 
   // ─── Active Tab ──────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<
-    "profile" | "numbering" | "vitals" | "patient_fields" | "system"
+    "profile" | "numbering" | "vitals" | "patient_fields" | "opd_slots" | "rx_presets" | "rx_print" | "system"
   >("profile")
 
   // ─── Queries ────────────────────────────────────────────────────────
@@ -73,6 +81,45 @@ export const SettingsPage: React.FC = () => {
   const { data: generalSettings, refetch: refetchGeneralSettings } = useQuery({
     queryKey: queryKeys.settings.general("general"),
     queryFn: () => settingsService.getSettings("general"),
+  })
+
+  // 6. OPD Slot Settings
+  const { data: opdSlotSettings, refetch: refetchOpdSlotSettings } = useQuery({
+    queryKey: ["settings", "opd_slot"],
+    queryFn: () => settingsService.getSettings("opd_slot"),
+  })
+
+  const [slotSettings, setSlotSettings] = useState({
+    slot_duration_minutes: 15,
+    morning_start: "09:00",
+    morning_end: "13:00",
+    evening_start: "17:00",
+    evening_end: "21:00",
+    max_patients_per_slot: 1,
+    allow_fifo_live_token: true,
+  })
+
+  React.useEffect(() => {
+    if (opdSlotSettings && typeof opdSlotSettings === "object") {
+      setSlotSettings({
+        slot_duration_minutes: Number(opdSlotSettings.slot_duration_minutes || 15),
+        morning_start: opdSlotSettings.morning_start || "09:00",
+        morning_end: opdSlotSettings.morning_end || "13:00",
+        evening_start: opdSlotSettings.evening_start || "17:00",
+        evening_end: opdSlotSettings.evening_end || "21:00",
+        max_patients_per_slot: Number(opdSlotSettings.max_patients_per_slot || 1),
+        allow_fifo_live_token: opdSlotSettings.allow_fifo_live_token !== false,
+      })
+    }
+  }, [opdSlotSettings])
+
+  const saveSlotSettingsMutation = useMutation({
+    mutationFn: () => settingsService.saveSettings("opd_slot", slotSettings),
+    onSuccess: () => {
+      toast.success("OPD Appointment Slot settings saved successfully!")
+      refetchOpdSlotSettings()
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to save slot settings"),
   })
 
   // ─── Tab 1: Profile Form State & Mutation ────────────────────────────
@@ -225,6 +272,7 @@ export const SettingsPage: React.FC = () => {
 
   // ─── Tab 3: Dynamic Vitals Modal & Mutation ──────────────────────────
   const [vitalModalOpen, setVitalModalOpen] = useState(false)
+  const [editingVitalId, setEditingVitalId] = useState<number | null>(null)
   const [vitalPayload, setVitalPayload] = useState({
     field_key: "",
     label: "",
@@ -261,6 +309,7 @@ export const SettingsPage: React.FC = () => {
       toast.success("Vital metric configured!")
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.vitals })
       setVitalModalOpen(false)
+      setEditingVitalId(null)
       setVitalPayload({
         field_key: "",
         label: "",
@@ -273,6 +322,47 @@ export const SettingsPage: React.FC = () => {
       })
     },
     onError: (err: any) => toast.error(err.message || "Failed to create vital metric"),
+  })
+
+  const updateVitalMutation = useMutation({
+    mutationFn: () => {
+      if (!editingVitalId) throw new Error("No vital metric selected to update")
+      const options =
+        vitalPayload.input_type === "select"
+          ? vitalPayload.options_text
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : undefined
+
+      return settingsService.updateVitalConfig(editingVitalId, {
+        field_key: vitalPayload.field_key.trim(),
+        label: vitalPayload.label.trim(),
+        unit: vitalPayload.input_type === "number" ? vitalPayload.unit?.trim() || undefined : undefined,
+        input_type: vitalPayload.input_type,
+        options: options && options.length > 0 ? options : undefined,
+        min_value: vitalPayload.input_type === "number" ? vitalPayload.min_value : undefined,
+        max_value: vitalPayload.input_type === "number" ? vitalPayload.max_value : undefined,
+        is_required: vitalPayload.is_required,
+      })
+    },
+    onSuccess: () => {
+      toast.success("Vital parameter updated successfully!")
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.vitals })
+      setVitalModalOpen(false)
+      setEditingVitalId(null)
+      setVitalPayload({
+        field_key: "",
+        label: "",
+        unit: "",
+        input_type: "number",
+        options_text: "",
+        min_value: undefined,
+        max_value: undefined,
+        is_required: false,
+      })
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to update vital metric"),
   })
 
   const deleteVitalMutation = useMutation({
@@ -485,20 +575,45 @@ export const SettingsPage: React.FC = () => {
     {
       key: "actions",
       header: "Actions",
-      className: "w-[70px] text-right",
+      className: "w-[90px] text-right",
       cell: (row) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-          onClick={() => {
-            if (confirm(`Remove vital metric "${row.label}"?`)) {
-              deleteVitalMutation.mutate(row.id)
-            }
-          }}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+            title="Edit vital parameter"
+            onClick={() => {
+              setEditingVitalId(row.id)
+              setVitalPayload({
+                field_key: row.field_key || (row as any).field_name || "",
+                label: row.label || (row as any).field_label || "",
+                unit: row.unit || "",
+                input_type: (row.input_type || (row as any).field_type || "number") as any,
+                options_text: Array.isArray(row.options) ? row.options.join(", ") : "",
+                min_value: row.min_value !== undefined && row.min_value !== null ? Number(row.min_value) : undefined,
+                max_value: row.max_value !== undefined && row.max_value !== null ? Number(row.max_value) : undefined,
+                is_required: Boolean(row.is_required),
+              })
+              setVitalModalOpen(true)
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+            title="Remove vital parameter"
+            onClick={() => {
+              if (confirm(`Remove vital metric "${row.label}"?`)) {
+                deleteVitalMutation.mutate(row.id)
+              }
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       ),
     },
   ]
@@ -613,63 +728,75 @@ export const SettingsPage: React.FC = () => {
       />
 
       {/* ────────────────────────────────────────────────────────────────
-          NAVIGATION TABS
+          NAVIGATION TABS (Non-scrolling 4x2 Responsive Grid - All 8 visible upfront)
          ──────────────────────────────────────────────────────────────── */}
-      <div className="flex border-b border-border">
-        <button
-          onClick={() => setActiveTab("profile")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
-            activeTab === "profile"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Building2 className="h-4 w-4" /> Hospital Profile & ABDM HIP
-        </button>
-
-        <button
-          onClick={() => setActiveTab("numbering")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
-            activeTab === "numbering"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Binary className="h-4 w-4" /> Document Numbering Formats
-        </button>
-
-        <button
-          onClick={() => setActiveTab("vitals")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
-            activeTab === "vitals"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Activity className="h-4 w-4" /> Clinical Vitals Master ({vitals.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab("patient_fields")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
-            activeTab === "patient_fields"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <UserPlus className="h-4 w-4" /> Patient Demographics Fields
-        </button>
-
-        <button
-          onClick={() => setActiveTab("system")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
-            activeTab === "system"
-              ? "border-primary text-primary bg-primary/5"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Sliders className="h-4 w-4" /> Print & System Preferences
-        </button>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        {[
+          { id: "profile", label: "Hospital Profile & ABDM", desc: "Facility ID & HIP Config", icon: Building2 },
+          { id: "numbering", label: "Document Numbering", desc: "UHID, OPD, IPD Sequences", icon: Binary },
+          { id: "vitals", label: "Clinical Vitals Master", desc: "Dynamic Vitals & Range", icon: Activity, badge: vitals.length },
+          { id: "patient_fields", label: "Patient Demographics", desc: "Registration Fields", icon: UserPlus },
+          { id: "opd_slots", label: "OPD Slot Config", desc: "Doctor Timings & Duration", icon: Clock },
+          { id: "rx_print", label: "Prescription Print", desc: "Rx Layout & Header/Footer", icon: Printer },
+          { id: "rx_presets", label: "Rx Presets & Templates", desc: "3-Tier Clinical Engine", icon: Sparkles, isSpecial: true, badge: "Clinical" },
+          { id: "system", label: "System Preferences", desc: "Hospital Rules & Options", icon: Sliders },
+        ].map((tab) => {
+          const isActive = activeTab === tab.id
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`group flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                isActive
+                  ? tab.isSpecial
+                    ? "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300 shadow-xs ring-1 ring-amber-500/40"
+                    : "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/40"
+                  : "border-slate-200/90 dark:border-border/70 bg-card text-muted-foreground hover:bg-slate-50 dark:hover:bg-muted/40 hover:text-foreground hover:border-slate-300"
+              }`}
+            >
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                  isActive
+                    ? tab.isSpecial
+                      ? "bg-amber-500 text-white shadow-2xs"
+                      : "bg-primary text-primary-foreground shadow-2xs"
+                    : "bg-slate-100 dark:bg-muted text-muted-foreground group-hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 justify-between">
+                  <p
+                    className={`text-xs font-bold leading-tight truncate ${
+                      isActive ? "text-foreground" : "text-foreground/85 group-hover:text-foreground"
+                    }`}
+                  >
+                    {tab.label}
+                  </p>
+                  {tab.badge !== undefined && (
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full shrink-0 ${
+                        isActive
+                          ? tab.isSpecial
+                            ? "bg-amber-500 text-white"
+                            : "bg-primary text-primary-foreground"
+                          : "bg-slate-200/80 dark:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10.5px] text-muted-foreground truncate mt-0.5">
+                  {tab.desc}
+                </p>
+              </div>
+            </button>
+          )
+        })}
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
@@ -1088,7 +1215,20 @@ export const SettingsPage: React.FC = () => {
             <Button
               size="sm"
               className="gap-1.5 text-xs"
-              onClick={() => setVitalModalOpen(true)}
+              onClick={() => {
+                setEditingVitalId(null)
+                setVitalPayload({
+                  field_key: "",
+                  label: "",
+                  unit: "",
+                  input_type: "number",
+                  options_text: "",
+                  min_value: undefined,
+                  max_value: undefined,
+                  is_required: false,
+                })
+                setVitalModalOpen(true)
+              }}
             >
               <Plus className="h-4 w-4" /> Add Vital Metric
             </Button>
@@ -1102,6 +1242,8 @@ export const SettingsPage: React.FC = () => {
             emptyTitle="No Custom Vitals Configured"
             emptyDescription="Standard baseline vitals will be applied by default."
           />
+
+          <TriageSectionsSettingsCard />
         </div>
       )}
 
@@ -1237,18 +1379,244 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
+      {/* ════════════════════════════════════════════════════════════════
+          TAB: PRESCRIPTION (RX) PRINT TEMPLATE
+         ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "rx_print" && (
+        <div className="w-full">
+          <PrescriptionPrintSettingsCard />
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          TAB 6: OPD & APPOINTMENT SLOT SETTINGS
+         ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "opd_slots" && (
+        <div className="w-full space-y-6">
+          <div className="p-6 rounded-xl border border-border bg-card space-y-6 text-xs shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
+              <div>
+                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" /> OPD Appointment Slot Engine
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Configure consultation slot intervals (5 min to 60 min), shift durations, and FIFO walk-in rules.
+                </p>
+              </div>
+              <Badge variant="outline" className="border-primary/40 text-primary w-fit font-mono">
+                Active Slot: {slotSettings.slot_duration_minutes} Mins
+              </Badge>
+            </div>
+
+            {/* 1. Slot Duration Interval Selection */}
+            <div className="space-y-3">
+              <Label className="text-xs font-semibold text-foreground">
+                Consultation Slot Duration (Minutes) *
+              </Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
+                {[5, 10, 15, 20, 30, 45, 60].map((mins) => {
+                  const isSelected = slotSettings.slot_duration_minutes === mins
+                  return (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setSlotSettings({ ...slotSettings, slot_duration_minutes: mins })}
+                      className={`py-3 px-3 rounded-xl border text-center transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-2 ring-primary/40"
+                          : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="text-base font-bold block">{mins}m</span>
+                      <span className="text-[10px] text-muted-foreground block mt-0.5">
+                        {mins <= 10 ? "Fast Track" : mins <= 20 ? "Standard" : "Extended"}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Determines the granularity of time slots generated during patient walk-in intake and appointments.
+              </p>
+            </div>
+
+            {/* 2. OPD Operating Sessions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+              <div className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-foreground">Morning OPD Session</span>
+                  <Badge variant="secondary" className="text-[10px]">Shift 1</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[11px]">Start Time</Label>
+                    <Input
+                      type="time"
+                      value={slotSettings.morning_start}
+                      onChange={(e) => setSlotSettings({ ...slotSettings, morning_start: e.target.value })}
+                      className="mt-1 font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[11px]">End Time</Label>
+                    <Input
+                      type="time"
+                      value={slotSettings.morning_end}
+                      onChange={(e) => setSlotSettings({ ...slotSettings, morning_end: e.target.value })}
+                      className="mt-1 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-foreground">Evening OPD Session</span>
+                  <Badge variant="secondary" className="text-[10px]">Shift 2</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[11px]">Start Time</Label>
+                    <Input
+                      type="time"
+                      value={slotSettings.evening_start}
+                      onChange={(e) => setSlotSettings({ ...slotSettings, evening_start: e.target.value })}
+                      className="mt-1 font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[11px]">End Time</Label>
+                    <Input
+                      type="time"
+                      value={slotSettings.evening_end}
+                      onChange={(e) => setSlotSettings({ ...slotSettings, evening_end: e.target.value })}
+                      className="mt-1 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Capacity & Overbooking Rules */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+              <div>
+                <Label className="text-xs font-semibold">Max Patients Per Slot</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={slotSettings.max_patients_per_slot}
+                  onChange={(e) => setSlotSettings({ ...slotSettings, max_patients_per_slot: Number(e.target.value) || 1 })}
+                  className="mt-1 text-xs font-mono max-w-xs"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Default is 1 patient per slot. Set to 2 or 3 to allow simultaneous parallel intake.
+                </p>
+              </div>
+
+              <div className="flex items-center pt-5">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={slotSettings.allow_fifo_live_token}
+                    onChange={(e) => setSlotSettings({ ...slotSettings, allow_fifo_live_token: e.target.checked })}
+                    className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <div>
+                    <span className="font-semibold text-foreground block">
+                      Enable "Live Queue (FIFO Next Available Token)"
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block">
+                      Provides walk-in receptionists a fast option to issue live FIFO queue tokens without picking a time slot.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* 4. Live Slot Generator Simulator Preview */}
+            <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-primary flex items-center gap-1.5 text-xs">
+                  ⚡ Live Dynamic Slot Simulator ({slotSettings.slot_duration_minutes}m Interval Preview)
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  Simulating with {slotSettings.morning_start} to {slotSettings.morning_end}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+                {generateDoctorSlots({
+                  startTime: slotSettings.morning_start,
+                  endTime: slotSettings.morning_end,
+                  slotDurationMinutes: slotSettings.slot_duration_minutes,
+                  includeLiveToken: slotSettings.allow_fifo_live_token,
+                }).map((slot, idx) => (
+                  <span
+                    key={idx}
+                    className={`text-[10px] px-2.5 py-1 rounded-lg border font-mono ${
+                      slot.isLiveToken
+                        ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-semibold"
+                        : "bg-background text-foreground border-border"
+                    }`}
+                  >
+                    {slot.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Button
+                onClick={() => saveSlotSettingsMutation.mutate()}
+                disabled={saveSlotSettingsMutation.isPending}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {saveSlotSettingsMutation.isPending ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save OPD Slot Configuration
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          TAB: 3-TIER RX PRESETS & TEMPLATES
+         ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "rx_presets" && (
+        <div className="w-full space-y-6">
+          <RxPresetsSettingsCard />
+        </div>
+      )}
+
       {/* ────────────────────────────────────────────────────────────────
-          MODAL: ADD VITAL METRIC
+          MODAL: ADD / EDIT VITAL METRIC
          ──────────────────────────────────────────────────────────────── */}
       <FormContainer
         open={vitalModalOpen}
-        onOpenChange={setVitalModalOpen}
-        title="Add Hospital Vital Sign Metric"
-        description="Configure dynamic clinical parameter for nurse stations and doctor consults"
+        onOpenChange={(isOpen) => {
+          setVitalModalOpen(isOpen)
+          if (!isOpen) setEditingVitalId(null)
+        }}
+        title={editingVitalId ? "Edit Hospital Vital Sign Metric" : "Add Hospital Vital Sign Metric"}
+        description={
+          editingVitalId
+            ? "Modify clinical parameter ranges, units, and dropdown options"
+            : "Configure dynamic clinical parameter for nurse stations and doctor consults"
+        }
         size="md"
         footer={
           <div className="flex justify-end gap-2 w-full">
-            <Button variant="outline" onClick={() => setVitalModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setVitalModalOpen(false)
+                setEditingVitalId(null)
+              }}
+            >
               Cancel
             </Button>
             <Button
@@ -1265,12 +1633,18 @@ export const SettingsPage: React.FC = () => {
                   toast.error("Please enter dropdown options separated by commas")
                   return
                 }
-                createVitalMutation.mutate()
+                if (editingVitalId) {
+                  updateVitalMutation.mutate()
+                } else {
+                  createVitalMutation.mutate()
+                }
               }}
-              disabled={createVitalMutation.isPending}
+              disabled={createVitalMutation.isPending || updateVitalMutation.isPending}
             >
-              {createVitalMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-1" />}
-              Save Vital Metric
+              {(createVitalMutation.isPending || updateVitalMutation.isPending) && (
+                <RefreshCw className="h-4 w-4 animate-spin mr-1" />
+              )}
+              {editingVitalId ? "Update Vital Parameter" : "Save Vital Metric"}
             </Button>
           </div>
         }
@@ -1284,7 +1658,9 @@ export const SettingsPage: React.FC = () => {
                 setVitalPayload({
                   ...vitalPayload,
                   label: e.target.value,
-                  field_key: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+                  field_key: editingVitalId
+                    ? vitalPayload.field_key
+                    : e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "_"),
                 })
               }
               placeholder="e.g. Pain Severity Score"

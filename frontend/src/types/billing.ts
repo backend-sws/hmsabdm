@@ -180,3 +180,158 @@ export interface PostLedgerPayload {
   discount_amount?: number
   notes?: string
 }
+
+// ─── OPD Quick Billing & Orders ───────────────────────────────────────
+export interface OpdPendingOrder {
+  visit_id: number
+  opd_number: string
+  queue_token?: number | string
+  token_no: string
+  visit_date: string
+  visit_status: string
+  patient: {
+    id: number
+    name: string
+    uhid: string
+    mobile?: string
+    gender?: string
+    age?: number | null
+  }
+  doctor: {
+    id?: number
+    name?: string
+    department?: string
+  }
+  consultation_fee: number
+  consultation_amount_paid: number
+  unpaid_consultation_fee: number
+  consultation_payment_status: string
+  prescription?: {
+    id: number
+    prescription_number: string
+    disposition?: string
+    disposition_notes?: string
+    admit_priority?: string
+    recommended_ward?: string
+    diagnoses?: Array<{ code?: string; name?: string }>
+  } | null
+  unbilled_investigations: Array<{
+    id?: number
+    test_name: string
+    test_code?: string
+    category?: string
+    urgency?: string
+    standard_rate?: number
+    clinical_indication?: string
+    status?: string
+    billed_invoice_id?: number | null
+  }>
+  billed_investigations: Array<{
+    id?: number
+    test_name: string
+    test_code?: string
+    category?: string
+    urgency?: string
+    standard_rate?: number
+    status?: string
+    billed_invoice_id?: number | null
+  }>
+  has_pending_items: boolean
+  total_pending_amount: number
+}
+
+export interface CreateOpdBillPayload {
+  opd_visit_id: number
+  patient_id: number
+  bill_consultation_fee?: boolean
+  consultation_fee_amount?: number
+  investigations?: Array<{
+    id?: number
+    test_name: string
+    test_code?: string
+    category?: string
+    rate: number
+  }>
+  custom_items?: Array<{
+    item_name: string
+    category?: string
+    unit_price: number
+    quantity?: number
+  }>
+  discount_amount?: number
+  discount_reason?: string
+  tax_amount?: number
+  payment_method: string
+  payment_breakdown?: Array<{ method: string; amount: number; ref?: string }>
+  notes?: string
+}
+
+export interface OpdReceiptData {
+  invoice_id: number
+  invoice_number: string
+  invoice_date: string
+  encounter_type: string
+  token_no: string
+  opd_number: string
+  patient: {
+    id: number
+    name: string
+    uhid: string
+    mobile?: string
+    gender?: string
+    age?: number | null
+  }
+  doctor: {
+    name?: string
+    department?: string
+  }
+  items: Array<{
+    item_name: string
+    category?: string
+    quantity: number
+    unit_price: number
+    total_amount: number
+  }>
+  gross_amount: number
+  discount_amount: number
+  discount_reason?: string
+  tax_amount: number
+  net_amount: number
+  amount_paid: number
+  balance_due: number
+  payment_method: string
+  payment_breakdown?: any
+  billed_by?: string
+}
+
+export interface OpdAdmissionReferral {
+  id: number
+  prescription_id: number
+  prescription_number: string
+  opd_visit_id: number
+  token_no: string
+  opd_number: string
+  patient_id: number
+  patient: {
+    id: number
+    name: string
+    uhid: string
+    mobile?: string
+    gender?: string
+    age?: number | null
+    dob?: string
+  }
+  doctor_id: number
+  doctor?: {
+    id: number
+    name: string
+    qualification?: string
+    department?: { id: number; name: string }
+  }
+  admit_priority: "routine" | "urgent" | "emergency" | string
+  recommended_ward?: string
+  disposition_notes?: string
+  diagnoses: Array<{ code?: string; name?: string }>
+  referred_at: string
+}
+

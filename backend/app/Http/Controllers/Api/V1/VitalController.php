@@ -92,6 +92,37 @@ class VitalController extends Controller
         return $this->createdResponse($vital, 'Patient vitals recorded successfully');
     }
 
+    #[OA\Put(
+        path: "/api/v1/vitals/{id}",
+        summary: "Update an existing vital record",
+        security: [["bearerAuth" => []]],
+        tags: ["5. Triage & Vitals (Nurse)"]
+    )]
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'temperature'        => 'nullable|numeric|between:50,120',
+            'temperature_unit'   => 'nullable|in:F,C',
+            'blood_pressure_sys' => 'nullable|integer|between:40,300',
+            'blood_pressure_dia' => 'nullable|integer|between:20,200',
+            'pulse_rate'         => 'nullable|integer|between:30,250',
+            'respiratory_rate'   => 'nullable|integer|between:5,100',
+            'oxygen_saturation'  => 'nullable|numeric|between:40,100',
+            'weight'             => 'nullable|numeric|between:0.5,500',
+            'height'             => 'nullable|numeric|between:20,300',
+            'blood_glucose'      => 'nullable|numeric|between:10,1000',
+            'glucose_type'       => 'nullable|in:fasting,random,post_meal',
+            'custom_vitals'      => 'nullable|array',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()->id;
+
+        $vital = $this->vitalService->updateVital($hospitalId, $userId, (int) $id, $validated);
+
+        return $this->successResponse($vital, 'Vital record updated successfully');
+    }
+
     #[OA\Get(
         path: "/api/v1/vitals",
         summary: "Get list of recorded vitals",

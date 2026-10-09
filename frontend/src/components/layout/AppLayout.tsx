@@ -40,7 +40,7 @@ export const AppLayout: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-50/60 text-foreground antialiased dark:bg-background">
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-foreground antialiased dark:bg-background">
       {/* App Top Header Component */}
       <AppHeader
         sidebarOpen={sidebarOpen}
@@ -114,14 +114,8 @@ export const AppLayout: React.FC = () => {
             document.body
           )}
 
-        {/* Route Outlet Main Area with Tech Mesh Pattern Overlay */}
+        {/* Route Outlet Main Area */}
         <main className="custom-scrollbar relative min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          {/* Background Medical Doodle Line-Art Pattern Overlay */}
-          <div
-            className="pointer-events-none absolute inset-0 bg-[length:380px_380px] bg-top bg-repeat opacity-[0.05] mix-blend-multiply transition-opacity duration-300 dark:opacity-[0.08] dark:invert"
-            style={{ backgroundImage: "url('/medical_pattern.png')" }}
-          />
-
           <div className="relative z-10 w-full">
             <Outlet />
           </div>

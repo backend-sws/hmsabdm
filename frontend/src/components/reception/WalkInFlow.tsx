@@ -13,6 +13,9 @@ import { cn } from "@/lib/utils"
 import { DobAgePicker } from "@/components/common/DobAgePicker"
 import { settingsService } from "@/services/settingsService"
 import { queryKeys } from "@/constants/queryKeys"
+import { generateDoctorSlots } from "@/utils/slotGenerator"
+import { DoctorQueueLoadCard } from "@/components/reception/DoctorQueueLoadCard"
+import { SlotPicker } from "@/components/reception/SlotPicker"
 import type { QuickVisitPayload } from "@/types/reception"
 
 export const walkInSchema = z.object({
@@ -97,6 +100,7 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
 
   const selectedDeptId = watch("department_id")
   const selectedDoctorId = watch("doctor_id")
+  const selectedSlotTime = watch("slot_time")
   const currentDob = watch("dob")
   const currentAge = watch("age")
 
@@ -111,6 +115,12 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
     return availableDoctors.find((doc: any) => String(doc.id) === String(selectedDoctorId))
   }, [selectedDoctorId, availableDoctors])
 
+  // OPD Slot Duration Settings from Hospital Configuration
+  const { data: opdSlotConfig } = useQuery({
+    queryKey: ["settings", "opd_slot"],
+    queryFn: () => settingsService.getSettings("opd_slot"),
+  })
+
   const doctorTiming = useMemo(() => {
     if (!selectedDoctor) return null
     if (selectedDoctor.schedules && selectedDoctor.schedules.length > 0) {
@@ -121,6 +131,31 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
     }
     return selectedDoctor.consultation_time || "10:00 AM - 02:00 PM"
   }, [selectedDoctor])
+
+  const dynamicSlots = useMemo(() => {
+    const slotDuration = Number(opdSlotConfig?.slot_duration_minutes || 15)
+    let startTime = opdSlotConfig?.morning_start || "09:00"
+    let endTime = opdSlotConfig?.morning_end || "13:00"
+
+    if (selectedDoctor?.schedules && selectedDoctor.schedules.length > 0) {
+      const sched = selectedDoctor.schedules[0]
+      if (sched.start_time && sched.end_time) {
+        startTime = sched.start_time.slice(0, 5)
+        endTime = sched.end_time.slice(0, 5)
+      }
+    }
+
+    return generateDoctorSlots({
+      startTime,
+      endTime,
+      slotDurationMinutes: slotDuration,
+      includeLiveToken: true,
+      defaultMorningStart: opdSlotConfig?.morning_start || "09:00",
+      defaultMorningEnd: opdSlotConfig?.morning_end || "13:00",
+      defaultEveningStart: opdSlotConfig?.evening_start || "17:00",
+      defaultEveningEnd: opdSlotConfig?.evening_end || "21:00",
+    })
+  }, [selectedDoctor, opdSlotConfig])
 
   React.useEffect(() => {
     if (selectedDoctor?.schedules?.[0]?.opd_fee) {
@@ -443,30 +478,33 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
                 <option value="">-- Auto-assign first available doctor --</option>
                 {availableDoctors.map((doc: any) => (
                   <option key={doc.id} value={doc.id}>
-                    {doc.name} {doc.specialization ? `(${doc.specialization})` : ""}
+                    {doc.name} {doc.specialization ? `(${doc.specialization})` : ""} {typeof doc.today_waiting_count === 'number' ? `• [${doc.today_waiting_count} waiting]` : ""}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="sm:col-span-1 lg:col-span-2">
-              <Label className="text-xs font-semibold">Appointment Slot / Session</Label>
-              <select
-                {...register("slot_time")}
-                className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs"
-              >
-                <option value="">⚡ Next Available Token (Live Queue - FIFO)</option>
-                <option value="10:00 AM - 10:30 AM">10:00 AM – 10:30 AM (Morning Slot)</option>
-                <option value="10:30 AM - 11:00 AM">10:30 AM – 11:00 AM (Morning Slot)</option>
-                <option value="11:00 AM - 11:30 AM">11:00 AM – 11:30 AM (Morning Slot)</option>
-                <option value="11:30 AM - 12:00 PM">11:30 AM – 12:00 PM (Morning Slot)</option>
-                <option value="12:00 PM - 12:30 PM">12:00 PM – 12:30 PM (Morning Slot)</option>
-                <option value="12:30 PM - 01:00 PM">12:30 PM – 01:00 PM (Morning Slot)</option>
-                <option value="04:00 PM - 04:30 PM">04:00 PM – 04:30 PM (Evening Slot)</option>
-                <option value="04:30 PM - 05:00 PM">04:30 PM – 05:00 PM (Evening Slot)</option>
-                <option value="05:00 PM - 05:30 PM">05:00 PM – 05:30 PM (Evening Slot)</option>
-                <option value="05:30 PM - 06:00 PM">05:30 PM – 06:00 PM (Evening Slot)</option>
-              </select>
+            {/* Doctor Live Queue & Load Status Card */}
+            {selectedDeptId && availableDoctors.length > 0 && (
+              <div className="sm:col-span-2 lg:col-span-4">
+                <DoctorQueueLoadCard
+                  selectedDoctor={selectedDoctor}
+                  availableDoctors={availableDoctors}
+                  slotDurationMinutes={Number(opdSlotConfig?.slot_duration_minutes || 15)}
+                  onSelectDoctor={(docId) => setValue("doctor_id", docId ? Number(docId) : undefined)}
+                />
+              </div>
+            )}
+
+            {/* Appointment Slot / Session Selection */}
+            <div className="sm:col-span-2 lg:col-span-4">
+              <Label className="text-xs font-semibold mb-1 block">Appointment Slot / Token Allocation</Label>
+              <SlotPicker
+                slots={dynamicSlots}
+                value={selectedSlotTime}
+                onChange={(val) => setValue("slot_time", val)}
+                slotDurationMinutes={Number(opdSlotConfig?.slot_duration_minutes || 15)}
+              />
             </div>
 
             <div className="sm:col-span-2 lg:col-span-4">

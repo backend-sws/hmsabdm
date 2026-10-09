@@ -115,4 +115,8 @@ export const patientService = {
       body: JSON.stringify(data),
     })
   },
+
+  getPatientHistory: async (patientId: number | string): Promise<any> => {
+    return apiClient<any>(`/patients/${patientId}/history`)
+  },
 }

@@ -19,6 +19,10 @@ import {
   Activity,
   Layers,
   Sparkles,
+  Clock,
+  UserPlus,
+  CheckCircle2,
+  Settings2,
 } from "lucide-react"
 
 import { PageHeader } from "@/components/common/PageHeader"
@@ -31,6 +35,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { WardBedManagementView } from "@/components/ipd/WardBedManagementView"
 
 import { ipdService } from "@/services/ipdService"
 import { doctorService } from "@/services/doctorService"
@@ -40,6 +45,8 @@ import type {
   BedMatrixResponse,
   BedMatrixWard,
   BedMatrixBed,
+  IpdWard,
+  IpdBed,
   IpdAdmission,
   AdmitPatientPayload,
 } from "@/types/ipd"
@@ -49,7 +56,7 @@ export const IpdDeskPage: React.FC = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [activeTab, setActiveTab] = useState<"matrix" | "admissions">("matrix")
+  const [activeTab, setActiveTab] = useState<"matrix" | "admissions" | "referrals" | "wards_setup">("matrix")
   const [selectedWardFilter, setSelectedWardFilter] = useState<string>("all")
   const [admissionsSearch, setAdmissionsSearch] = useState("")
 
@@ -62,6 +69,20 @@ export const IpdDeskPage: React.FC = () => {
   // Quick pre-selected Ward & Bed when clicking "Admit Here" on a vacant bed in matrix
   const [preSelectedWardId, setPreSelectedWardId] = useState<number | null>(null)
   const [preSelectedBedId, setPreSelectedBedId] = useState<number | null>(null)
+
+  // Referral selected for admission
+  const [referralForAdmission, setReferralForAdmission] = useState<any | null>(null)
+
+  // ─── Query: Pending OPD Admission Referrals ──────────────────────────
+  const {
+    data: opdReferrals = [],
+    isLoading: referralsLoading,
+    refetch: refetchReferrals,
+  } = useQuery({
+    queryKey: ["ipd", "opd-referrals"],
+    queryFn: () => ipdService.getOpdReferrals(),
+    refetchInterval: 20_000,
+  })
 
   // ─── Queries ────────────────────────────────────────────────────────
   const {
@@ -76,7 +97,7 @@ export const IpdDeskPage: React.FC = () => {
   })
 
   const {
-    data: admissionsList = [],
+    data: admissionsRaw,
     isLoading: admissionsLoading,
     refetch: refetchAdmissions,
   } = useQuery({
@@ -85,22 +106,41 @@ export const IpdDeskPage: React.FC = () => {
     refetchInterval: 30_000,
   })
 
-  const { data: wardsList = [] } = useQuery({
+  const admissionsList = useMemo<IpdAdmission[]>(() => {
+    if (Array.isArray(admissionsRaw)) return admissionsRaw
+    if (admissionsRaw && Array.isArray((admissionsRaw as any).data)) return (admissionsRaw as any).data
+    return []
+  }, [admissionsRaw])
+
+  const { data: rawWards = [] } = useQuery({
     queryKey: queryKeys.ipd.wards,
     queryFn: () => ipdService.getWards(),
   })
+  const wardsList = useMemo<IpdWard[]>(() => {
+    if (Array.isArray(rawWards)) return rawWards
+    if (rawWards && Array.isArray((rawWards as any).data)) return (rawWards as any).data
+    return []
+  }, [rawWards])
 
   const { data: doctorsData } = useQuery({
     queryKey: queryKeys.doctors.list(),
     queryFn: () => doctorService.getDoctors({ limit: 100 }),
   })
-  const doctorsList = useMemo(() => doctorsData?.data || [], [doctorsData])
+  const doctorsList = useMemo(() => {
+    if (Array.isArray(doctorsData)) return doctorsData
+    return doctorsData?.data || []
+  }, [doctorsData])
 
-  const { data: availableBedsList = [] } = useQuery({
+  const { data: rawAvailableBeds = [] } = useQuery({
     queryKey: queryKeys.ipd.availableBeds(preSelectedWardId || undefined),
     queryFn: () => ipdService.getAvailableBeds(preSelectedWardId || undefined),
     enabled: admitModalOpen || transferModalOpen,
   })
+  const availableBedsList = useMemo<IpdBed[]>(() => {
+    if (Array.isArray(rawAvailableBeds)) return rawAvailableBeds
+    if (rawAvailableBeds && Array.isArray((rawAvailableBeds as any).data)) return (rawAvailableBeds as any).data
+    return []
+  }, [rawAvailableBeds])
 
   // ─── Mutations ──────────────────────────────────────────────────────
   const transferBedMutation = useMutation({
@@ -155,9 +195,10 @@ export const IpdDeskPage: React.FC = () => {
 
   // Filter admissions in Directory view
   const filteredAdmissions = useMemo(() => {
-    if (!admissionsSearch.trim()) return admissionsList
+    const list = Array.isArray(admissionsList) ? admissionsList : []
+    if (!admissionsSearch.trim()) return list
     const q = admissionsSearch.toLowerCase()
-    return admissionsList.filter(
+    return list.filter(
       (a) =>
         a.ipd_number?.toLowerCase().includes(q) ||
         a.patient?.name?.toLowerCase().includes(q) ||
@@ -314,6 +355,16 @@ export const IpdDeskPage: React.FC = () => {
 
             <Button
               size="sm"
+              variant={activeTab === "wards_setup" ? "default" : "outline"}
+              onClick={() => setActiveTab(activeTab === "wards_setup" ? "matrix" : "wards_setup")}
+              className="gap-1.5 text-xs font-semibold"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              {activeTab === "wards_setup" ? "Back to Live Matrix" : "Manage Wards & Beds"}
+            </Button>
+
+            <Button
+              size="sm"
               onClick={() => {
                 setPreSelectedWardId(null)
                 setPreSelectedBedId(null)
@@ -421,6 +472,35 @@ export const IpdDeskPage: React.FC = () => {
           <Building className="h-4 w-4" />
           Active Inpatients Directory ({admissionsList.length})
         </button>
+
+        <button
+          onClick={() => setActiveTab("referrals")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-lg transition-all ${
+            activeTab === "referrals"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          <Sparkles className="h-4 w-4 text-amber-500" />
+          Pending OPD Admissions
+          {opdReferrals.length > 0 && (
+            <span className="ml-1.5 rounded-full bg-rose-600 text-white text-[10px] px-1.5 py-0.5 font-bold leading-none animate-pulse">
+              {opdReferrals.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("wards_setup")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-lg transition-all ${
+            activeTab === "wards_setup"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          <Settings2 className="h-4 w-4 text-purple-500" />
+          Wards & Bed Setup (Pricing)
+        </button>
       </div>
 
       {/* ────────────────────────────────────────────────────────────────
@@ -522,20 +602,171 @@ export const IpdDeskPage: React.FC = () => {
       )}
 
       {/* ────────────────────────────────────────────────────────────────
+          TAB 3: PENDING OPD ADMISSION REFERRALS
+         ──────────────────────────────────────────────────────────────── */}
+      {activeTab === "referrals" && (
+        <SectionCard
+          title="Pending OPD Admission Referrals"
+          description="Patients advised for in-patient bed admission by OPD consulting doctors."
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchReferrals()}
+              className="gap-1.5 text-xs h-8"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Refresh
+            </Button>
+          }
+        >
+          <div className="space-y-4">
+            {referralsLoading ? (
+              <div className="py-12 flex justify-center">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : opdReferrals.length === 0 ? (
+              <div className="py-16 text-center rounded-xl border border-dashed border-border/80 bg-card/50">
+                <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-2 opacity-80" />
+                <h4 className="text-sm font-semibold text-foreground">No Pending Referrals</h4>
+                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                  All patients advised for admission from OPD consultations have either been admitted or transferred.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {opdReferrals.map((ref: any) => {
+                  const isEmergency = ref.admit_priority === "emergency"
+                  const isUrgent = ref.admit_priority === "urgent"
+
+                  return (
+                    <Card
+                      key={ref.prescription_id}
+                      className={`relative overflow-hidden transition-all border shadow-xs hover:shadow-md ${
+                        isEmergency
+                          ? "border-rose-500/50 bg-rose-500/5 dark:bg-rose-950/20"
+                          : isUrgent
+                          ? "border-amber-500/50 bg-amber-500/5 dark:bg-amber-950/20"
+                          : "border-border bg-card"
+                      }`}
+                    >
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-sm text-foreground">{ref.patient_name}</h4>
+                              <Badge
+                                variant={isEmergency ? "destructive" : isUrgent ? "outline" : "secondary"}
+                                className={`text-[10px] uppercase font-bold tracking-wider ${
+                                  isUrgent ? "bg-amber-500/10 text-amber-600 border-amber-300" : ""
+                                }`}
+                              >
+                                {ref.admit_priority || "Routine"}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                              {ref.uhid} • {ref.gender || "M"}/{ref.age || "N/A"} • +91 {ref.patient_mobile || "N/A"}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                            Token #{ref.token_number || "—"}
+                          </Badge>
+                        </div>
+
+                        <div className="rounded-lg bg-background/80 p-2.5 border border-border/60 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-muted-foreground">
+                            <span className="flex items-center gap-1.5">
+                              <Stethoscope className="h-3.5 w-3.5 text-primary" />
+                              Advised by:
+                            </span>
+                            <span className="font-medium text-foreground">
+                              {ref.doctor_name || "Doctor"}
+                            </span>
+                          </div>
+                          {ref.recommended_ward && (
+                            <div className="flex items-center justify-between text-muted-foreground">
+                              <span className="flex items-center gap-1.5">
+                                <Bed className="h-3.5 w-3.5 text-blue-500" />
+                                Recommended Ward:
+                              </span>
+                              <Badge variant="outline" className="text-[11px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40">
+                                {ref.recommended_ward}
+                              </Badge>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between text-muted-foreground">
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                              Advised Time:
+                            </span>
+                            <span className="font-mono text-[11px]">
+                              {ref.created_at ? new Date(ref.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Today"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {ref.disposition_notes && (
+                          <div className="text-xs bg-accent/40 rounded-lg p-2 text-foreground/90 border border-border/40">
+                            <span className="font-semibold text-muted-foreground text-[10px] uppercase block mb-0.5">
+                              Clinical Advice / Reason:
+                            </span>
+                            <p className="line-clamp-2 italic">{ref.disposition_notes}</p>
+                          </div>
+                        )}
+
+                        <Button
+                          onClick={() => {
+                            setReferralForAdmission(ref)
+                            setPreSelectedWardId(null)
+                            setPreSelectedBedId(null)
+                            setAdmitModalOpen(true)
+                          }}
+                          className="w-full gap-2 text-xs font-semibold shadow-xs"
+                          size="sm"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          Allocate Bed & Admit Now
+                        </Button>
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────
+          TAB 4: WARDS & BED SETUP (PRICING & ROOM CONFIGURATION)
+         ──────────────────────────────────────────────────────────────── */}
+      {activeTab === "wards_setup" && (
+        <WardBedManagementView />
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────
           MODAL 1: NEW IPD ADMISSION DRAWER
          ──────────────────────────────────────────────────────────────── */}
       <AdmitPatientModal
         open={admitModalOpen}
-        onOpenChange={setAdmitModalOpen}
+        onOpenChange={(open) => {
+          setAdmitModalOpen(open)
+          if (!open) {
+            setReferralForAdmission(null)
+          }
+        }}
         preSelectedWardId={preSelectedWardId}
         preSelectedBedId={preSelectedBedId}
+        referralData={referralForAdmission}
         wards={wardsList}
         doctors={doctorsList}
         availableBeds={availableBedsList}
         onAdmitted={(newAdm) => {
           queryClient.invalidateQueries({ queryKey: queryKeys.ipd.bedMatrix })
           queryClient.invalidateQueries({ queryKey: queryKeys.ipd.admissions() })
+          queryClient.invalidateQueries({ queryKey: ["ipd", "opd-referrals"] })
           setAdmitModalOpen(false)
+          setReferralForAdmission(null)
           navigate(`/ipd/admissions/${newAdm.id}`)
         }}
       />
@@ -765,6 +996,7 @@ interface AdmitPatientModalProps {
   onOpenChange: (open: boolean) => void
   preSelectedWardId: number | null
   preSelectedBedId: number | null
+  referralData?: any | null
   wards: any[]
   doctors: any[]
   availableBeds: any[]
@@ -776,6 +1008,7 @@ const AdmitPatientModal: React.FC<AdmitPatientModalProps> = ({
   onOpenChange,
   preSelectedWardId,
   preSelectedBedId,
+  referralData,
   wards,
   doctors,
   availableBeds,
@@ -816,6 +1049,39 @@ const AdmitPatientModal: React.FC<AdmitPatientModalProps> = ({
     if (preSelectedWardId) setWardId(preSelectedWardId)
     if (preSelectedBedId) setBedId(preSelectedBedId)
   }, [preSelectedWardId, preSelectedBedId])
+
+  // Populate from referral data if opened from OPD Referrals queue
+  React.useEffect(() => {
+    if (referralData && open) {
+      setSelectedPatient({
+        id: referralData.patient_id,
+        name: referralData.patient_name,
+        uhid: referralData.uhid,
+        mobile: referralData.patient_mobile || "",
+        gender: referralData.gender || "M",
+        age: referralData.age || 0,
+      } as any)
+      if (referralData.doctor_id) {
+        setDoctorId(referralData.doctor_id)
+      }
+      if (referralData.admit_priority === "emergency") {
+        setAdmissionType("emergency")
+      } else {
+        setAdmissionType("planned")
+      }
+      if (referralData.disposition_notes) {
+        setAdmissionReason(`OPD Referral: ${referralData.disposition_notes}`)
+      }
+      if (referralData.recommended_ward && wards.length > 0) {
+        const matched = wards.find((w: any) =>
+          w.name.toLowerCase().includes(referralData.recommended_ward.toLowerCase())
+        )
+        if (matched) {
+          setWardId(matched.id)
+        }
+      }
+    }
+  }, [referralData, open, wards])
 
   const admitMutation = useMutation({
     mutationFn: async () => {
@@ -884,6 +1150,33 @@ const AdmitPatientModal: React.FC<AdmitPatientModalProps> = ({
       }
     >
       <div className="space-y-6 py-2">
+        {referralData && (
+          <div className="rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-500/10 p-3.5 flex items-start gap-3">
+            <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div className="text-xs space-y-1">
+              <p className="font-bold text-foreground">
+                Direct Admission from OPD Consultation (Token #{referralData.token_number || referralData.visit_id})
+              </p>
+              <p className="text-muted-foreground">
+                Advised by <span className="font-semibold text-foreground">{referralData.doctor_name || "Doctor"}</span> • Priority:{" "}
+                <span className="uppercase font-bold text-amber-600 dark:text-amber-400">
+                  {referralData.admit_priority || "Routine"}
+                </span>
+                {referralData.recommended_ward && (
+                  <span>
+                    {" "}• Advised Ward: <span className="font-semibold text-foreground">{referralData.recommended_ward}</span>
+                  </span>
+                )}
+              </p>
+              {referralData.disposition_notes && (
+                <p className="italic text-foreground/90 bg-background/70 p-2 rounded-lg border border-border/50 text-[11px] mt-1">
+                  "{referralData.disposition_notes}"
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Section 1: Patient Selection */}
         <div className="rounded-xl border border-border bg-card p-4 space-y-4">
           <h4 className="font-semibold text-sm flex items-center gap-2 text-foreground">

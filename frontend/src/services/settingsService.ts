@@ -106,6 +106,28 @@ export const settingsService = {
     })
   },
 
+  async updateVitalConfig(
+    id: number,
+    data: Partial<{
+      field_key: string
+      label: string
+      category?: string
+      unit?: string
+      input_type: "number" | "text" | "select" | "boolean"
+      options?: string[]
+      min_value?: number
+      max_value?: number
+      is_required?: boolean
+      is_active?: boolean
+      sort_order?: number
+    }>
+  ): Promise<VitalFieldConfig> {
+    return apiClient<VitalFieldConfig>(`/vitals/configs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  },
+
   // ─── 5. Custom Patient Registration Fields ──────────────────────────
   async getPatientFieldConfigs(): Promise<PatientFieldConfig[]> {
     return apiClient<PatientFieldConfig[]>("/patient-fields/configs")

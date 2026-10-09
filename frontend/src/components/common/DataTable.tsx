@@ -64,17 +64,30 @@ export function DataTable<T>({
     if (onSearchChange) onSearchChange(val)
   }
 
+  // Defensively normalize incoming data into guaranteed Array
+  const rawList: T[] = React.useMemo(() => {
+    if (Array.isArray(data)) return data
+    if (data && typeof data === "object" && Array.isArray((data as any).data)) {
+      return (data as any).data
+    }
+    return []
+  }, [data])
+
   const filteredData = React.useMemo(() => {
-    if (onSearchChange || !currentSearch) return data
+    if (!Array.isArray(rawList)) return []
+    if (onSearchChange || !currentSearch) return rawList
     const term = currentSearch.toLowerCase()
-    return data.filter((item) =>
+    return rawList.filter((item) =>
       Object.values(item as Record<string, unknown>).some((val) =>
         String(val ?? "").toLowerCase().includes(term)
       )
     )
-  }, [data, currentSearch, onSearchChange])
+  }, [rawList, currentSearch, onSearchChange])
 
-  const total = totalRecords !== undefined ? totalRecords : filteredData.length
+  const total =
+    totalRecords !== undefined
+      ? totalRecords
+      : ((data as any)?.meta?.total ?? filteredData.length)
   const page = currentPage !== undefined ? currentPage : 1
   const limit = pageSize !== undefined ? pageSize : 10
   const maxPage = lastPage !== undefined ? lastPage : Math.max(1, Math.ceil(total / limit))

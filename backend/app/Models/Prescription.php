@@ -23,6 +23,10 @@ class Prescription extends Model
         'diet_advice',
         'general_advice',
         'follow_up_date',
+        'disposition',
+        'disposition_notes',
+        'admit_priority',
+        'recommended_ward',
         'status',
     ];
 
@@ -70,5 +74,10 @@ class Prescription extends Model
     public function diagnoses()
     {
         return $this->hasMany(PrescriptionDiagnosis::class, 'prescription_id');
+    }
+
+    public function investigations()
+    {
+        return $this->hasMany(PrescriptionInvestigation::class, 'prescription_id');
     }
 }

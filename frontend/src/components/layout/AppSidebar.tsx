@@ -65,10 +65,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
     {
-      title: "OPD Doctor Desk",
+      title: "OPD Clinical Desk",
       path: "/opd",
       icon: Stethoscope,
-      roles: ["HOSPITAL_ADMIN", "DOCTOR"],
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"],
     },
     {
       title: "IPD Inpatient Desk",
@@ -134,20 +134,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
   return (
     <aside
-      className={`fixed top-16 bottom-0 left-0 z-30 flex h-[calc(100vh-4rem)] shrink-0 flex-col justify-between border-r border-border/80 bg-card/95 backdrop-blur-md transition-all duration-300 ease-in-out lg:relative lg:top-0 lg:z-auto lg:translate-x-0 ${
+      className={`fixed top-16 bottom-0 left-0 z-30 flex h-[calc(100vh-4rem)] shrink-0 flex-col justify-between border-r border-slate-200 dark:border-border bg-white dark:bg-card transition-all duration-300 ease-in-out lg:relative lg:top-0 lg:z-auto lg:translate-x-0 ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       } ${isCollapsed ? "lg:w-20" : "lg:w-64"} w-64 overflow-hidden`}
     >
-      {/* Seamless Medical Line-Art Pattern Background Overlay */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-top bg-repeat opacity-[0.04] mix-blend-multiply transition-opacity duration-300 dark:opacity-[0.12] dark:invert"
-        style={{ backgroundImage: "url('/medical_pattern.png')" }}
-      />
-
-      {/* Cybernetic Accent Glow Lines */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-24 -bottom-24 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl" />
-
       {/* Navigation Scrollable Body */}
       <div className="custom-scrollbar relative z-10 flex-1 space-y-6 overflow-y-auto p-3.5">
         {/* If Super Admin, show Platform Administration */}
@@ -155,7 +145,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           <div>
             {!isCollapsed && (
               <div className="mb-2.5 flex items-center justify-between px-3">
-                <p className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase">
+                <p className="text-xs font-bold tracking-wider text-muted-foreground/80 uppercase">
                   Platform Administration
                 </p>
                 <span className="h-1 w-1 rounded-full bg-primary/60" />
@@ -172,10 +162,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                     end={item.path === "/"}
                     title={isCollapsed ? item.title : undefined}
                     className={({ isActive }) =>
-                      `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
+                      `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                         isActive
                           ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
-                          : "text-muted-foreground hover:bg-slate-100/80 hover:text-foreground dark:hover:bg-muted/60"
+                          : "text-muted-foreground hover:bg-slate-100 hover:text-foreground dark:hover:bg-muted/60"
                       } ${isCollapsed ? "justify-center px-0" : ""}`
                     }
                   >
@@ -195,7 +185,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                         </div>
                         {!isCollapsed && item.badge && (
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                            className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                               isActive
                                 ? "bg-primary-foreground/20 text-primary-foreground"
                                 : "bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-400"
@@ -218,7 +208,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               <div>
                 {!isCollapsed && (
                   <div className="mb-2.5 flex items-center justify-between px-3">
-                    <p className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase">
+                    <p className="text-xs font-bold tracking-wider text-muted-foreground/80 uppercase">
                       Clinical Workflows
                     </p>
                     <span className="h-1 w-1 rounded-full bg-primary/60" />
@@ -235,10 +225,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                         end={item.path === "/"}
                         title={isCollapsed ? item.title : undefined}
                         className={({ isActive }) =>
-                          `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
+                          `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                             isActive
                               ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
-                              : "text-muted-foreground hover:bg-slate-100/80 hover:text-foreground dark:hover:bg-muted/60"
+                              : "text-muted-foreground hover:bg-slate-100 hover:text-foreground dark:hover:bg-muted/60"
                           } ${isCollapsed ? "justify-center px-0" : ""}`
                         }
                       >
@@ -267,7 +257,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               <div>
                 {!isCollapsed && (
                   <div className="mb-2.5 flex items-center justify-between px-3">
-                    <p className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase">
+                    <p className="text-xs font-bold tracking-wider text-muted-foreground/80 uppercase">
                       Hospital Management
                     </p>
                     <span className="h-1 w-1 rounded-full bg-emerald-500/60" />
@@ -283,10 +273,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                         onClick={() => setSidebarOpen(false)}
                         title={isCollapsed ? item.title : undefined}
                         className={({ isActive }) =>
-                          `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
+                          `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                             isActive
                               ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
-                              : "text-muted-foreground hover:bg-slate-100/80 hover:text-foreground dark:hover:bg-muted/60"
+                              : "text-muted-foreground hover:bg-slate-100 hover:text-foreground dark:hover:bg-muted/60"
                           } ${isCollapsed ? "justify-center px-0" : ""}`
                         }
                       >
@@ -328,7 +318,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   ABDM Verified Node
                 </p>
               </div>
-              <p className="truncate text-[10px] text-muted-foreground">
+              <p className="truncate text-xs text-muted-foreground">
                 M1, M2 & M3 Connected
               </p>
             </div>

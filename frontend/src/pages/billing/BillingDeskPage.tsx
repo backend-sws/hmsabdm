@@ -16,8 +16,10 @@ import {
   Building,
   User,
   Clock,
+  CreditCard,
 } from "lucide-react"
 
+import { OpdQuickBillCounterTab } from "@/components/billing/OpdQuickBillCounterTab"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable, type Column } from "@/components/common/DataTable"
 import { FormContainer } from "@/components/formContainer"
@@ -45,7 +47,7 @@ export const BillingDeskPage: React.FC = () => {
   const queryClient = useQueryClient()
 
   // ─── Active Tab ──────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"tariff" | "ledger" | "rules" | "invoices">("tariff")
+  const [activeTab, setActiveTab] = useState<"opd-counter" | "tariff" | "ledger" | "rules" | "invoices">("opd-counter")
 
   // ─── Tariff Tab Filters & States ─────────────────────────────────────
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
@@ -583,10 +585,21 @@ export const BillingDeskPage: React.FC = () => {
          ──────────────────────────────────────────────────────────────── */}
       <div className="flex border-b border-border">
         <button
+          onClick={() => setActiveTab("opd-counter")}
+          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
+            activeTab === "opd-counter"
+              ? "border-primary text-primary bg-primary/5 font-bold"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <CreditCard className="h-4 w-4" /> OPD Token Quick Bill
+        </button>
+
+        <button
           onClick={() => setActiveTab("tariff")}
           className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
             activeTab === "tariff"
-              ? "border-primary text-primary bg-primary/5"
+              ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -597,7 +610,7 @@ export const BillingDeskPage: React.FC = () => {
           onClick={() => setActiveTab("ledger")}
           className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
             activeTab === "ledger"
-              ? "border-primary text-primary bg-primary/5"
+              ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -608,7 +621,7 @@ export const BillingDeskPage: React.FC = () => {
           onClick={() => setActiveTab("rules")}
           className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
             activeTab === "rules"
-              ? "border-primary text-primary bg-primary/5"
+              ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -619,13 +632,18 @@ export const BillingDeskPage: React.FC = () => {
           onClick={() => setActiveTab("invoices")}
           className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
             activeTab === "invoices"
-              ? "border-primary text-primary bg-primary/5"
+              ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           <Receipt className="h-4 w-4" /> Final Tax Invoices
         </button>
       </div>
+
+      {/* ════════════════════════════════════════════════════════════════
+          TAB 0: OPD TOKEN QUICK BILL COUNTER
+         ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "opd-counter" && <OpdQuickBillCounterTab />}
 
       {/* ════════════════════════════════════════════════════════════════
           TAB 1: SERVICE TARIFF MASTER

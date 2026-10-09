@@ -42,6 +42,26 @@ class Patient extends Model
         'custom_fields' => 'array',
     ];
 
+    protected $appends = [
+        'age',
+    ];
+
+    public function getAgeAttribute()
+    {
+        if (array_key_exists('age', $this->attributes) && $this->attributes['age'] !== null) {
+            return (int) $this->attributes['age'];
+        }
+        if ($this->dob) {
+            try {
+                $dob = $this->dob instanceof \Carbon\Carbon ? $this->dob : \Carbon\Carbon::parse($this->dob);
+                return (int) $dob->age;
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     protected static function booted()
     {
         static::creating(function (Patient $patient) {
