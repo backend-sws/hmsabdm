@@ -17,6 +17,16 @@ export const GENDER_OPTIONS = [
   { label: "Other", value: "O" },
 ]
 
+export const ID_PROOF_OPTIONS = [
+  { value: "aadhaar", label: "Aadhaar Card" },
+  { value: "pan", label: "PAN Card" },
+  { value: "voter_id", label: "Voter ID" },
+  { value: "driving_license", label: "Driving License" },
+  { value: "passport", label: "Passport" },
+  { value: "ration_card", label: "Ration Card" },
+  { value: "other", label: "Other Official Govt ID" },
+]
+
 export const BLOOD_GROUP_OPTIONS = [
   { label: "A+", value: "A+" },
   { label: "A-", value: "A-" },

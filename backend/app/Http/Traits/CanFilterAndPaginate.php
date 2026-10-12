@@ -52,4 +52,12 @@ trait CanFilterAndPaginate
 
         return $query->paginate($perPage)->withQueryString();
     }
+
+    /**
+     * Get case-insensitive like operator based on active database driver (pgsql uses ilike, sqlite/mysql use like).
+     */
+    public function likeOperator(): string
+    {
+        return \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+    }
 }

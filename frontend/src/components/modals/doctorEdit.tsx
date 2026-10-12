@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useForm, useFieldArray, Controller, type SubmitHandler } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { Clock } from "lucide-react"
@@ -13,6 +14,7 @@ import { doctorService } from "@/services/doctorService"
 import { departmentService } from "@/services/departmentService"
 import { queryKeys } from "@/constants/queryKeys"
 import { DOCTOR_FORM_INITIAL_DATA, DAYS_OF_WEEK } from "@/constants/doctor.constants"
+import { doctorFormSchema, type DoctorFormValues } from "@/schemas"
 import type { Doctor, DoctorSchedule } from "@/types/doctor"
 
 interface DoctorEditProps {
@@ -21,27 +23,7 @@ interface DoctorEditProps {
   doctor?: (Doctor & { viewMode?: boolean }) | null
 }
 
-interface DoctorFormValues {
-  name: string
-  username?: string
-  password?: string
-  email?: string
-  phone?: string
-  department_id: string | number
-  specialization?: string
-  qualification?: string
-  hpr_id?: string
-  consultation_time?: number
-  is_active: boolean
-  schedules: {
-    day_of_week: number
-    enabled: boolean
-    start_time: string
-    end_time: string
-    max_patients: number
-    opd_fee: number | string
-  }[]
-}
+// DoctorFormValues is inferred from doctorFormSchema in src/schemas/doctor.schema.ts
 
 export default function DoctorEdit({ open, onClose, doctor }: DoctorEditProps) {
   const isViewMode = !!doctor?.viewMode
@@ -51,6 +33,7 @@ export default function DoctorEdit({ open, onClose, doctor }: DoctorEditProps) {
   const [activeTab, setActiveTab] = useState<"profile" | "schedule">("profile")
 
   const { handleSubmit, control, reset, register, watch } = useForm<DoctorFormValues>({
+    resolver: zodResolver(doctorFormSchema),
     defaultValues: {
       ...DOCTOR_FORM_INITIAL_DATA,
       schedules: Array.from({ length: 7 }, (_, i) => ({

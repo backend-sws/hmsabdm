@@ -27,7 +27,7 @@ import { rxPresetService } from "@/services/rxPresetService"
 import { departmentService } from "@/services/departmentService"
 import { doctorService } from "@/services/doctorService"
 import { opdService } from "@/services/opdService"
-import { detectMedicineFormAndDosage } from "../opd/DoctorConsultationWorkstationView"
+import { detectMedicineFormAndDosage } from "@/constants/clinical.constants"
 import type { RxPreset, RxPresetScope, RxPresetMedicine } from "@/types/rxPreset"
 import type { MedicineResult } from "@/types/opd"
 

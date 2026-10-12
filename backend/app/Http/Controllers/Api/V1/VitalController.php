@@ -98,6 +98,7 @@ class VitalController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["5. Triage & Vitals (Nurse)"]
     )]
+    #[OA\Response(response: 200, description: "Vital record updated successfully")]
     public function update(Request $request, $id)
     {
         $validated = $request->validate([

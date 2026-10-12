@@ -49,6 +49,11 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isLinkAbhaOpen, setIsLinkAbhaOpen] = useState(false)
 
+  const selectPatient = (patient: any) => {
+    setSelectedPatient(patient)
+    setSearchResults([])
+  }
+
   // Search logic: by UHID, Mobile, or Name
   const executeSearch = async (queryStr: string) => {
     const q = queryStr.trim()
@@ -137,11 +142,6 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
       defaultEveningEnd: opdSlotConfig?.evening_end || "21:00",
     })
   }, [selectedDoctor, opdSlotConfig])
-
-  const selectPatient = (patient: any) => {
-    setSelectedPatient(patient)
-    setSearchResults([])
-  }
 
   // Check 15-Day Follow-up Policy whenever patient or doctor changes
   const {

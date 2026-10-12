@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 import { useForm, type SubmitHandler } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import {
@@ -31,39 +32,14 @@ import {
   GENDER_OPTIONS,
   BLOOD_GROUP_OPTIONS,
   GUARDIAN_RELATION_OPTIONS,
+  ID_PROOF_OPTIONS,
 } from "@/constants/patient.constants"
 import { PatientAvatar, AbhaCardModal, LinkAbhaModal } from "@/components/common"
 import { DobAgePicker, calculateAgeBreakdown } from "@/components/common/DobAgePicker"
+import { patientFormSchema, type PatientFormValues } from "@/schemas"
 import type { Patient } from "@/types/patient"
 
-export const ID_PROOF_OPTIONS = [
-  { value: "aadhaar", label: "Aadhaar Card" },
-  { value: "pan", label: "PAN Card" },
-  { value: "voter_id", label: "Voter ID" },
-  { value: "driving_license", label: "Driving License" },
-  { value: "passport", label: "Passport" },
-  { value: "ration_card", label: "Ration Card" },
-  { value: "other", label: "Other Official Govt ID" },
-]
-
-interface PatientFormValues {
-  name: string
-  mobile?: string
-  email?: string
-  id_proof_type?: string
-  id_proof_number?: string
-  gender: "M" | "F" | "O" | ""
-  dob?: string
-  blood_group?: string
-  guardian_name?: string
-  guardian_relation?: string
-  guardian_phone?: string
-  address?: string
-  city?: string
-  district?: string
-  state?: string
-  pincode?: string
-}
+// PatientFormValues is inferred from patientFormSchema in src/schemas/patient.schema.ts
 
 interface PatientEditProps {
   open: boolean
@@ -99,6 +75,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
     reset,
     formState: { errors },
   } = useForm<PatientFormValues>({
+    resolver: zodResolver(patientFormSchema),
     defaultValues: {
       name: "",
       mobile: "",

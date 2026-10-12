@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\Billing\DischargeBillingServiceInterface;
+use App\Http\Traits\HasApiResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
 class InvoiceController extends Controller
 {
+    use HasApiResponse;
+
     public function __construct(
         protected DischargeBillingServiceInterface $dischargeBillingService
     ) {}
@@ -28,16 +31,9 @@ class InvoiceController extends Controller
 
         try {
             $estimate = $this->dischargeBillingService->getPreDischargeEstimate($hospitalId, (int) $id);
-            return response()->json([
-                'success' => true,
-                'message' => 'Pre-discharge billing estimate retrieved successfully',
-                'data'    => $estimate,
-            ], 200);
+            return $this->successResponse($estimate, 'Pre-discharge billing estimate retrieved successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+            return $this->errorResponse($e->getMessage(), 400);
         }
     }
 
@@ -74,16 +70,9 @@ class InvoiceController extends Controller
 
         try {
             $result = $this->dischargeBillingService->settleAndDischarge($hospitalId, (int) $id, $validated, $userId);
-            return response()->json([
-                'success' => true,
-                'message' => 'Bill settled, patient discharged, and Security Gate Pass generated successfully.',
-                'data'    => $result,
-            ], 200);
+            return $this->successResponse($result, 'Bill settled, patient discharged, and Security Gate Pass generated successfully.');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+            return $this->errorResponse($e->getMessage(), 400);
         }
     }
 
@@ -102,15 +91,9 @@ class InvoiceController extends Controller
 
         try {
             $invoice = $this->dischargeBillingService->getInvoice($hospitalId, (int) $id);
-            return response()->json([
-                'success' => true,
-                'data'    => $invoice,
-            ], 200);
+            return $this->successResponse($invoice, 'Invoice retrieved successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 404);
+            return $this->notFoundResponse($e->getMessage());
         }
     }
 
@@ -129,16 +112,9 @@ class InvoiceController extends Controller
 
         try {
             $gatePass = $this->dischargeBillingService->getGatePass($hospitalId, (int) $id);
-            return response()->json([
-                'success' => true,
-                'message' => 'Security Gate Pass slip retrieved successfully',
-                'data'    => $gatePass,
-            ], 200);
+            return $this->successResponse($gatePass, 'Security Gate Pass slip retrieved successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+            return $this->errorResponse($e->getMessage(), 400);
         }
     }
 
@@ -154,9 +130,6 @@ class InvoiceController extends Controller
     {
         $hospitalId = $this->getHospitalId($request);
         $invoices = $this->dischargeBillingService->getPatientInvoices($hospitalId, (int) $patientId);
-        return response()->json([
-            'success' => true,
-            'data'    => $invoices,
-        ], 200);
+        return $this->successResponse($invoices, 'Patient invoices retrieved successfully');
     }
 }

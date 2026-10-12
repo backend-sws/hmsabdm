@@ -5,10 +5,14 @@ export interface Patient {
   hospital_id?: number | string
   uhid: string
   name: string
+  first_name?: string
+  last_name?: string
   guardian_name?: string
   guardian_relation?: string
   guardian_phone?: string
   mobile?: string
+  phone?: string
+  age?: number
   id_proof_type?: string
   id_proof_number?: string
   abha_number?: string

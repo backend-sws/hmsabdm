@@ -4,13 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Traits\HasApiResponse;
-use App\Models\Hospital;
-use App\Models\User;
+use App\Services\Hospital\HospitalServiceInterface;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Spatie\Permission\Models\Role;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(
@@ -20,6 +15,10 @@ use OpenApi\Attributes as OA;
 class HospitalController extends Controller
 {
     use HasApiResponse;
+
+    public function __construct(
+        protected HospitalServiceInterface $hospitalService
+    ) {}
 
     #[OA\Post(
         path: "/api/v1/hospitals",
@@ -51,69 +50,21 @@ class HospitalController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string',
-            'city' => 'nullable|string|max:100',
-            'state' => 'nullable|string|max:100',
-            'pincode' => 'nullable|string|max:20',
-            'abdm_hip_id' => 'nullable|string|unique:hospitals,abdm_hip_id',
-            'admin_name' => 'nullable|string|max:255',
-            'admin_email' => 'nullable|email|max:255|unique:users,email',
+            'name'           => 'required|string|max:255',
+            'code'           => 'nullable|string|max:50',
+            'email'          => 'nullable|email|max:255',
+            'phone'          => 'nullable|string|max:20',
+            'address'        => 'nullable|string',
+            'city'           => 'nullable|string|max:100',
+            'state'          => 'nullable|string|max:100',
+            'pincode'        => 'nullable|string|max:20',
+            'abdm_hip_id'    => 'nullable|string|unique:hospitals,abdm_hip_id',
+            'admin_name'     => 'nullable|string|max:255',
+            'admin_email'    => 'nullable|email|max:255|unique:users,email',
             'admin_password' => 'nullable|string|min:6',
         ]);
 
-        $hospital = DB::transaction(function () use ($request, $validated) {
-            $hospitalData = [
-                'name' => $validated['name'],
-                'code' => $validated['code'] ?? Str::upper(Str::slug($validated['name'])),
-                'address' => $validated['address'] ?? null,
-                'city' => $validated['city'] ?? null,
-                'state' => $validated['state'] ?? null,
-                'pincode' => $validated['pincode'] ?? null,
-                'abdm_hip_id' => $validated['abdm_hip_id'] ?? null,
-            ];
-
-            $hospital = Hospital::create($hospitalData);
-
-            if (!empty($validated['admin_email'])) {
-                $username = strtolower(explode('@', $validated['admin_email'])[0]);
-                if (User::where('username', $username)->exists()) {
-                    $username .= '_' . Str::lower(Str::random(4));
-                }
-
-                $adminUser = User::create([
-                    'hospital_id' => $hospital->id,
-                    'name' => $validated['admin_name'] ?? ($hospital->name . ' Admin'),
-                    'username' => $username,
-                    'email' => $validated['admin_email'],
-                    'password' => Hash::make($validated['admin_password'] ?? 'Admin@1234'),
-                ]);
-
-                // Create Hospital Admin Role for this specific hospital team
-                setPermissionsTeamId($hospital->id);
-                $adminRole = Role::firstOrCreate([
-                    'name' => 'Hospital Admin',
-                    'guard_name' => 'sanctum',
-                    'hospital_id' => $hospital->id
-                ]);
-
-                $adminUser->assignRole($adminRole);
-            }
-
-            return $hospital;
-        });
-
-        $responseData = $hospital->toArray();
-        if (!empty($validated['admin_email'])) {
-            $responseData['admin_credentials'] = [
-                'name'     => $validated['admin_name'] ?? ($hospital->name . ' Admin'),
-                'email'    => $validated['admin_email'],
-                'password' => $validated['admin_password'] ?? 'Admin@1234',
-            ];
-        }
+        $responseData = $this->hospitalService->registerHospital($validated);
 
         return $this->createdResponse($responseData, 'Hospital registered and Admin account created successfully');
     }
@@ -128,27 +79,13 @@ class HospitalController extends Controller
     #[OA\Response(response: 200, description: "List of Hospitals")]
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 15);
-        $search = $request->input('search');
-
-        $query = Hospital::query();
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('abdm_hip_id', 'like', "%{$search}%");
-            });
-        }
-
-        $hospitals = $query->paginate($perPage);
-
+        $hospitals = $this->hospitalService->getHospitals($request);
         return $this->paginatedResponse($hospitals, 'Hospitals retrieved successfully');
     }
 
     #[OA\Get(
         path: "/api/v1/hospitals/{id}",
-        summary: "Get specific Hospital details",
+        summary: "Get single Hospital details",
         security: [["bearerAuth" => []]],
         tags: ["8. Super Admin (Platform)"]
     )]
@@ -156,12 +93,8 @@ class HospitalController extends Controller
     #[OA\Response(response: 200, description: "Hospital details")]
     public function show($id)
     {
-        $hospital = Hospital::find($id);
-        if (!$hospital) {
-            return $this->notFoundResponse('Hospital not found');
-        }
-
-        return $this->successResponse($hospital, 'Hospital retrieved successfully');
+        $hospital = $this->hospitalService->getHospitalById((int)$id);
+        return $this->successResponse($hospital, 'Hospital details retrieved successfully');
     }
 
     #[OA\Put(
@@ -174,29 +107,27 @@ class HospitalController extends Controller
     #[OA\Response(response: 200, description: "Hospital updated successfully")]
     public function update(Request $request, $id)
     {
-        $hospital = Hospital::find($id);
-        if (!$hospital) {
-            return $this->notFoundResponse('Hospital not found');
-        }
-
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'code' => 'sometimes|nullable|string|max:50',
-            'address' => 'sometimes|nullable|string',
-            'city' => 'sometimes|nullable|string|max:100',
-            'state' => 'sometimes|nullable|string|max:100',
-            'pincode' => 'sometimes|nullable|string|max:20',
-            'abdm_hip_id' => 'sometimes|nullable|string|unique:hospitals,abdm_hip_id,' . $id,
+            'name'        => 'sometimes|required|string|max:255',
+            'code'        => 'nullable|string|max:50',
+            'email'       => 'nullable|email|max:255',
+            'phone'       => 'nullable|string|max:20',
+            'address'     => 'nullable|string',
+            'city'        => 'nullable|string|max:100',
+            'state'       => 'nullable|string|max:100',
+            'pincode'     => 'nullable|string|max:20',
+            'abdm_hip_id' => 'nullable|string|unique:hospitals,abdm_hip_id,' . $id,
+            'is_active'   => 'nullable|boolean',
         ]);
 
-        $hospital->update($validated);
+        $hospital = $this->hospitalService->updateHospital((int)$id, $validated);
 
         return $this->successResponse($hospital, 'Hospital updated successfully');
     }
 
     #[OA\Delete(
         path: "/api/v1/hospitals/{id}",
-        summary: "Delete a Hospital",
+        summary: "Delete / Deactivate Hospital",
         security: [["bearerAuth" => []]],
         tags: ["8. Super Admin (Platform)"]
     )]
@@ -204,13 +135,7 @@ class HospitalController extends Controller
     #[OA\Response(response: 200, description: "Hospital deleted successfully")]
     public function destroy($id)
     {
-        $hospital = Hospital::find($id);
-        if (!$hospital) {
-            return $this->notFoundResponse('Hospital not found');
-        }
-
-        $hospital->delete();
-
+        $this->hospitalService->deleteHospital((int)$id);
         return $this->successResponse(null, 'Hospital deleted successfully');
     }
 }

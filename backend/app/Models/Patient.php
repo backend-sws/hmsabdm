@@ -44,7 +44,25 @@ class Patient extends Model
 
     protected $appends = [
         'age',
+        'first_name',
+        'last_name',
+        'phone',
     ];
+
+    public function getFirstNameAttribute()
+    {
+        return $this->attributes['name'] ?? '';
+    }
+
+    public function getLastNameAttribute()
+    {
+        return '';
+    }
+
+    public function getPhoneAttribute()
+    {
+        return $this->attributes['phone'] ?? ($this->attributes['mobile'] ?? ($this->attributes['guardian_phone'] ?? null));
+    }
 
     public function getAgeAttribute()
     {

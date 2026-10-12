@@ -4,43 +4,56 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Traits\HasApiResponse;
-use App\Models\Bed;
-use App\Models\Ward;
+use App\Services\Bed\BedServiceInterface;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use OpenApi\Attributes as OA;
 
 class BedController extends Controller
 {
     use HasApiResponse;
 
-    /**
-     * List hospital beds with optional ward and status filter
-     */
+    public function __construct(
+        protected BedServiceInterface $bedService
+    ) {}
+
+    #[OA\Get(
+        path: "/api/v1/beds",
+        summary: "List hospital beds with optional ward and status filter",
+        description: "Retrieves hospital beds filtered by ward ID, occupancy status, or bed number.",
+        tags: ["18. Inpatient Department (IPD) & Wards"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "ward_id", in: "query", description: "Filter by ward ID", required: false, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "status", in: "query", description: "Filter by status (available, occupied, maintenance)", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Parameter(name: "search", in: "query", description: "Search by bed number", required: false, schema: new OA\Schema(type: "string"))]
+    #[OA\Response(response: 200, description: "Beds retrieved successfully")]
     public function index(Request $request)
     {
-        $query = Bed::with(['ward', 'currentAdmission.patient']);
-
-        if ($request->filled('ward_id')) {
-            $query->where('ward_id', $request->ward_id);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('search')) {
-            $search = trim($request->search);
-            $query->where('bed_number', 'ilike', "%{$search}%");
-        }
-
-        $beds = $query->orderBy('bed_number')->get();
-
+        $hospitalId = $this->getHospitalId($request);
+        $beds = $this->bedService->getBeds($hospitalId, $request);
         return $this->successResponse($beds, 'Beds retrieved successfully');
     }
 
-    /**
-     * Add a single bed to a ward with pricing
-     */
+    #[OA\Post(
+        path: "/api/v1/beds",
+        summary: "Add a single bed to a ward with pricing",
+        description: "Creates an individual bed within a designated ward with custom or inherited daily rate.",
+        tags: ["18. Inpatient Department (IPD) & Wards"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["ward_id", "bed_number"],
+            properties: [
+                new OA\Property(property: "ward_id", type: "integer", example: 1),
+                new OA\Property(property: "bed_number", type: "string", example: "ICU-01"),
+                new OA\Property(property: "daily_charge", type: "number", example: 2500)
+            ]
+        )
+    )]
+    #[OA\Response(response: 201, description: "Bed added successfully")]
+    #[OA\Response(response: 422, description: "Validation error")]
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -51,27 +64,10 @@ class BedController extends Controller
             'is_active'    => 'nullable|boolean',
         ]);
 
-        $ward = Ward::findOrFail($validated['ward_id']);
+        $hospitalId = $this->getHospitalId($request);
+        $bed = $this->bedService->createBed($hospitalId, $validated);
 
-        // Check unique bed_number in ward
-        $exists = Bed::where('ward_id', $ward->id)
-            ->where('bed_number', $validated['bed_number'])
-            ->exists();
-        if ($exists) {
-            return $this->errorResponse("Bed number '{$validated['bed_number']}' already exists in this ward.", null, 422);
-        }
-
-        $bed = Bed::create([
-            'ward_id'      => $ward->id,
-            'bed_number'   => $validated['bed_number'],
-            'daily_charge' => isset($validated['daily_charge']) && $validated['daily_charge'] !== ''
-                ? (float)$validated['daily_charge']
-                : $ward->daily_charge,
-            'status'       => $validated['status'] ?? 'available',
-            'is_active'    => $validated['is_active'] ?? true,
-        ]);
-
-        return $this->createdResponse($bed->load('ward'), 'Bed added successfully');
+        return $this->createdResponse($bed, 'Bed added successfully');
     }
 
     /**
@@ -87,36 +83,10 @@ class BedController extends Controller
             'daily_charge' => 'nullable|numeric|min:0',
         ]);
 
-        $ward = Ward::findOrFail($validated['ward_id']);
-        $prefix = trim($validated['prefix'] ?? '');
-        $start = (int) $validated['start_number'];
-        $end = (int) $validated['end_number'];
-        $rate = isset($validated['daily_charge']) && $validated['daily_charge'] !== ''
-            ? (float)$validated['daily_charge']
-            : $ward->daily_charge;
+        $hospitalId = $this->getHospitalId($request);
+        $created = $this->bedService->batchCreateBeds($hospitalId, $validated);
 
-        if (($end - $start + 1) > 100) {
-            return $this->errorResponse('Cannot generate more than 100 beds in a single batch.', null, 422);
-        }
-
-        $created = [];
-        DB::transaction(function () use ($ward, $prefix, $start, $end, $rate, &$created) {
-            for ($i = $start; $i <= $end; $i++) {
-                $bedNum = $prefix . str_pad((string)$i, 2, '0', STR_PAD_LEFT);
-                $already = Bed::where('ward_id', $ward->id)->where('bed_number', $bedNum)->exists();
-                if (!$already) {
-                    $created[] = Bed::create([
-                        'ward_id'      => $ward->id,
-                        'bed_number'   => $bedNum,
-                        'daily_charge' => $rate,
-                        'status'       => 'available',
-                        'is_active'    => true,
-                    ]);
-                }
-            }
-        });
-
-        return $this->createdResponse($created, count($created) . ' beds generated successfully in ' . $ward->name);
+        return $this->createdResponse($created, count($created) . ' beds generated successfully');
     }
 
     /**
@@ -124,8 +94,6 @@ class BedController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $bed = Bed::findOrFail($id);
-
         $validated = $request->validate([
             'bed_number'   => 'sometimes|required|string|max:50',
             'daily_charge' => 'nullable|numeric|min:0',
@@ -133,39 +101,19 @@ class BedController extends Controller
             'is_active'    => 'nullable|boolean',
         ]);
 
-        // Guard: cannot change status of occupied bed directly
-        if (isset($validated['status']) && $validated['status'] !== 'occupied' && $bed->status === 'occupied') {
-            return $this->errorResponse('Cannot change status of currently occupied bed. Discharge or transfer patient first.', null, 422);
-        }
+        $hospitalId = $this->getHospitalId($request);
+        $bed = $this->bedService->updateBed($hospitalId, (int)$id, $validated);
 
-        // Check unique bed number in same ward if changing
-        if (!empty($validated['bed_number']) && $validated['bed_number'] !== $bed->bed_number) {
-            $exists = Bed::where('ward_id', $bed->ward_id)
-                ->where('bed_number', $validated['bed_number'])
-                ->where('id', '!=', $bed->id)
-                ->exists();
-            if ($exists) {
-                return $this->errorResponse("Bed number '{$validated['bed_number']}' already exists in this ward.", null, 422);
-            }
-        }
-
-        $bed->update($validated);
-
-        return $this->successResponse($bed->fresh(['ward']), 'Bed updated successfully');
+        return $this->successResponse($bed, 'Bed updated successfully');
     }
 
     /**
      * Delete bed if not occupied
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $bed = Bed::findOrFail($id);
-
-        if ($bed->status === 'occupied') {
-            return $this->errorResponse('Cannot delete bed with active admitted patient. Discharge or transfer patient first.', null, 422);
-        }
-
-        $bed->delete();
+        $hospitalId = $this->getHospitalId($request);
+        $this->bedService->deleteBed($hospitalId, (int)$id);
 
         return $this->successResponse(null, 'Bed deleted successfully');
     }

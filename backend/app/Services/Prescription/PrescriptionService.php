@@ -193,10 +193,43 @@ class PrescriptionService implements PrescriptionServiceInterface
             }
         } catch (\Exception) {}
 
-        // Filter standard catalog
+        // 1. Search in LabTestTemplate catalog (281+ Pathology Tests Master) - HIGHEST PRIORITY
+        $labMatches = [];
+        try {
+            $labQuery = \App\Models\LabTestTemplate::where('is_active', true)
+                ->where(function ($q) use ($term) {
+                    $q->where('test_name', 'ilike', "%{$term}%")
+                      ->orWhere('test_code', 'ilike', "%{$term}%")
+                      ->orWhere('category', 'ilike', "%{$term}%");
+                });
+
+            if ($category && $category !== 'All' && strtolower($category) !== 'all') {
+                $labQuery->where(function ($q) use ($category) {
+                    $q->where('category', 'ilike', "%{$category}%")
+                      ->orWhereRaw('? ilike concat(\'%\', category, \'%\')', [$category]);
+                });
+            }
+
+            $labTemplates = $labQuery->limit($limit)
+                ->get(['id', 'test_code', 'test_name', 'category', 'standard_price', 'sample_type']);
+
+            foreach ($labTemplates as $lt) {
+                $labMatches[] = [
+                    'id'            => $lt->id,
+                    'code'          => $lt->test_code,
+                    'name'          => $lt->test_name,
+                    'category'      => $lt->category ?? 'Pathology',
+                    'standard_rate' => $lt->standard_price,
+                    'sample_type'   => $lt->sample_type,
+                    'source'        => 'lab_templates',
+                ];
+            }
+        } catch (\Exception) {}
+
+        // Filter standard fallback catalog
         $catalogMatches = [];
         foreach ($standardCatalog as $idx => $item) {
-            if ($category && strcasecmp($item['category'], $category) !== 0) {
+            if ($category && $category !== 'All' && strcasecmp($item['category'], $category) !== 0) {
                 continue;
             }
             if ($term === '' ||
@@ -214,7 +247,7 @@ class PrescriptionService implements PrescriptionServiceInterface
             }
         }
 
-        $all = array_merge($dbMatches, $catalogMatches);
+        $all = array_merge($labMatches, $dbMatches, $catalogMatches);
 
         // Deduplicate by name
         $seen = [];

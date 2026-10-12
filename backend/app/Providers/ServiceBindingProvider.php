@@ -95,6 +95,36 @@ class ServiceBindingProvider extends ServiceProvider
             \App\Services\Billing\DischargeBillingServiceInterface::class,
             \App\Services\Billing\DischargeBillingService::class
         );
+
+        $this->app->bind(
+            \App\Services\Lab\LabServiceInterface::class,
+            \App\Services\Lab\LabService::class
+        );
+
+        $this->app->bind(
+            \App\Services\Ward\WardServiceInterface::class,
+            \App\Services\Ward\WardService::class
+        );
+
+        $this->app->bind(
+            \App\Services\Bed\BedServiceInterface::class,
+            \App\Services\Bed\BedService::class
+        );
+
+        $this->app->bind(
+            \App\Services\Hospital\HospitalServiceInterface::class,
+            \App\Services\Hospital\HospitalService::class
+        );
+
+        $this->app->bind(
+            \App\Services\Billing\OpdBillingServiceInterface::class,
+            \App\Services\Billing\OpdBillingService::class
+        );
+
+        $this->app->bind(
+            \App\Services\Pharmacy\PharmacyServiceInterface::class,
+            \App\Services\Pharmacy\PharmacyService::class
+        );
     }
 
 

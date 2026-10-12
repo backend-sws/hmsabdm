@@ -1,7 +1,7 @@
 import React, { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import { deptDoctorSchema, type DeptDoctorFormValues } from "@/schemas"
 import { RefreshCw, CheckCircle, ShieldCheck } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { settingsService } from "@/services/settingsService"
@@ -16,28 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { PatientAvatar } from "@/components/common"
 import { cn } from "@/lib/utils"
 
-export const deptDoctorSchema = z.object({
-  department_id: z
-    .union([z.string(), z.number()])
-    .refine((v) => v !== "" && v !== undefined && v !== null && !isNaN(Number(v)) && Number(v) > 0, {
-      message: "Please select a department",
-    })
-    .transform((v) => Number(v)),
-  doctor_id: z
-    .union([z.string(), z.number()])
-    .optional()
-    .transform((v) => (v !== "" && v !== undefined && !isNaN(Number(v)) ? Number(v) : undefined)),
-  slot_time: z.string().optional(),
-  chief_complaint: z.string().optional(),
-  fee_charged: z
-    .union([z.string(), z.number()])
-    .optional()
-    .transform((v) => (v !== "" && v !== undefined && !isNaN(Number(v)) ? Number(v) : 0)),
-  payment_method: z.string().default("cash"),
-  payment_status: z.string().default("paid"),
-})
-
-export type DeptDoctorFormValues = z.infer<typeof deptDoctorSchema>
+// deptDoctorSchema and DeptDoctorFormValues are centralized in src/schemas/reception.schema.ts
 
 interface PatientSummary {
   name: string

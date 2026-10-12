@@ -17,7 +17,14 @@ import { IpdDeskPage } from "@/pages/ipd/IpdDeskPage"
 import { IpdPatientChartPage } from "@/pages/ipd/IpdPatientChartPage"
 import { EmergencyDeskPage } from "@/pages/emergency/EmergencyDeskPage"
 import { BillingDeskPage } from "@/pages/billing/BillingDeskPage"
+import { LabDeskPage } from "@/pages/lab/LabDeskPage"
+import { LabTestEditorPage } from "@/pages/lab/LabTestEditorPage"
+import { PhlebotomyDisplayPage } from "@/pages/lab/PhlebotomyDisplayPage"
+import { LabResultEntryPage } from "@/pages/lab/LabResultEntryPage"
+import { LabReportViewPage } from "@/pages/lab/LabReportViewPage"
+import { PublicLabReportPage } from "@/pages/lab/PublicLabReportPage"
 import { SettingsPage } from "@/pages/settings/SettingsPage"
+import { PharmacyDeskPage } from "@/pages/pharmacy/PharmacyDeskPage"
 import InputHelperDemoPage from "@/pages/demo/InputHelperDemoPage"
 
 const queryClient = new QueryClient({
@@ -64,6 +71,12 @@ export default function App() {
           <Routes>
             {/* Public Login Route */}
             <Route path="/login" element={<LoginPage />} />
+
+            {/* Public Waiting Room TV Kiosk Display */}
+            <Route path="/lab/display" element={<PhlebotomyDisplayPage />} />
+
+            {/* Public QR Code Verification Report View */}
+            <Route path="/public/report/:id" element={<PublicLabReportPage />} />
 
             {/* Protected Application Routes */}
             <Route
@@ -129,6 +142,54 @@ export default function App() {
                 element={
                   <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "RECEPTIONIST"]}>
                     <BillingDeskPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/lab"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "LAB_TECHNICIAN", "PATHOLOGIST", "RECEPTIONIST"]}>
+                    <LabDeskPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/lab/tests/create"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "LAB_TECHNICIAN", "PATHOLOGIST"]}>
+                    <LabTestEditorPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/lab/tests/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "LAB_TECHNICIAN", "PATHOLOGIST"]}>
+                    <LabTestEditorPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/lab/orders/:id/results"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "LAB_TECHNICIAN", "PATHOLOGIST"]}>
+                    <LabResultEntryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/lab/orders/:id/report"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "LAB_TECHNICIAN", "PATHOLOGIST", "RECEPTIONIST"]}>
+                    <LabReportViewPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/pharmacy"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "PHARMACIST", "RECEPTIONIST"]}>
+                    <PharmacyDeskPage />
                   </ProtectedRoute>
                 }
               />

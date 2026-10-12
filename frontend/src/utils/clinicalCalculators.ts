@@ -21,8 +21,8 @@ export function calculateBmi(heightCm?: number | string | null, weightKg?: numbe
   const heightInMeters = h / 100
   const bmiVal = parseFloat((w / (heightInMeters * heightInMeters)).toFixed(2))
 
-  let category: BmiResult["category"] = "Normal"
-  let colorClass = "text-emerald-600 bg-emerald-500/10 border-emerald-500/30"
+  let category: BmiResult["category"]
+  let colorClass: string
 
   if (bmiVal < 18.5) {
     category = "Underweight"

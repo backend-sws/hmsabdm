@@ -21,10 +21,16 @@ class Doctor extends Model
 
     protected $appends = [
         'username',
+        'full_name',
         'today_waiting_count',
         'today_consulting_count',
         'today_total_count',
     ];
+
+    public function getFullNameAttribute()
+    {
+        return $this->attributes['name'] ?? '';
+    }
 
     public function getUsernameAttribute()
     {

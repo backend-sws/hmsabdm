@@ -17,9 +17,11 @@ import {
   User,
   Clock,
   CreditCard,
+  FlaskConical,
 } from "lucide-react"
 
 import { OpdQuickBillCounterTab } from "@/components/billing/OpdQuickBillCounterTab"
+import { DirectLabBookingModal } from "@/components/lab/DirectLabBookingModal"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable, type Column } from "@/components/common/DataTable"
 import { FormContainer } from "@/components/formContainer"
@@ -67,6 +69,9 @@ export const BillingDeskPage: React.FC = () => {
   // ─── Invoices Tab States ─────────────────────────────────────────────
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
+
+  // ─── Direct Lab Billing Modal State ──────────────────────────────────
+  const [directLabModalOpen, setDirectLabModalOpen] = useState(false)
 
   // ─── Queries ────────────────────────────────────────────────────────
   // 1. Categories
@@ -539,7 +544,18 @@ export const BillingDeskPage: React.FC = () => {
         badgeText="Finance & Tariff"
         badgeVariant="default"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDirectLabModalOpen(true)}
+              className="gap-1.5 text-xs border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 font-bold"
+              title="Create direct walk-in laboratory investigation bill and assign phlebotomy token"
+            >
+              <FlaskConical className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+              Direct Lab Bill
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
@@ -1638,6 +1654,17 @@ export const BillingDeskPage: React.FC = () => {
           </div>
         )}
       </FormContainer>
+
+      {/* Direct Walk-In Lab Booking & Invoice Modal */}
+      <DirectLabBookingModal
+        isOpen={directLabModalOpen}
+        onClose={() => setDirectLabModalOpen(false)}
+        onSuccess={() => {
+          setDirectLabModalOpen(false)
+          queryClient.invalidateQueries({ queryKey: queryKeys.billing.all })
+          queryClient.invalidateQueries({ queryKey: ["lab", "orders"] })
+        }}
+      />
     </div>
   )
 }

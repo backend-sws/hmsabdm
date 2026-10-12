@@ -69,6 +69,7 @@ class OpdVisit extends Model
     protected $appends = [
         'visit_id',
         'token_no',
+        'token_number',
         'patient_name',
         'uhid',
         'age',
@@ -91,6 +92,11 @@ class OpdVisit extends Model
     public function getTokenNoAttribute()
     {
         return $this->queue_token !== null ? (string)$this->queue_token : ($this->opd_number ?? '');
+    }
+
+    public function getTokenNumberAttribute()
+    {
+        return $this->queue_token;
     }
 
     public function getPatientNameAttribute()

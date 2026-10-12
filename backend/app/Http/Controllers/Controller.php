@@ -122,6 +122,13 @@ EOT
 #[OA\Tag(name: "9. Patients", description: "Patient Records Management")]
 #[OA\Tag(name: "11. ABDM Webhooks", description: "Incoming Webhooks from ABDM (Scan & Share)")]
 #[OA\Tag(name: "12. Storage", description: "File Upload/Download via R2/S3")]
+#[OA\Tag(name: "13. Lab — Orders & Billing", description: "Laboratory Worklist, Direct Walk-In Booking & Invoicing")]
+#[OA\Tag(name: "14. Lab — Phlebotomy & Queue", description: "Sample Collection, Accessioning Barcodes, Booth Calling & Rejection")]
+#[OA\Tag(name: "15. Lab — Results & Pathology", description: "Result Entry, Delta Checks, Approvals & Authorization")]
+#[OA\Tag(name: "16. Lab — Test Catalog Master", description: "281+ Pathology Tests Master, Parameters & Reference Intervals")]
+#[OA\Tag(name: "17. Lab — Diagnostic Reports", description: "Printable Diagnostic Reports & Public QR Verification")]
+#[OA\Tag(name: "18. Inpatient Department (IPD) & Wards", description: "Wards, Beds, Admissions, Transfers & Nursing Station")]
+#[OA\Tag(name: "19. Hospital Billing & Tariff", description: "Charge Masters, Ledger & Billing Operations")]
 
 abstract class Controller
 {

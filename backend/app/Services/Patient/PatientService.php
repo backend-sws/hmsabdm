@@ -29,22 +29,24 @@ class PatientService implements PatientServiceInterface
             $patientQuery->where('hospital_id', $hospitalId);
         }
 
+        $like = $this->likeOperator();
+
         $query = QueryBuilder::for($patientQuery)
             ->allowedFilters(
-                AllowedFilter::callback('uhid', fn($q, $v) => $q->where('uhid', 'ilike', "%{$v}%")),
-                AllowedFilter::callback('name', fn($q, $v) => $q->where('name', 'ilike', "%{$v}%")),
-                AllowedFilter::callback('mobile', fn($q, $v) => $q->where('mobile', 'ilike', "%{$v}%")),
-                AllowedFilter::callback('email', fn($q, $v) => $q->where('email', 'ilike', "%{$v}%")),
-                AllowedFilter::callback('abha_number', fn($q, $v) => $q->where('abha_number', 'ilike', "%{$v}%")),
-                AllowedFilter::callback('abha_address', fn($q, $v) => $q->where('abha_address', 'ilike', "%{$v}%")),
+                AllowedFilter::callback('uhid', fn($q, $v) => $q->where('uhid', $like, "%{$v}%")),
+                AllowedFilter::callback('name', fn($q, $v) => $q->where('name', $like, "%{$v}%")),
+                AllowedFilter::callback('mobile', fn($q, $v) => $q->where('mobile', $like, "%{$v}%")),
+                AllowedFilter::callback('email', fn($q, $v) => $q->where('email', $like, "%{$v}%")),
+                AllowedFilter::callback('abha_number', fn($q, $v) => $q->where('abha_number', $like, "%{$v}%")),
+                AllowedFilter::callback('abha_address', fn($q, $v) => $q->where('abha_address', $like, "%{$v}%")),
                 'gender',
-                AllowedFilter::callback('search', fn($q, $v) => $q->where(function ($sq) use ($v) {
-                    $sq->where('name', 'ilike', "%{$v}%")
-                       ->orWhere('uhid', 'ilike', "%{$v}%")
-                       ->orWhere('mobile', 'ilike', "%{$v}%")
-                       ->orWhere('email', 'ilike', "%{$v}%")
-                       ->orWhere('abha_number', 'ilike', "%{$v}%")
-                       ->orWhere('abha_address', 'ilike', "%{$v}%");
+                AllowedFilter::callback('search', fn($q, $v) => $q->where(function ($sq) use ($v, $like) {
+                    $sq->where('name', $like, "%{$v}%")
+                       ->orWhere('uhid', $like, "%{$v}%")
+                       ->orWhere('mobile', $like, "%{$v}%")
+                       ->orWhere('email', $like, "%{$v}%")
+                       ->orWhere('abha_number', $like, "%{$v}%")
+                       ->orWhere('abha_address', $like, "%{$v}%");
                 }))
             )
             ->allowedSorts('name', 'created_at', 'dob')
@@ -52,13 +54,13 @@ class PatientService implements PatientServiceInterface
 
         if ($req && $req->filled('search')) {
             $search = $req->query('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('uhid', 'ilike', "%{$search}%")
-                  ->orWhere('name', 'ilike', "%{$search}%")
-                  ->orWhere('mobile', 'ilike', "%{$search}%")
-                  ->orWhere('email', 'ilike', "%{$search}%")
-                  ->orWhere('abha_number', 'ilike', "%{$search}%")
-                  ->orWhere('abha_address', 'ilike', "%{$search}%");
+            $query->where(function ($q) use ($search, $like) {
+                $q->where('uhid', $like, "%{$search}%")
+                  ->orWhere('name', $like, "%{$search}%")
+                  ->orWhere('mobile', $like, "%{$search}%")
+                  ->orWhere('email', $like, "%{$search}%")
+                  ->orWhere('abha_number', $like, "%{$search}%")
+                  ->orWhere('abha_address', $like, "%{$search}%");
             });
         }
 

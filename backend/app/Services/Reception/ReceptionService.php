@@ -58,7 +58,7 @@ class ReceptionService implements ReceptionServiceInterface
 
         if ($queue->expires_at < now() && $queue->status === 'waiting_confirmation') {
             $queue->update(['status' => 'expired']);
-            throw new \Exception("Token '{$token}' has expired. Please generate a new token.");
+            throw new \Exception("Queue token has expired.");
         }
 
         return $queue->toArray();
