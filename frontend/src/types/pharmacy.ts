@@ -225,6 +225,7 @@ export interface PharmacySale {
   customer_name: string
   customer_phone?: string | null
   doctor_name?: string | null
+  doctor_reg_no?: string | null
   subtotal_amount: number
   discount_amount: number
   taxable_amount: number
@@ -343,9 +344,11 @@ export interface PendingPrescriptionResponse {
     patient?: {
       id: number
       uhid: string
-      first_name: string
-      last_name: string
+      name?: string
+      first_name?: string
+      last_name?: string
       phone?: string
+      mobile?: string
       age?: number
       gender?: string
     }
@@ -431,4 +434,347 @@ export interface ExpiryDashboardData {
   critical: ExpiryDashboardEntry[]
   near_expiry: ExpiryDashboardEntry[]
 }
+
+export interface GenericSubstituteItem {
+  id: number
+  brand_name: string
+  generic_name?: string | null
+  dosage_form: string
+  strength?: string | null
+  manufacturer?: string | null
+  mrp: number
+  default_selling_price: number
+  min_price: number
+  max_price: number
+  pack_size: number
+  prescription_type: "OTC" | "SCHEDULE_H" | "SCHEDULE_H1" | "NARCOTIC"
+  total_stock: number
+  in_stock: boolean
+  earliest_expiry?: string | null
+  days_to_expiry?: number | null
+  is_current: boolean
+  fefo_batch?: PharmacyBatch | null
+  batches: PharmacyBatch[]
+}
+
+export interface GenericSubstituteResponse {
+  target_medicine?: HospitalMedicine | null
+  generic_name: string
+  substitutes: GenericSubstituteItem[]
+  total_count: number
+}
+
+export interface PatientMedicationHistoryItem {
+  medicine_id: number
+  brand_name: string
+  generic_name?: string | null
+  dosage_form: string
+  strength?: string | null
+  prescription_type: "OTC" | "SCHEDULE_H" | "SCHEDULE_H1" | "NARCOTIC"
+  pack_size: number
+  last_purchased_at?: string
+  last_invoice_no?: string
+  last_quantity: number
+  last_unit_price: number
+  purchase_count: number
+  current_stock: number
+  in_stock: boolean
+  fefo_batch?: PharmacyBatch | null
+  can_refill: boolean
+}
+
+export interface PatientMedicationHistoryResponse {
+  patient_id: number
+  recent_sales: PharmacySale[]
+  medications: PatientMedicationHistoryItem[]
+  total_past_rx: number
+}
+
+export interface CdscoRegisterEntry {
+  id: number
+  sale_id: number
+  invoice_number: string
+  dispensed_at: string
+  dispensed_date: string
+  dispensed_time: string
+  sale_type: string
+
+  // Patient
+  patient_uhid?: string | null
+  patient_name: string
+  patient_phone?: string | null
+  patient_address: string
+
+  // Prescribing Doctor
+  doctor_name: string
+  doctor_reg_no: string
+  doctor_qualification?: string | null
+
+  // Drug
+  medicine_id?: number
+  brand_name: string
+  generic_name?: string | null
+  dosage_form: string
+  strength?: string | null
+  prescription_type: "SCHEDULE_H" | "SCHEDULE_H1" | "NARCOTIC"
+  manufacturer: string
+  hsn_code?: string
+
+  // Batch & Qty
+  batch_number: string
+  expiry_date: string
+  quantity: number
+  unit_price: number
+  total_amount: number
+
+  // Qualified Pharmacist Sign-Off
+  dispensed_by: string
+  pharmacist_sign_off: string
+}
+
+export interface CdscoRegisterSummary {
+  total_dispensed: number
+  schedule_h1: number
+  schedule_h: number
+  narcotics: number
+}
+
+export interface CdscoRegisterResponse {
+  paginated?: {
+    data: CdscoRegisterEntry[]
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+  }
+  records?: CdscoRegisterEntry[]
+  summary: CdscoRegisterSummary
+}
+
+export interface GstPeriod {
+  start_date: string
+  end_date: string
+}
+
+export interface GstReportSummary {
+  // Outward (Sales)
+  sales_count: number
+  sales_gross_total: number
+  sales_taxable: number
+  sales_cgst: number
+  sales_sgst: number
+  sales_output_tax: number
+
+  // Customer Return Reversals
+  cust_returns_count: number
+  cust_return_taxable: number
+  cust_return_reversal: number
+
+  // Net Outward Liability
+  net_outward_taxable: number
+  net_output_cgst: number
+  net_output_sgst: number
+  net_output_tax: number
+
+  // Inward Supplies (Purchases / GRN ITC)
+  purchases_count: number
+  purchases_gross: number
+  purchases_taxable: number
+  purchases_cgst: number
+  purchases_sgst: number
+  purchases_igst: number
+  purchases_itc: number
+
+  // Supplier Returns (RTV Reversals)
+  supplier_returns_count: number
+  supplier_returns_reversal: number
+  net_itc_available: number
+
+  // Net GST Settlement (GSTR-3B)
+  net_gst_payable: number
+  itc_carried_forward: number
+}
+
+export interface GstSlabBreakdown {
+  gst_rate: number
+  slab_label: string
+  outward_taxable: number
+  outward_tax: number
+  inward_taxable: number
+  inward_itc: number
+  net_tax: number
+}
+
+export interface GstOutwardInvoice {
+  id: number
+  invoice_number: string
+  invoice_date: string
+  customer_name: string
+  payment_mode: string
+  taxable_amount: number
+  cgst_amount: number
+  sgst_amount: number
+  total_tax: number
+  net_amount: number
+}
+
+export interface GstInwardPurchase {
+  id: number
+  grn_number: string
+  supplier_invoice_no: string
+  invoice_date: string
+  supplier_name: string
+  supplier_gstin: string
+  taxable_amount: number
+  cgst_amount: number
+  sgst_amount: number
+  igst_amount: number
+  total_itc: number
+  net_amount: number
+}
+
+export interface GstReportResponse {
+  period: GstPeriod
+  summary: GstReportSummary
+  slab_breakdown: GstSlabBreakdown[]
+  outward_invoices: GstOutwardInvoice[]
+  inward_purchases: GstInwardPurchase[]
+}
+
+export interface PharmacyWardIndentItem {
+  id: number
+  ward_indent_id: number
+  hospital_medicine_id: number
+  batch_id?: number | null
+  requested_quantity: number
+  dispensed_quantity: number
+  returned_quantity: number
+  unit_price: number
+  gst_rate: number
+  taxable_amount: number
+  tax_amount: number
+  total_amount: number
+  dosage_instruction?: string | null
+  billing_ledger_item_id?: number | null
+  status: "PENDING" | "DISPENSED" | "OUT_OF_STOCK" | "REJECTED" | "RETURNED"
+  medicine?: HospitalMedicine
+  batch?: PharmacyBatch
+}
+
+export interface PharmacyWardIndent {
+  id: number
+  hospital_id: number
+  indent_number: string
+  ipd_admission_id: number
+  patient_id: number
+  ward_name?: string | null
+  bed_number?: string | null
+  priority: "ROUTINE" | "URGENT" | "STAT"
+  status: "PENDING" | "DISPENSED" | "PARTIALLY_DISPENSED" | "REJECTED" | "RETURNED"
+  requested_by_user_id: number
+  dispensed_by_user_id?: number | null
+  dispensed_at?: string | null
+  notes?: string | null
+  rejection_reason?: string | null
+  total_taxable: number
+  total_tax: number
+  total_amount: number
+  created_at: string
+  updated_at: string
+  patient?: {
+    id: number
+    uhid: string
+    name: string
+    gender?: string
+    age?: number
+    phone?: string
+  }
+  ipdAdmission?: {
+    id: number
+    ipd_number: string
+    admission_date: string
+    doctor_id?: number
+  }
+  requestedBy?: {
+    id: number
+    name: string
+  }
+  dispensedBy?: {
+    id: number
+    name: string
+  }
+  items: PharmacyWardIndentItem[]
+}
+
+export interface PharmacyPurchaseOrderItem {
+  id: number
+  purchase_order_id: number
+  hospital_medicine_id: number
+  pack_quantity: number
+  strip_size: number
+  pack_size: number
+  total_loose_units: number
+  pack_purchase_rate: number
+  unit_purchase_price: number
+  discount_percent: number
+  gst_rate: number
+  taxable_amount: number
+  cgst_amount: number
+  sgst_amount: number
+  total_amount: number
+  received_quantity: number
+  status: "PENDING" | "PARTIALLY_RECEIVED" | "COMPLETED" | "CANCELLED"
+  medicine?: HospitalMedicine
+}
+
+export interface PharmacyPurchaseOrder {
+  id: number
+  hospital_id: number
+  po_number: string
+  supplier_id: number
+  po_date: string
+  expected_delivery_date?: string | null
+  status: "DRAFT" | "ORDERED" | "PARTIALLY_RECEIVED" | "COMPLETED" | "CANCELLED"
+  total_items_count: number
+  subtotal_amount: number
+  discount_amount: number
+  taxable_amount: number
+  tax_amount: number
+  net_amount: number
+  notes?: string | null
+  created_by_user_id: number
+  approved_by_user_id?: number | null
+  created_at: string
+  updated_at: string
+  supplier?: PharmacySupplier
+  items: PharmacyPurchaseOrderItem[]
+  createdBy?: { id: number; name: string }
+  approvedBy?: { id: number; name: string }
+}
+
+export interface LowStockAlertItem {
+  medicine_id: number
+  brand_name: string
+  generic_name?: string | null
+  dosage_form: string
+  base_unit: string
+  strip_size: number
+  pack_size: number
+  current_stock_units: number
+  current_stock_packs: number
+  min_reorder_level: number
+  deficit_units: number
+  suggested_packs: number
+  default_purchase_rate: number
+  mrp: number
+  gst_rate: number
+  preferred_supplier?: PharmacySupplier | null
+}
+
+export interface LowStockAlertResponse {
+  total_low_stock_count: number
+  items: LowStockAlertItem[]
+}
+
+
 

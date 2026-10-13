@@ -12,6 +12,7 @@ import {
   useFormulary,
   useCreatePurchaseMutation,
   usePurchases,
+  usePurchaseOrders,
 } from "@/hooks/usePharmacy"
 import type { PurchaseItemValues } from "@/schemas/pharmacy.schema"
 import { SupplierModal } from "./SupplierModal"
@@ -22,6 +23,7 @@ export const PurchaseGrnTab: React.FC = () => {
 
   // Header State
   const [supplierId, setSupplierId] = useState<number | "">("")
+  const [selectedPoId, setSelectedPoId] = useState<number | "">("")
   const [supplierInvoiceNo, setSupplierInvoiceNo] = useState("")
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0])
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split("T")[0])
@@ -47,7 +49,40 @@ export const PurchaseGrnTab: React.FC = () => {
   const { data: purchasesData } = usePurchases({ search: historySearch })
   const purchaseHistory = purchasesData?.data || []
 
+  const { data: posData } = usePurchaseOrders({ status: "ORDERED" })
+  const orderedPos = posData?.data || []
+
   const createPurchaseMutation = useCreatePurchaseMutation()
+
+  // Handle PO Import
+  const handleSelectPo = (poId: number | "") => {
+    setSelectedPoId(poId)
+    if (!poId) return
+    const po = orderedPos.find((p: any) => p.id === poId)
+    if (po) {
+      setSupplierId(po.supplier_id)
+      const defaultExp = new Date()
+      defaultExp.setFullYear(defaultExp.getFullYear() + 2)
+      const expStr = defaultExp.toISOString().split("T")[0]
+
+      const poItems: PurchaseItemValues[] = (po.items || []).map((it: any) => ({
+        hospital_medicine_id: it.hospital_medicine_id,
+        medicine_name: it.medicine?.brand_name || "Medicine",
+        batch_number: "",
+        mfg_date: new Date().toISOString().split("T")[0],
+        expiry_date: expStr,
+        pack_size: it.pack_size || 1,
+        pack_quantity: it.pack_quantity,
+        free_pack_quantity: 0,
+        purchase_rate_per_unit: it.unit_purchase_price,
+        discount_percent: it.discount_percent || 0,
+        gst_rate: it.gst_rate || 12,
+        unit_mrp: it.medicine?.mrp || 0,
+        selling_price_per_unit: it.medicine?.default_selling_price || it.medicine?.mrp || 0,
+      }))
+      setItems(poItems)
+    }
+  }
 
   // Add Item to GRN
   const handleAddMedicineToGrn = () => {
@@ -139,6 +174,7 @@ export const PurchaseGrnTab: React.FC = () => {
 
     const payload = {
       supplier_id: Number(supplierId),
+      purchase_order_id: selectedPoId ? Number(selectedPoId) : undefined,
       supplier_invoice_no: supplierInvoiceNo.trim(),
       invoice_date: invoiceDate,
       received_date: receivedDate,
@@ -220,7 +256,25 @@ export const PurchaseGrnTab: React.FC = () => {
             <h4 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Supplier & Bill Details
             </h4>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Import from Purchase Order (PO)
+                </label>
+                <select
+                  value={selectedPoId}
+                  onChange={(e) => handleSelectPo(Number(e.target.value) || "")}
+                  className="w-full rounded-xl border border-blue-200 bg-blue-50/50 px-3 py-2 text-xs font-bold text-blue-900 focus:border-primary focus:outline-none dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200"
+                >
+                  <option value="">-- Manual (No PO) --</option>
+                  {orderedPos.map((po) => (
+                    <option key={po.id} value={po.id}>
+                      {po.po_number} ({po.supplier?.supplier_name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Select Supplier / Distributor <span className="text-red-500">*</span>

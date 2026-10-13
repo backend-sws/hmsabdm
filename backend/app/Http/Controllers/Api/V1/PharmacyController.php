@@ -502,6 +502,20 @@ class PharmacyController extends Controller
         return $this->successResponse($batches, 'Available batches retrieved successfully');
     }
 
+    #[OA\Get(
+        path: "/api/v1/pharmacy/substitutes",
+        summary: "Find In-Stock Generic Salt Substitutes & Equivalent Formulations",
+        security: [["bearerAuth" => []]],
+        tags: ["13. Pharmacy & Inventory"]
+    )]
+    public function substitutes(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $params = $request->only(['medicine_id', 'generic_name', 'search']);
+        $result = $this->pharmacyService->getGenericSubstitutes($hospitalId, $params);
+        return $this->successResponse($result, 'Generic salt substitutes retrieved successfully');
+    }
+
     #[OA\Post(
         path: "/api/v1/pharmacy/batches/{id}/adjust",
         summary: "Adjust Batch Stock (Breakage, Spoilage, Recount)",
@@ -639,6 +653,19 @@ class PharmacyController extends Controller
         } catch (\Exception $e) {
             return $this->notFoundResponse($e->getMessage());
         }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/pharmacy/patients/{id}/medication-history",
+        summary: "Get Patient Past Medication History & 1-Click Refill Availability",
+        security: [["bearerAuth" => []]],
+        tags: ["13. Pharmacy & Inventory"]
+    )]
+    public function patientMedicationHistory(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $history = $this->pharmacyService->getPatientMedicationHistory($hospitalId, (int) $id);
+        return $this->successResponse($history, 'Patient medication history retrieved successfully');
     }
 
     /**
@@ -859,6 +886,211 @@ class PharmacyController extends Controller
         try {
             $batch = $this->pharmacyService->quarantineBatch($hospitalId, (int) $id, $userId);
             return $this->successResponse($batch, 'Batch quarantined successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * Statutory Compliance: CDSCO Schedule H / H1 & Narcotic Regulatory Register
+     */
+    #[OA\Get(
+        path: "/api/v1/pharmacy/regulatory-register",
+        summary: "Get CDSCO Schedule H / H1 & Narcotic Regulatory Audit Register (FDA Inspection Compliance)",
+        security: [["bearerAuth" => []]],
+        tags: ["13. Pharmacy & Inventory"]
+    )]
+    public function cdscoRegister(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $filters = $request->only([
+            'schedule_type',
+            'start_date',
+            'end_date',
+            'search',
+            'per_page',
+            'all',
+        ]);
+        $register = $this->pharmacyService->getCdscoRegulatoryRegister($hospitalId, $filters);
+        return $this->successResponse($register, 'CDSCO Regulatory Register retrieved successfully');
+    }
+
+    /**
+     * Statutory GST Tax Intelligence & Filing Report (GSTR-3B & Input/Output Tax Ledger)
+     */
+    #[OA\Get(
+        path: "/api/v1/pharmacy/gst-report",
+        summary: "Get Pharmacy GST Input Tax Credit vs Output Liability Report (GSTR-3B Compliant)",
+        security: [["bearerAuth" => []]],
+        tags: ["13. Pharmacy & Inventory"]
+    )]
+    public function gstReport(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $filters = $request->only([
+            'start_date',
+            'end_date',
+            'period',
+        ]);
+        $report = $this->pharmacyService->getGstReport($hospitalId, $filters);
+        return $this->successResponse($report, 'GST tax report retrieved successfully');
+    }
+
+    /**
+     * IPD Nursing Ward Drug Indents & Requisitions
+     */
+    public function wardIndents(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $filters = $request->only([
+            'status', 'priority', 'ward_name', 'ipd_admission_id',
+            'start_date', 'end_date', 'search', 'per_page'
+        ]);
+        $indents = $this->pharmacyService->getWardIndents($hospitalId, $filters);
+        return $this->successResponse($indents, 'Ward indents retrieved successfully');
+    }
+
+    public function createWardIndent(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $userId = auth()->id() ?: 1;
+
+        $request->validate([
+            'ipd_admission_id' => 'required|integer',
+            'items'            => 'required|array|min:1',
+            'items.*.hospital_medicine_id' => 'required|integer',
+            'items.*.requested_quantity'   => 'required|integer|min:1',
+        ]);
+
+        try {
+            $indent = $this->pharmacyService->createWardIndent($hospitalId, $request->all(), $userId);
+            return $this->successResponse($indent, 'Ward drug indent created successfully', 201);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function showWardIndent(Request $request, int $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        try {
+            $indent = $this->pharmacyService->showWardIndent($hospitalId, $id);
+            return $this->successResponse($indent, 'Ward indent details retrieved');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 404);
+        }
+    }
+
+    public function dispenseWardIndent(Request $request, int $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $userId = auth()->id() ?: 1;
+
+        try {
+            $indent = $this->pharmacyService->dispenseWardIndent($hospitalId, $id, $request->all(), $userId);
+            return $this->successResponse($indent, 'Ward indent dispensed and charged to IPD ledger successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function rejectWardIndent(Request $request, int $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $userId = auth()->id() ?: 1;
+
+        $request->validate([
+            'reason' => 'required|string|max:255',
+        ]);
+
+        try {
+            $indent = $this->pharmacyService->rejectWardIndent($hospitalId, $id, $request->input('reason'), $userId);
+            return $this->successResponse($indent, 'Ward indent rejected');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function returnWardIndentItem(Request $request, int $indentId, int $itemId)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $userId = auth()->id() ?: 1;
+
+        $request->validate([
+            'return_quantity' => 'required|integer|min:1',
+        ]);
+
+        try {
+            $indent = $this->pharmacyService->returnWardIndentItem($hospitalId, $indentId, $itemId, (int) $request->input('return_quantity'), $userId);
+            return $this->successResponse($indent, 'Ward medicine returned and IPD ledger adjusted successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * Low Stock Intelligence & Purchase Orders (PO)
+     */
+    public function lowStockAlerts(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $alerts = $this->pharmacyService->getLowStockAlerts($hospitalId);
+        return $this->successResponse($alerts, 'Low stock alerts retrieved successfully');
+    }
+
+    public function purchaseOrders(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $filters = $request->only([
+            'status', 'supplier_id', 'start_date', 'end_date', 'search', 'per_page'
+        ]);
+        $orders = $this->pharmacyService->getPurchaseOrders($hospitalId, $filters);
+        return $this->successResponse($orders, 'Purchase orders retrieved successfully');
+    }
+
+    public function createPurchaseOrder(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $userId = auth()->id() ?: 1;
+
+        $request->validate([
+            'supplier_id' => 'required|integer',
+            'items'       => 'required|array|min:1',
+            'items.*.hospital_medicine_id' => 'required|integer',
+            'items.*.pack_quantity'        => 'required|integer|min:1',
+        ]);
+
+        try {
+            $po = $this->pharmacyService->createPurchaseOrder($hospitalId, $request->all(), $userId);
+            return $this->successResponse($po, 'Purchase order generated successfully', 201);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function showPurchaseOrder(Request $request, int $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        try {
+            $po = $this->pharmacyService->showPurchaseOrder($hospitalId, $id);
+            return $this->successResponse($po, 'Purchase order retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 404);
+        }
+    }
+
+    public function updatePurchaseOrderStatus(Request $request, int $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $userId = auth()->id() ?: 1;
+
+        $request->validate([
+            'status' => 'required|string',
+        ]);
+
+        try {
+            $po = $this->pharmacyService->updatePurchaseOrderStatus($hospitalId, $id, $request->input('status'), $userId);
+            return $this->successResponse($po, 'Purchase order status updated successfully');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
         }

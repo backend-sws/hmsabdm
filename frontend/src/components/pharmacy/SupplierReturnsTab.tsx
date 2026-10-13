@@ -3,9 +3,7 @@ import {
   RotateCcw,
   Search,
   Plus,
-  FileText,
   Printer,
-  CheckCircle2,
   Clock,
   Building2,
   FileCheck,
@@ -18,7 +16,6 @@ export const SupplierReturnsTab: React.FC = () => {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("ALL")
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false)
-  const [selectedRtvForView, setSelectedRtvForView] = useState<PharmacySupplierReturn | null>(null)
 
   const { data: rtvData, isLoading } = useSupplierReturns({
     status: statusFilter === "ALL" ? undefined : statusFilter,
@@ -236,7 +233,6 @@ export const SupplierReturnsTab: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedRtvForView(rtv)
                             window.print()
                           }}
                           className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"

@@ -7,8 +7,17 @@ import {
   Building2,
   Pill,
   Stethoscope,
+  ShieldAlert,
+  IndianRupee,
+  Bed,
+  ClipboardList,
 } from "lucide-react"
-import { usePharmacyDashboardStats, usePendingPrescriptions } from "@/hooks/usePharmacy"
+import {
+  usePharmacyDashboardStats,
+  usePendingPrescriptions,
+  useWardIndents,
+  useLowStockAlerts,
+} from "@/hooks/usePharmacy"
 import { pharmacyService } from "@/services/pharmacyService"
 import { PharmacyStatsHeader } from "@/components/pharmacy/PharmacyStatsHeader"
 import { PosBillingTab } from "@/components/pharmacy/PosBillingTab"
@@ -19,10 +28,25 @@ import { SuppliersLedgerTab } from "@/components/pharmacy/SuppliersLedgerTab"
 import { FormularyTab } from "@/components/pharmacy/FormularyTab"
 import { SupplierReturnsTab } from "@/components/pharmacy/SupplierReturnsTab"
 import { OpdPrescriptionQueueTab } from "@/components/pharmacy/OpdPrescriptionQueueTab"
+import { CdscoRegisterTab } from "@/components/pharmacy/CdscoRegisterTab"
+import { GstReportTab } from "@/components/pharmacy/GstReportTab"
+import { WardIndentsTab } from "@/components/pharmacy/WardIndentsTab"
+import { PurchaseOrdersTab } from "@/components/pharmacy/PurchaseOrdersTab"
 
 export const PharmacyDeskPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
-    "pos" | "prescriptions" | "formulary" | "suppliers" | "grn" | "inventory" | "rtv" | "returns"
+    | "pos"
+    | "prescriptions"
+    | "indents"
+    | "cdsco"
+    | "gst"
+    | "po"
+    | "formulary"
+    | "suppliers"
+    | "grn"
+    | "inventory"
+    | "rtv"
+    | "returns"
   >("pos")
 
   const [posInitialPatient, setPosInitialPatient] = useState<any>(undefined)
@@ -31,6 +55,12 @@ export const PharmacyDeskPage: React.FC = () => {
   const { data: stats, isLoading: isLoadingStats } = usePharmacyDashboardStats()
   const { data: pendingRxData } = usePendingPrescriptions()
   const pendingCount = pendingRxData?.data?.length || 0
+
+  const { data: indentsData } = useWardIndents({ status: "PENDING" })
+  const pendingIndentCount = indentsData?.data?.length || 0
+
+  const { data: lowStockData } = useLowStockAlerts()
+  const lowStockCount = lowStockData?.total_low_stock_count || 0
 
   const handleFulfillPrescription = async (prescriptionId: number, patientData: any) => {
     try {
@@ -123,6 +153,56 @@ export const PharmacyDeskPage: React.FC = () => {
 
           <button
             type="button"
+            onClick={() => setActiveTab("indents")}
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === "indents"
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            }`}
+          >
+            <Bed className="h-4 w-4 text-indigo-500" />
+            <span>Ward Indents (IPD)</span>
+            {pendingIndentCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-[10px] font-black text-white animate-pulse">
+                {pendingIndentCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("cdsco")}
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === "cdsco"
+                ? "border-amber-500 text-amber-600 dark:text-amber-400"
+                : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            }`}
+          >
+            <ShieldAlert className="h-4 w-4 text-amber-500" />
+            <span>CDSCO Register</span>
+            <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[10px] font-black text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              Form 35
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("gst")}
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === "gst"
+                ? "border-blue-600 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            }`}
+          >
+            <IndianRupee className="h-4 w-4 text-blue-600" />
+            <span>GST Tax Ledger & Filing</span>
+            <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+              GSTR-3B
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab("formulary")}
             className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all whitespace-nowrap ${
               activeTab === "formulary"
@@ -145,6 +225,24 @@ export const PharmacyDeskPage: React.FC = () => {
           >
             <Building2 className="h-4 w-4" />
             Suppliers & Vendor Ledger
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("po")}
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === "po"
+                ? "border-blue-600 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            }`}
+          >
+            <ClipboardList className="h-4 w-4 text-blue-600" />
+            <span>Purchase Orders & PO</span>
+            {lowStockCount > 0 && (
+              <span className="rounded-full bg-rose-100 px-1.5 py-0.2 text-[10px] font-black text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                {lowStockCount} Deficit
+              </span>
+            )}
           </button>
 
           <button
@@ -213,6 +311,13 @@ export const PharmacyDeskPage: React.FC = () => {
         {activeTab === "prescriptions" && (
           <OpdPrescriptionQueueTab onFulfillPrescription={handleFulfillPrescription} />
         )}
+
+        {activeTab === "indents" && <WardIndentsTab />}
+
+        {activeTab === "cdsco" && <CdscoRegisterTab />}
+        {activeTab === "gst" && <GstReportTab />}
+
+        {activeTab === "po" && <PurchaseOrdersTab />}
 
         {activeTab === "formulary" && <FormularyTab />}
 

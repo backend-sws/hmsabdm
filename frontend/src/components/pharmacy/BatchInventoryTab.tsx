@@ -7,12 +7,11 @@ import {
   AlertTriangle,
   ShieldAlert,
   RotateCcw,
-  SlidersHorizontal,
-  Layers,
   Clock,
   Ban,
   CheckCircle2,
   Building2,
+  Sparkles,
 } from "lucide-react"
 import {
   useBatchStock,
@@ -23,6 +22,7 @@ import {
 import type { PharmacyBatch } from "@/types/pharmacy"
 import { MedicineFormModal } from "./MedicineFormModal"
 import { SupplierReturnModal } from "./SupplierReturnModal"
+import { SaltSubstituteModal } from "./SaltSubstituteModal"
 
 export const BatchInventoryTab: React.FC = () => {
   const [search, setSearch] = useState("")
@@ -37,6 +37,15 @@ export const BatchInventoryTab: React.FC = () => {
   const [selectedBatchForAdjust, setSelectedBatchForAdjust] = useState<PharmacyBatch | null>(null)
   const [adjustmentQty, setAdjustmentQty] = useState<number>(0)
   const [adjustmentReason, setAdjustmentReason] = useState<string>("")
+
+  // Salt Substitute Modal State
+  const [isSubstituteModalOpen, setIsSubstituteModalOpen] = useState(false)
+  const [substituteModalTarget, setSubstituteModalTarget] = useState<{
+    medicineId?: number
+    brandName?: string
+    genericName?: string
+    currentPrice?: number
+  } | null>(null)
 
   // Queries
   const { data: expiryData } = useExpiryDashboard()
@@ -505,6 +514,24 @@ export const BatchInventoryTab: React.FC = () => {
                             <RotateCcw className="h-3.5 w-3.5" />
                           </button>
 
+                          {/* View Same-Salt Generic Substitutes */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSubstituteModalTarget({
+                                medicineId: batch.hospital_medicine_id,
+                                brandName: batch.medicine?.brand_name,
+                                genericName: batch.medicine?.generic_name || undefined,
+                                currentPrice: batch.selling_price || batch.mrp,
+                              })
+                              setIsSubstituteModalOpen(true)
+                            }}
+                            title="View Same-Salt Generic Substitutes in Hospital"
+                            className="rounded-lg bg-indigo-50 p-1 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 transition-all"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                          </button>
+
                           {/* Adjust stock */}
                           <button
                             type="button"
@@ -618,6 +645,23 @@ export const BatchInventoryTab: React.FC = () => {
           setBatchForRtv(null)
         }}
         initialBatch={batchForRtv}
+      />
+
+      {/* Salt Substitute Intelligence Modal */}
+      <SaltSubstituteModal
+        isOpen={isSubstituteModalOpen}
+        onClose={() => {
+          setIsSubstituteModalOpen(false)
+          setSubstituteModalTarget(null)
+        }}
+        medicineId={substituteModalTarget?.medicineId}
+        initialBrandName={substituteModalTarget?.brandName}
+        initialGenericName={substituteModalTarget?.genericName}
+        currentPrice={substituteModalTarget?.currentPrice}
+        onSelectBatch={() => {
+          setIsSubstituteModalOpen(false)
+          setSubstituteModalTarget(null)
+        }}
       />
     </div>
   )

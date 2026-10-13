@@ -24,6 +24,15 @@ export const PHARMACY_QUERY_KEYS = {
   expiryDashboard: ["pharmacy", "expiry-dashboard"] as const,
   supplierReturns: (params?: any) => ["pharmacy", "supplier-returns", params] as const,
   supplierReturn: (id: number) => ["pharmacy", "supplier-return", id] as const,
+  substitutes: (params?: any) => ["pharmacy", "substitutes", params] as const,
+  patientMedicationHistory: (patientId?: number) => ["pharmacy", "patient-history", patientId] as const,
+  cdscoRegister: (params?: any) => ["pharmacy", "cdsco-register", params] as const,
+  gstReport: (params?: any) => ["pharmacy", "gst-report", params] as const,
+  wardIndents: (params?: any) => ["pharmacy", "ward-indents", params] as const,
+  wardIndent: (id: number) => ["pharmacy", "ward-indent", id] as const,
+  lowStockAlerts: ["pharmacy", "low-stock-alerts"] as const,
+  purchaseOrders: (params?: any) => ["pharmacy", "purchase-orders", params] as const,
+  purchaseOrder: (id: number) => ["pharmacy", "purchase-order", id] as const,
 }
 
 // Queries
@@ -386,4 +395,190 @@ export function useUpdateSupplierReturnStatusMutation() {
     },
   })
 }
+
+export function useGenericSubstitutes(
+  params?: { medicine_id?: number; generic_name?: string; search?: string },
+  enabled = true
+) {
+  const hasParam = Boolean(params?.medicine_id || params?.generic_name || params?.search)
+  return useQuery({
+    queryKey: PHARMACY_QUERY_KEYS.substitutes(params),
+    queryFn: () => pharmacyService.getSubstitutes(params),
+    enabled: enabled && hasParam,
+    staleTime: 30 * 1000,
+  })
+}
+
+export function usePatientMedicationHistory(patientId?: number, enabled = true) {
+  return useQuery({
+    queryKey: PHARMACY_QUERY_KEYS.patientMedicationHistory(patientId),
+    queryFn: () => pharmacyService.getPatientMedicationHistory(patientId!),
+    enabled: enabled && Boolean(patientId && patientId > 0),
+    staleTime: 60 * 1000,
+  })
+}
+
+export function useCdscoRegister(params?: {
+  schedule_type?: string
+  start_date?: string
+  end_date?: string
+  search?: string
+  per_page?: number
+  all?: boolean
+}) {
+  return useQuery({
+    queryKey: PHARMACY_QUERY_KEYS.cdscoRegister(params),
+    queryFn: () => pharmacyService.getCdscoRegister(params),
+    staleTime: 15 * 1000,
+  })
+}
+
+export function useGstReport(params?: {
+  start_date?: string
+  end_date?: string
+  period?: string
+}) {
+  return useQuery({
+    queryKey: PHARMACY_QUERY_KEYS.gstReport(params),
+    queryFn: () => pharmacyService.getGstReport(params),
+    staleTime: 30 * 1000,
+  })
+}
+
+// IPD Ward Indents Hooks
+export function useWardIndents(params?: Record<string, any>) {
+  return useQuery({
+    queryKey: PHARMACY_QUERY_KEYS.wardIndents(params),
+    queryFn: () => pharmacyService.getWardIndents(params),
+    staleTime: 10 * 1000,
+  })
+}
+
+export function useWardIndent(id: number) {
+  return useQuery({
+    queryKey: PHARMACY_QUERY_KEYS.wardIndent(id),
+    queryFn: () => pharmacyService.getWardIndent(id),
+    enabled: Boolean(id && id > 0),
+  })
+}
+
+export function useCreateWardIndentMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: any) => pharmacyService.createWardIndent(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "ward-indents"] })
+      toast.success("Ward indent created successfully")
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to create ward indent")
+    },
+  })
+}
+
+export function useDispenseWardIndentMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload?: any }) =>
+      pharmacyService.dispenseWardIndent(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "ward-indents"] })
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "batches"] })
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "stats"] })
+      toast.success("Ward indent dispensed & charged to IPD ledger")
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to dispense ward indent")
+    },
+  })
+}
+
+export function useRejectWardIndentMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      pharmacyService.rejectWardIndent(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "ward-indents"] })
+      toast.success("Ward indent marked as rejected")
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to reject ward indent")
+    },
+  })
+}
+
+export function useReturnWardIndentItemMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ indentId, itemId, returnQuantity }: { indentId: number; itemId: number; returnQuantity: number }) =>
+      pharmacyService.returnWardIndentItem(indentId, itemId, returnQuantity),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "ward-indents"] })
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "batches"] })
+      toast.success("Ward item returned & IPD ledger updated")
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to return ward item")
+    },
+  })
+}
+
+// Low Stock & Purchase Orders Hooks
+export function useLowStockAlerts() {
+  return useQuery({
+    queryKey: PHARMACY_QUERY_KEYS.lowStockAlerts,
+    queryFn: () => pharmacyService.getLowStockAlerts(),
+    staleTime: 30 * 1000,
+  })
+}
+
+export function usePurchaseOrders(params?: Record<string, any>) {
+  return useQuery({
+    queryKey: PHARMACY_QUERY_KEYS.purchaseOrders(params),
+    queryFn: () => pharmacyService.getPurchaseOrders(params),
+    staleTime: 15 * 1000,
+  })
+}
+
+export function usePurchaseOrder(id: number) {
+  return useQuery({
+    queryKey: PHARMACY_QUERY_KEYS.purchaseOrder(id),
+    queryFn: () => pharmacyService.getPurchaseOrder(id),
+    enabled: Boolean(id && id > 0),
+  })
+}
+
+export function useCreatePurchaseOrderMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: any) => pharmacyService.createPurchaseOrder(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "purchase-orders"] })
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "low-stock-alerts"] })
+      toast.success("Purchase order generated successfully")
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to generate purchase order")
+    },
+  })
+}
+
+export function useUpdatePurchaseOrderStatusMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      pharmacyService.updatePurchaseOrderStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "purchase-orders"] })
+      toast.success("Purchase order status updated")
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to update purchase order status")
+    },
+  })
+}
+
+
+
 

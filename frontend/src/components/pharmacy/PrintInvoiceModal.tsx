@@ -159,9 +159,22 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                       </tr>
                       <tr className="text-[10px] text-slate-600">
                         <td>B:{item.batch_number} Exp:{item.expiry_date}</td>
-                        <td className="text-center font-bold">{item.quantity}</td>
-                        <td className="text-right">₹{item.unit_price}</td>
-                        <td className="text-right font-bold">₹{item.total_amount}</td>
+                        <td className="text-center font-bold">
+                          {(() => {
+                            const packSize = item.medicine?.pack_size || item.medicine?.strip_size || 1
+                            const baseUnit = item.medicine?.base_unit || "Tab"
+                            if (packSize > 1) {
+                              if (item.quantity % packSize === 0) {
+                                const strips = item.quantity / packSize
+                                return `${strips} Strip`
+                              }
+                              return `${item.quantity} Loose ${baseUnit}`
+                            }
+                            return `${item.quantity} ${baseUnit}`
+                          })()}
+                        </td>
+                        <td className="text-right">₹{item.unit_price.toFixed(2)}</td>
+                        <td className="text-right font-bold">₹{item.total_amount.toFixed(2)}</td>
                       </tr>
                     </React.Fragment>
                   ))}
@@ -268,11 +281,24 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                       <td className="p-2 text-slate-500">{item.hsn_code}</td>
                       <td className="p-2 font-mono font-bold">{item.batch_number}</td>
                       <td className="p-2">{item.expiry_date}</td>
-                      <td className="p-2 text-center font-bold">{item.quantity}</td>
-                      <td className="p-2 text-right">₹{item.unit_mrp}</td>
-                      <td className="p-2 text-right">₹{item.unit_price}</td>
+                      <td className="p-2 text-center font-bold">
+                        {(() => {
+                          const packSize = item.medicine?.pack_size || item.medicine?.strip_size || 1
+                          const baseUnit = item.medicine?.base_unit || "Tab"
+                          if (packSize > 1) {
+                            if (item.quantity % packSize === 0) {
+                              const strips = item.quantity / packSize
+                              return `${strips} Strip (${item.quantity} ${baseUnit})`
+                            }
+                            return `${item.quantity} Loose ${baseUnit}`
+                          }
+                          return `${item.quantity} ${baseUnit}`
+                        })()}
+                      </td>
+                      <td className="p-2 text-right">₹{item.unit_mrp.toFixed(2)}</td>
+                      <td className="p-2 text-right">₹{item.unit_price.toFixed(2)}</td>
                       <td className="p-2 text-right">{item.gst_rate}%</td>
-                      <td className="p-2 text-right font-bold">₹{item.total_amount}</td>
+                      <td className="p-2 text-right font-bold">₹{item.total_amount.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>

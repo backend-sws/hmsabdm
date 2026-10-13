@@ -23,6 +23,7 @@ class PharmacySale extends Model
         'customer_name',
         'customer_phone',
         'doctor_name',
+        'doctor_reg_no',
         'subtotal_amount',
         'discount_amount',
         'taxable_amount',

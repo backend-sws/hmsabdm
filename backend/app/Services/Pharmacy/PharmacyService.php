@@ -19,6 +19,12 @@ use App\Models\PharmacySupplierPayment;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
 use App\Models\BillingLedgerItem;
+use App\Models\PharmacyWardIndent;
+use App\Models\PharmacyWardIndentItem;
+use App\Models\PharmacyPurchaseOrder;
+use App\Models\PharmacyPurchaseOrderItem;
+use App\Models\IpdAdmission;
+use App\Models\Patient;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -889,15 +895,36 @@ class PharmacyService implements PharmacyServiceInterface
                 $gstRate      = (float) ($item['gst_rate'] ?? $medicine->gst_rate);
                 $hsnCode      = $item['hsn_code'] ?? $medicine->hsn_code;
 
-                $lineSubtotal = $quantity * $unitPrice;
-                $lineDiscount = $lineSubtotal * ($discountPct / 100);
-                $lineTaxable  = max(0, $lineSubtotal - $lineDiscount);
+                $isTaxInclusive = isset($item['is_tax_inclusive'])
+                    ? filter_var($item['is_tax_inclusive'], FILTER_VALIDATE_BOOLEAN)
+                    : (($data['tax_mode'] ?? 'INCLUSIVE') === 'INCLUSIVE');
 
-                $lineCgst     = $lineTaxable * ($gstRate / 200);
-                $lineSgst     = $lineTaxable * ($gstRate / 200);
-                $lineTotal    = $lineTaxable + $lineCgst + $lineSgst;
+                $lineGross    = $quantity * $unitPrice;
+                $lineDiscount = $lineGross * ($discountPct / 100);
+                $lineNet      = max(0, $lineGross - $lineDiscount);
 
-                $subtotalAmount += $lineSubtotal;
+                if ($isTaxInclusive) {
+                    // MRP / Retail Inclusive GST: Back-calculate Taxable base & GST from selling price
+                    if ($gstRate > 0) {
+                        $lineTaxable = round($lineNet / (1 + ($gstRate / 100)), 2);
+                        $lineTax     = round($lineNet - $lineTaxable, 2);
+                        $lineCgst    = round($lineTax / 2, 2);
+                        $lineSgst    = round($lineTax - $lineCgst, 2);
+                    } else {
+                        $lineTaxable = $lineNet;
+                        $lineCgst    = 0.0;
+                        $lineSgst    = 0.0;
+                    }
+                    $lineTotal = $lineNet;
+                } else {
+                    // Tax Exclusive: GST is added on top of the rate
+                    $lineTaxable = $lineNet;
+                    $lineCgst    = round($lineTaxable * ($gstRate / 200), 2);
+                    $lineSgst    = round($lineTaxable * ($gstRate / 200), 2);
+                    $lineTotal   = round($lineTaxable + $lineCgst + $lineSgst, 2);
+                }
+
+                $subtotalAmount += $lineGross;
                 $taxableAmount  += $lineTaxable;
                 $cgstAmount     += $lineCgst;
                 $sgstAmount     += $lineSgst;
@@ -918,12 +945,20 @@ class PharmacyService implements PharmacyServiceInterface
                 ];
             }
 
-            $grossTotal = $taxableAmount + $cgstAmount + $sgstAmount;
+            $grossTotal = max(0, ($taxableAmount + $cgstAmount + $sgstAmount) - $discountAmount);
             $netTotal   = round($grossTotal);
             $roundOff   = round($netTotal - $grossTotal, 2);
 
             $paymentMode   = $data['payment_mode'] ?? 'CASH';
             $paymentStatus = $paymentMode === 'IPD_LEDGER' ? 'CHARGED_TO_IPD' : 'PAID';
+
+            $doctorRegNo = $data['doctor_reg_no'] ?? null;
+            if (empty($doctorRegNo) && !empty($data['prescription_id'])) {
+                $rx = Prescription::with('doctor')->find($data['prescription_id']);
+                if ($rx && $rx->doctor && !empty($rx->doctor->hpr_id)) {
+                    $doctorRegNo = $rx->doctor->hpr_id;
+                }
+            }
 
             // 1. Create Pharmacy Sale Header
             $sale = PharmacySale::create([
@@ -936,6 +971,7 @@ class PharmacyService implements PharmacyServiceInterface
                 'customer_name'     => trim($data['customer_name']),
                 'customer_phone'    => $data['customer_phone'] ?? null,
                 'doctor_name'       => $data['doctor_name'] ?? null,
+                'doctor_reg_no'     => $doctorRegNo,
                 'subtotal_amount'   => round($subtotalAmount, 2),
                 'discount_amount'   => round($discountAmount, 2),
                 'taxable_amount'    => round($taxableAmount, 2),
@@ -1028,8 +1064,12 @@ class PharmacyService implements PharmacyServiceInterface
     public function getSales(int $hospitalId, array $filters = []): mixed
     {
         $query = PharmacySale::where('hospital_id', $hospitalId)
-            ->with(['patient:id,uhid,first_name,last_name,phone', 'billedByUser:id,name'])
+            ->with(['patient', 'billedByUser:id,name'])
             ->withCount('items');
+
+        if (!empty($filters['patient_id'])) {
+            $query->where('patient_id', (int) $filters['patient_id']);
+        }
 
         if (!empty($filters['search'])) {
             $search = '%' . trim($filters['search']) . '%';
@@ -1625,5 +1665,1098 @@ class PharmacyService implements PharmacyServiceInterface
 
         return $batch->fresh();
     }
+
+    /**
+     * Generic Salt Substitute Intelligence
+     * Finds medicines in the hospital with the same active pharmaceutical salt/generic composition
+     */
+    public function getGenericSubstitutes(int $hospitalId, array $params): array
+    {
+        $medicineId = !empty($params['medicine_id']) ? (int) $params['medicine_id'] : null;
+        $genericName = !empty($params['generic_name']) ? trim($params['generic_name']) : null;
+        $search = !empty($params['search']) ? trim($params['search']) : null;
+
+        $targetMedicine = null;
+        if ($medicineId) {
+            $targetMedicine = HospitalMedicine::where('hospital_id', $hospitalId)->find($medicineId);
+            if ($targetMedicine && empty($genericName)) {
+                $genericName = trim($targetMedicine->generic_name ?? '');
+            }
+        }
+
+        if (empty($genericName) && !empty($search)) {
+            $genericName = $search;
+        }
+
+        if (empty($genericName) || strlen($genericName) < 2) {
+            return [
+                'target_medicine' => $targetMedicine,
+                'generic_name'    => $genericName ?? '',
+                'substitutes'     => [],
+                'total_count'     => 0,
+            ];
+        }
+
+        $like = $this->likeOp();
+        $today = now()->toDateString();
+
+        // Match medicines by generic salt
+        $medicines = HospitalMedicine::where('hospital_id', $hospitalId)
+            ->where('is_active', true)
+            ->where(function ($q) use ($genericName, $like) {
+                $q->where('generic_name', $like, "%{$genericName}%");
+                $parts = preg_split('/[\+\,\/]/', $genericName);
+                if (count($parts) > 1) {
+                    foreach ($parts as $p) {
+                        $trimmed = trim($p);
+                        if (strlen($trimmed) >= 3) {
+                            $q->orWhere('generic_name', $like, "%{$trimmed}%");
+                        }
+                    }
+                }
+            })
+            ->with(['batches' => function ($bq) use ($today) {
+                $bq->where('is_active', true)
+                   ->where('available_quantity', '>', 0)
+                   ->where('expiry_date', '>=', $today)
+                   ->orderBy('expiry_date', 'asc'); // FEFO
+            }])
+            ->get();
+
+        $substitutes = $medicines->map(function ($med) use ($targetMedicine) {
+            $activeBatches = $med->batches ?? collect();
+            $totalStock = $activeBatches->sum('available_quantity');
+            $fefoBatch = $activeBatches->first(); // Earliest valid expiry batch
+
+            $minPrice = $activeBatches->count() > 0 
+                ? (float) $activeBatches->min('selling_price') 
+                : (float) ($med->default_selling_price ?: $med->mrp);
+            $maxPrice = $activeBatches->count() > 0 
+                ? (float) $activeBatches->max('selling_price') 
+                : (float) ($med->default_selling_price ?: $med->mrp);
+
+            $earliestExpiry = $fefoBatch?->expiry_date;
+            $daysToExpiry = null;
+            if ($earliestExpiry) {
+                $daysToExpiry = (int) now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($earliestExpiry)->startOfDay(), false);
+            }
+
+            return [
+                'id'                    => $med->id,
+                'brand_name'            => $med->brand_name,
+                'generic_name'          => $med->generic_name,
+                'dosage_form'           => $med->dosage_form,
+                'strength'              => $med->strength,
+                'manufacturer'          => $med->manufacturer,
+                'mrp'                   => (float) $med->mrp,
+                'default_selling_price' => (float) $med->default_selling_price,
+                'min_price'             => $minPrice,
+                'max_price'             => $maxPrice,
+                'pack_size'             => $med->pack_size ?? 1,
+                'prescription_type'     => $med->prescription_type,
+                'total_stock'           => $totalStock,
+                'in_stock'              => $totalStock > 0,
+                'earliest_expiry'       => $earliestExpiry,
+                'days_to_expiry'        => $daysToExpiry,
+                'is_current'            => $targetMedicine ? ($med->id === $targetMedicine->id) : false,
+                'fefo_batch'            => $fefoBatch,
+                'batches'               => $activeBatches,
+            ];
+        })
+        ->sortByDesc('in_stock')
+        ->values()
+        ->all();
+
+        return [
+            'target_medicine' => $targetMedicine,
+            'generic_name'    => $genericName,
+            'substitutes'     => $substitutes,
+            'total_count'     => count($substitutes),
+        ];
+    }
+
+    /**
+     * Patient Past Medication History & 1-Click Refill Intelligence
+     */
+    public function getPatientMedicationHistory(int $hospitalId, int $patientId): array
+    {
+        $today = now()->toDateString();
+
+        // 1. Fetch recent sales invoices for this patient
+        $sales = PharmacySale::where('hospital_id', $hospitalId)
+            ->where('patient_id', $patientId)
+            ->with([
+                'items.medicine',
+                'items.batch',
+                'billedByUser:id,name',
+            ])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        // 2. Aggregate unique medicines purchased previously
+        $medicationMap = [];
+        foreach ($sales as $sale) {
+            foreach ($sale->items as $item) {
+                $medId = $item->hospital_medicine_id;
+                if (!isset($medicationMap[$medId])) {
+                    $medicationMap[$medId] = [
+                        'medicine_id'       => $medId,
+                        'brand_name'        => $item->medicine?->brand_name ?? 'Medicine',
+                        'generic_name'      => $item->medicine?->generic_name,
+                        'dosage_form'       => $item->medicine?->dosage_form ?? 'Tablet',
+                        'strength'          => $item->medicine?->strength,
+                        'prescription_type' => $item->medicine?->prescription_type ?? 'OTC',
+                        'pack_size'         => $item->medicine?->pack_size ?? 1,
+                        'last_purchased_at' => $sale->created_at?->toIso8601String(),
+                        'last_invoice_no'   => $sale->invoice_number,
+                        'last_quantity'     => $item->quantity,
+                        'last_unit_price'   => (float) $item->unit_price,
+                        'purchase_count'    => 1,
+                    ];
+                } else {
+                    $medicationMap[$medId]['purchase_count']++;
+                }
+            }
+        }
+
+        // 3. For each previously purchased medicine, check today's stock and earliest FEFO batch
+        $medicationList = [];
+        foreach ($medicationMap as $medId => $data) {
+            $batches = PharmacyBatch::where('hospital_id', $hospitalId)
+                ->where('hospital_medicine_id', $medId)
+                ->where('is_active', true)
+                ->where('available_quantity', '>', 0)
+                ->where('expiry_date', '>=', $today)
+                ->orderBy('expiry_date', 'asc') // FEFO
+                ->get();
+
+            $totalStock = $batches->sum('available_quantity');
+            $fefoBatch = $batches->first();
+
+            $data['current_stock'] = $totalStock;
+            $data['in_stock']      = $totalStock > 0;
+            $data['fefo_batch']    = $fefoBatch;
+            $data['can_refill']    = $totalStock > 0 && $fefoBatch !== null;
+
+            $medicationList[] = $data;
+        }
+
+        return [
+            'patient_id'    => $patientId,
+            'recent_sales'  => $sales,
+            'medications'   => $medicationList,
+            'total_past_rx' => count($medicationList),
+        ];
+    }
+
+    /**
+     * Statutory Compliance: CDSCO Schedule H / H1 & Narcotic Regulatory Register
+     * Generates inspection-ready register under Drugs & Cosmetics Rules 1945 (Form 35 / Rule 65 & 97)
+     */
+    public function getCdscoRegulatoryRegister(int $hospitalId, array $filters = []): mixed
+    {
+        $like = $this->likeOp();
+
+        // 1. Build Base Query on PharmacySaleItem where medicine is controlled
+        $query = PharmacySaleItem::query()
+            ->whereHas('sale', function ($sq) use ($hospitalId) {
+                $sq->where('hospital_id', $hospitalId);
+            })
+            ->whereHas('medicine', function ($mq) {
+                $mq->whereIn('prescription_type', ['SCHEDULE_H', 'SCHEDULE_H1', 'NARCOTIC']);
+            })
+            ->with([
+                'sale' => function ($sq) {
+                    $sq->with([
+                        'patient:id,uhid,name,mobile,address,city,district,state,pincode',
+                        'prescription.doctor:id,name,qualification,specialization,hpr_id',
+                        'billedByUser:id,name',
+                    ]);
+                },
+                'medicine:id,item_code,brand_name,generic_name,dosage_form,strength,manufacturer,prescription_type,hsn_code,strip_size,box_size',
+                'batch:id,batch_number,expiry_date,mrp',
+            ]);
+
+        // Filter by Schedule Classification
+        if (!empty($filters['schedule_type']) && $filters['schedule_type'] !== 'ALL') {
+            $scheduleType = strtoupper(trim($filters['schedule_type']));
+            $query->whereHas('medicine', function ($mq) use ($scheduleType) {
+                $mq->where('prescription_type', $scheduleType);
+            });
+        }
+
+        // Filter by Date Range
+        if (!empty($filters['start_date'])) {
+            $query->whereHas('sale', function ($sq) use ($filters) {
+                $sq->whereDate('created_at', '>=', $filters['start_date']);
+            });
+        }
+        if (!empty($filters['end_date'])) {
+            $query->whereHas('sale', function ($sq) use ($filters) {
+                $sq->whereDate('created_at', '<=', $filters['end_date']);
+            });
+        }
+
+        // Filter by Keyword Search
+        if (!empty($filters['search'])) {
+            $search = '%' . trim($filters['search']) . '%';
+            $query->where(function ($q) use ($search, $like) {
+                $q->where('batch_number', $like, $search)
+                  ->orWhereHas('medicine', function ($mq) use ($search, $like) {
+                      $mq->where('brand_name', $like, $search)
+                        ->orWhere('generic_name', $like, $search)
+                        ->orWhere('manufacturer', $like, $search);
+                  })
+                  ->orWhereHas('sale', function ($sq) use ($search, $like) {
+                      $sq->where('invoice_number', $like, $search)
+                        ->orWhere('customer_name', $like, $search)
+                        ->orWhere('customer_phone', $like, $search)
+                        ->orWhere('doctor_name', $like, $search)
+                        ->orWhere('doctor_reg_no', $like, $search)
+                        ->orWhereHas('patient', function ($pq) use ($search, $like) {
+                            $pq->where('name', $like, $search)
+                              ->orWhere('uhid', $like, $search)
+                              ->orWhere('mobile', $like, $search);
+                        });
+                  });
+            });
+        }
+
+        // Order chronologically descending (newest dispensing first)
+        $query->orderBy('created_at', 'desc');
+
+        // Summary Statistics for compliance audit overview
+        $totalItemsCount = (clone $query)->count();
+        $h1Count = (clone $query)->whereHas('medicine', fn($mq) => $mq->where('prescription_type', 'SCHEDULE_H1'))->count();
+        $hCount = (clone $query)->whereHas('medicine', fn($mq) => $mq->where('prescription_type', 'SCHEDULE_H'))->count();
+        $narcoticsCount = (clone $query)->whereHas('medicine', fn($mq) => $mq->where('prescription_type', 'NARCOTIC'))->count();
+
+        // Pagination or Full Export
+        $isAll = filter_var($filters['all'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $perPage = !empty($filters['per_page']) ? (int) $filters['per_page'] : 25;
+        $items = $isAll ? $query->get() : $query->paginate($perPage);
+
+        // Transform collection to flatten compliance records cleanly
+        $transformer = function ($item) {
+            $sale = $item->sale;
+            $med = $item->medicine;
+            $patient = $sale?->patient;
+            $doctor = $sale?->prescription?->doctor;
+
+            // Resolve Patient Address
+            $patientAddress = null;
+            if ($patient) {
+                $addressParts = array_filter([
+                    $patient->address,
+                    $patient->city,
+                    $patient->district,
+                    $patient->state ? ($patient->pincode ? "{$patient->state} - {$patient->pincode}" : $patient->state) : $patient->pincode,
+                ]);
+                $patientAddress = !empty($addressParts) ? implode(', ', $addressParts) : null;
+            }
+
+            // Resolve Prescribing Doctor Name & Reg No
+            $doctorName = $sale?->doctor_name ?: ($doctor?->name ? "Dr. {$doctor->name}" : 'Not Specified');
+            $doctorRegNo = $sale?->doctor_reg_no ?: ($doctor?->hpr_id ?: null);
+            $doctorSpecialization = $doctor?->specialization ?: $doctor?->qualification;
+
+            return [
+                'id'                   => $item->id,
+                'sale_id'              => $item->sale_id,
+                'invoice_number'       => $sale?->invoice_number,
+                'dispensed_at'         => $item->created_at?->toIso8601String(),
+                'dispensed_date'       => $item->created_at?->format('Y-m-d'),
+                'dispensed_time'       => $item->created_at?->format('H:i A'),
+                'sale_type'            => $sale?->sale_type ?? 'WALK_IN',
+                
+                // Patient Details
+                'patient_uhid'         => $patient?->uhid ?: null,
+                'patient_name'         => $patient?->name ?: $sale?->customer_name,
+                'patient_phone'        => $patient?->mobile ?: $sale?->customer_phone,
+                'patient_address'      => $patientAddress ?: 'Local Area / Hospital Counter',
+                
+                // Doctor Details
+                'doctor_name'          => $doctorName,
+                'doctor_reg_no'        => $doctorRegNo ?: 'N/A',
+                'doctor_qualification' => $doctorSpecialization,
+                
+                // Drug Details
+                'medicine_id'          => $med?->id,
+                'brand_name'           => $med?->brand_name,
+                'generic_name'         => $med?->generic_name,
+                'dosage_form'          => $med?->dosage_form,
+                'strength'             => $med?->strength,
+                'prescription_type'    => $med?->prescription_type ?? 'SCHEDULE_H',
+                'manufacturer'         => $med?->manufacturer ?: 'Standard Pharma',
+                'hsn_code'             => $item->hsn_code,
+                
+                // Batch & Dispensing
+                'batch_number'         => $item->batch_number,
+                'expiry_date'          => $item->expiry_date?->format('Y-m-d'),
+                'quantity'             => (int) $item->quantity,
+                'unit_price'           => (float) $item->unit_price,
+                'total_amount'         => (float) $item->total_amount,
+                
+                // Dispensing Pharmacist (Qualified Person under Rule 65)
+                'dispensed_by'         => $sale?->billedByUser?->name ?: 'Duty Pharmacist',
+                'pharmacist_sign_off'  => 'VERIFIED_DIGITALLY',
+            ];
+        };
+
+        if ($isAll) {
+            $transformedItems = $items->map($transformer);
+            return [
+                'records' => $transformedItems,
+                'summary' => [
+                    'total_dispensed' => $totalItemsCount,
+                    'schedule_h1'     => $h1Count,
+                    'schedule_h'      => $hCount,
+                    'narcotics'       => $narcoticsCount,
+                ],
+            ];
+        }
+
+        $items->getCollection()->transform($transformer);
+
+        return [
+            'paginated' => $items,
+            'summary'   => [
+                'total_dispensed' => $totalItemsCount,
+                'schedule_h1'     => $h1Count,
+                'schedule_h'      => $hCount,
+                'narcotics'       => $narcoticsCount,
+            ],
+        ];
+    }
+
+    /**
+     * Statutory GST Tax Intelligence & Filing Report (GSTR-3B & Input/Output Tax Ledger)
+     */
+    public function getGstReport(int $hospitalId, array $filters = []): array
+    {
+        // 1. Resolve Date Range
+        $startDate = $filters['start_date'] ?? now()->startOfMonth()->toDateString();
+        $endDate   = $filters['end_date'] ?? now()->toDateString();
+
+        // 2. OUTWARD SUPPLIES (Sales / POS Billing)
+        $salesQuery = PharmacySale::where('hospital_id', $hospitalId)
+            ->whereDate('created_at', '>=', $startDate)
+            ->whereDate('created_at', '<=', $endDate);
+
+        $salesCount       = (clone $salesQuery)->count();
+        $salesGrossTotal  = (float) (clone $salesQuery)->sum('net_amount');
+        $salesTaxable     = (float) (clone $salesQuery)->sum('taxable_amount');
+        $salesCgst        = (float) (clone $salesQuery)->sum('cgst_amount');
+        $salesSgst        = (float) (clone $salesQuery)->sum('sgst_amount');
+        $salesOutputTax   = round($salesCgst + $salesSgst, 2);
+
+        // 3. CUSTOMER SALES RETURNS (Credit Notes - Reversal of Output Tax)
+        $custReturnsQuery = PharmacyReturnItem::whereHas('return', function ($q) use ($hospitalId, $startDate, $endDate) {
+            $q->where('hospital_id', $hospitalId)
+              ->whereDate('created_at', '>=', $startDate)
+              ->whereDate('created_at', '<=', $endDate);
+        });
+
+        $custReturnsCount   = (clone $custReturnsQuery)->count();
+        $custReturnTaxable  = (float) (clone $custReturnsQuery)->sum('taxable_amount_reversed');
+        $custReturnCgst     = (float) (clone $custReturnsQuery)->sum('cgst_reversed');
+        $custReturnSgst     = (float) (clone $custReturnsQuery)->sum('sgst_reversed');
+        $custReturnTaxReversal = round($custReturnCgst + $custReturnSgst, 2);
+
+        // Net Outward Tax Liability (Sales minus Returns)
+        $netOutwardTaxable = max(0, round($salesTaxable - $custReturnTaxable, 2));
+        $netOutputCgst     = max(0, round($salesCgst - $custReturnCgst, 2));
+        $netOutputSgst     = max(0, round($salesSgst - $custReturnSgst, 2));
+        $netOutputTax      = round($netOutputCgst + $netOutputSgst, 2);
+
+        // 4. INWARD SUPPLIES (Purchases / GRN from Suppliers - Input Tax Credit ITC)
+        $purchasesQuery = PharmacyPurchase::where('hospital_id', $hospitalId)
+            ->whereDate('invoice_date', '>=', $startDate)
+            ->whereDate('invoice_date', '<=', $endDate);
+
+        $purchasesCount   = (clone $purchasesQuery)->count();
+        $purchasesGross   = (float) (clone $purchasesQuery)->sum('net_amount');
+        $purchasesTaxable = (float) (clone $purchasesQuery)->sum('taxable_amount');
+        $purchasesCgst    = (float) (clone $purchasesQuery)->sum('cgst_amount');
+        $purchasesSgst    = (float) (clone $purchasesQuery)->sum('sgst_amount');
+        $purchasesIgst    = (float) (clone $purchasesQuery)->sum('igst_amount');
+        $purchasesItc     = round($purchasesCgst + $purchasesSgst + $purchasesIgst, 2);
+
+        // 5. SUPPLIER RETURNS (RTV Debit Notes - Reversal of ITC)
+        $supplierReturnsQuery = PharmacySupplierReturn::where('hospital_id', $hospitalId)
+            ->whereDate('rtv_date', '>=', $startDate)
+            ->whereDate('rtv_date', '<=', $endDate);
+
+        $supplierReturnsCount  = (clone $supplierReturnsQuery)->count();
+        $supplierReturnsItcRev = (float) (clone $supplierReturnsQuery)->sum('gst_reversal_amount');
+
+        // Net Inward Tax Credit (ITC from Purchases minus Supplier Returns)
+        $netItcAvailable = max(0, round($purchasesItc - $supplierReturnsItcRev, 2));
+
+        // 6. NET GST SETTLEMENT (GSTR-3B Formula)
+        $netTaxPayable     = max(0, round($netOutputTax - $netItcAvailable, 2));
+        $itcCarriedForward = max(0, round($netItcAvailable - $netOutputTax, 2));
+
+        // 7. GST SLAB-WISE BREAKUP (0%, 5%, 12%, 18%, 28%)
+        $slabs = [0.0, 5.0, 12.0, 18.0, 28.0];
+        $slabBreakdown = [];
+
+        foreach ($slabs as $rate) {
+            // Outward sales items for this slab
+            $outItems = PharmacySaleItem::whereHas('sale', function ($sq) use ($hospitalId, $startDate, $endDate) {
+                $sq->where('hospital_id', $hospitalId)
+                   ->whereDate('created_at', '>=', $startDate)
+                   ->whereDate('created_at', '<=', $endDate);
+            })->where('gst_rate', $rate);
+
+            $outTaxable = (float) (clone $outItems)->sum('taxable_amount');
+            $outCgst    = (float) (clone $outItems)->sum('cgst_amount');
+            $outSgst    = (float) (clone $outItems)->sum('sgst_amount');
+            $outTax     = round($outCgst + $outSgst, 2);
+
+            // Inward purchase items for this slab
+            $inItems = PharmacyPurchaseItem::whereHas('purchase', function ($pq) use ($hospitalId, $startDate, $endDate) {
+                $pq->where('hospital_id', $hospitalId)
+                   ->whereDate('invoice_date', '>=', $startDate)
+                   ->whereDate('invoice_date', '<=', $endDate);
+            })->where('gst_rate', $rate);
+
+            $inTaxable  = (float) (clone $inItems)->sum('taxable_amount');
+            $inCgst     = (float) (clone $inItems)->sum('cgst_amount');
+            $inSgst     = (float) (clone $inItems)->sum('sgst_amount');
+            $inTax      = round($inCgst + $inSgst, 2);
+
+            $slabBreakdown[] = [
+                'gst_rate'           => $rate,
+                'slab_label'         => "{$rate}% GST",
+                'outward_taxable'    => round($outTaxable, 2),
+                'outward_tax'        => $outTax,
+                'inward_taxable'     => round($inTaxable, 2),
+                'inward_itc'         => $inTax,
+                'net_tax'            => round($outTax - $inTax, 2),
+            ];
+        }
+
+        // 8. Recent Outward Invoices List
+        $outwardInvoices = PharmacySale::where('hospital_id', $hospitalId)
+            ->whereDate('created_at', '>=', $startDate)
+            ->whereDate('created_at', '<=', $endDate)
+            ->with(['billedByUser:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get()
+            ->map(fn($s) => [
+                'id'             => $s->id,
+                'invoice_number' => $s->invoice_number,
+                'invoice_date'   => $s->created_at->format('Y-m-d'),
+                'customer_name'  => $s->customer_name,
+                'payment_mode'   => $s->payment_mode,
+                'taxable_amount' => (float) $s->taxable_amount,
+                'cgst_amount'    => (float) $s->cgst_amount,
+                'sgst_amount'    => (float) $s->sgst_amount,
+                'total_tax'      => round((float) $s->cgst_amount + (float) $s->sgst_amount, 2),
+                'net_amount'     => (float) $s->net_amount,
+            ]);
+
+        // 9. Recent Inward GRN List
+        $inwardPurchases = PharmacyPurchase::where('hospital_id', $hospitalId)
+            ->whereDate('invoice_date', '>=', $startDate)
+            ->whereDate('invoice_date', '<=', $endDate)
+            ->with(['supplier:id,supplier_name,gstin'])
+            ->orderBy('invoice_date', 'desc')
+            ->limit(50)
+            ->get()
+            ->map(fn($p) => [
+                'id'                  => $p->id,
+                'grn_number'          => $p->grn_number,
+                'supplier_invoice_no' => $p->supplier_invoice_no,
+                'invoice_date'        => $p->invoice_date->format('Y-m-d'),
+                'supplier_name'       => $p->supplier?->supplier_name ?: 'Supplier',
+                'supplier_gstin'      => $p->supplier?->gstin ?: 'N/A',
+                'taxable_amount'      => (float) $p->taxable_amount,
+                'cgst_amount'         => (float) $p->cgst_amount,
+                'sgst_amount'         => (float) $p->sgst_amount,
+                'igst_amount'         => (float) $p->igst_amount,
+                'total_itc'           => round((float) $p->cgst_amount + (float) $p->sgst_amount + (float) $p->igst_amount, 2),
+                'net_amount'          => (float) $p->net_amount,
+            ]);
+
+        return [
+            'period' => [
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+            ],
+            'summary' => [
+                // Outward
+                'sales_count'               => $salesCount,
+                'sales_gross_total'         => round($salesGrossTotal, 2),
+                'sales_taxable'             => round($salesTaxable, 2),
+                'sales_cgst'                => round($salesCgst, 2),
+                'sales_sgst'                => round($salesSgst, 2),
+                'sales_output_tax'          => $salesOutputTax,
+                // Customer Return Reversals
+                'cust_returns_count'        => $custReturnsCount,
+                'cust_return_taxable'       => round($custReturnTaxable, 2),
+                'cust_return_reversal'      => $custReturnTaxReversal,
+                // Net Outward
+                'net_outward_taxable'       => $netOutwardTaxable,
+                'net_output_cgst'           => $netOutputCgst,
+                'net_output_sgst'           => $netOutputSgst,
+                'net_output_tax'            => $netOutputTax,
+                // Inward (ITC)
+                'purchases_count'           => $purchasesCount,
+                'purchases_gross'           => round($purchasesGross, 2),
+                'purchases_taxable'         => round($purchasesTaxable, 2),
+                'purchases_cgst'            => round($purchasesCgst, 2),
+                'purchases_sgst'            => round($purchasesSgst, 2),
+                'purchases_igst'            => round($purchasesIgst, 2),
+                'purchases_itc'             => $purchasesItc,
+                // Supplier Return ITC Reversal
+                'supplier_returns_count'    => $supplierReturnsCount,
+                'supplier_returns_reversal' => round($supplierReturnsItcRev, 2),
+                'net_itc_available'         => $netItcAvailable,
+                // Net Settlement
+                'net_gst_payable'           => $netTaxPayable,
+                'itc_carried_forward'       => $itcCarriedForward,
+            ],
+            'slab_breakdown'    => $slabBreakdown,
+            'outward_invoices'  => $outwardInvoices,
+            'inward_purchases'  => $inwardPurchases,
+        ];
+    }
+
+    /**
+     * IPD Nursing Ward Drug Indents & Requisitions
+     */
+    public function getWardIndents(int $hospitalId, array $filters = []): mixed
+    {
+        $query = PharmacyWardIndent::where('hospital_id', $hospitalId)
+            ->with([
+                'patient:id,uhid,name,gender,age,phone',
+                'ipdAdmission:id,ipd_number,admission_date,doctor_id',
+                'requestedBy:id,name',
+                'dispensedBy:id,name',
+                'items.medicine',
+                'items.batch',
+            ])
+            ->orderBy('created_at', 'desc');
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['priority'])) {
+            $query->where('priority', $filters['priority']);
+        }
+
+        if (!empty($filters['ward_name'])) {
+            $query->where('ward_name', $filters['ward_name']);
+        }
+
+        if (!empty($filters['ipd_admission_id'])) {
+            $query->where('ipd_admission_id', $filters['ipd_admission_id']);
+        }
+
+        if (!empty($filters['start_date'])) {
+            $query->whereDate('created_at', '>=', $filters['start_date']);
+        }
+
+        if (!empty($filters['end_date'])) {
+            $query->whereDate('created_at', '<=', $filters['end_date']);
+        }
+
+        if (!empty($filters['search'])) {
+            $s = trim($filters['search']);
+            $query->where(function ($q) use ($s) {
+                $q->where('indent_number', $this->likeOp(), "%{$s}%")
+                  ->orWhere('ward_name', $this->likeOp(), "%{$s}%")
+                  ->orWhere('bed_number', $this->likeOp(), "%{$s}%")
+                  ->orWhereHas('patient', function ($pq) use ($s) {
+                      $pq->where('name', $this->likeOp(), "%{$s}%")
+                         ->orWhere('uhid', $this->likeOp(), "%{$s}%");
+                  });
+            });
+        }
+
+        $perPage = (int) ($filters['per_page'] ?? 20);
+        return $query->paginate($perPage);
+    }
+
+    public function createWardIndent(int $hospitalId, array $data, int $userId): PharmacyWardIndent
+    {
+        return DB::transaction(function () use ($hospitalId, $data, $userId) {
+            $ipd = IpdAdmission::where('hospital_id', $hospitalId)->findOrFail($data['ipd_admission_id']);
+            $patientId = $ipd->patient_id;
+
+            $year   = date('Y');
+            $random = strtoupper(substr(uniqid(), -5));
+            $indentNumber = "IND-{$year}-{$random}";
+
+            $wardIndent = PharmacyWardIndent::create([
+                'hospital_id'          => $hospitalId,
+                'indent_number'        => $indentNumber,
+                'ipd_admission_id'     => $ipd->id,
+                'patient_id'           => $patientId,
+                'ward_name'            => $data['ward_name'] ?? 'Inpatient Ward',
+                'bed_number'           => $data['bed_number'] ?? 'Bed',
+                'priority'             => $data['priority'] ?? 'ROUTINE',
+                'status'               => 'PENDING',
+                'requested_by_user_id' => $userId,
+                'notes'                => $data['notes'] ?? null,
+            ]);
+
+            foreach ($data['items'] as $itemData) {
+                $med = HospitalMedicine::where('hospital_id', $hospitalId)->findOrFail($itemData['hospital_medicine_id']);
+                
+                PharmacyWardIndentItem::create([
+                    'ward_indent_id'       => $wardIndent->id,
+                    'hospital_medicine_id' => $med->id,
+                    'requested_quantity'   => (int) $itemData['requested_quantity'],
+                    'dispensed_quantity'   => 0,
+                    'returned_quantity'    => 0,
+                    'unit_price'           => (float) ($med->default_selling_price ?: $med->mrp),
+                    'gst_rate'             => (float) $med->gst_rate,
+                    'dosage_instruction'   => $itemData['dosage_instruction'] ?? null,
+                    'status'               => 'PENDING',
+                ]);
+            }
+
+            return $this->showWardIndent($hospitalId, $wardIndent->id);
+        });
+    }
+
+    public function showWardIndent(int $hospitalId, int $id): PharmacyWardIndent
+    {
+        return PharmacyWardIndent::where('hospital_id', $hospitalId)
+            ->with([
+                'patient',
+                'ipdAdmission',
+                'requestedBy:id,name',
+                'dispensedBy:id,name',
+                'items.medicine',
+                'items.batch',
+                'items.billingLedgerItem',
+            ])
+            ->findOrFail($id);
+    }
+
+    public function dispenseWardIndent(int $hospitalId, int $id, array $dispenseData, int $userId): PharmacyWardIndent
+    {
+        return DB::transaction(function () use ($hospitalId, $id, $dispenseData, $userId) {
+            $indent = PharmacyWardIndent::where('hospital_id', $hospitalId)->lockForUpdate()->findOrFail($id);
+
+            if (in_array($indent->status, ['DISPENSED', 'REJECTED'])) {
+                throw new \Exception("Indent {$indent->indent_number} is already {$indent->status}");
+            }
+
+            $itemsPayload = $dispenseData['items'] ?? [];
+            $itemsMap     = collect($itemsPayload)->keyBy('item_id');
+
+            $totalTaxable = 0.0;
+            $totalTax     = 0.0;
+            $totalAmount  = 0.0;
+            $allDispensed = true;
+            $anyDispensed = false;
+
+            foreach ($indent->items as $item) {
+                $payloadItem = $itemsMap->get($item->id);
+                $reqQty      = $item->requested_quantity;
+                $dispenseQty = $payloadItem ? (int) ($payloadItem['dispensed_quantity'] ?? $reqQty) : $reqQty;
+
+                if ($dispenseQty <= 0) {
+                    $item->update(['status' => 'OUT_OF_STOCK']);
+                    $allDispensed = false;
+                    continue;
+                }
+
+                // Resolve batch: specified or FEFO
+                $batchId = $payloadItem['batch_id'] ?? null;
+                $batchQuery = PharmacyBatch::where('hospital_id', $hospitalId)
+                    ->where('hospital_medicine_id', $item->hospital_medicine_id)
+                    ->where('is_active', true)
+                    ->where('available_quantity', '>', 0)
+                    ->where('expiry_date', '>=', now()->toDateString())
+                    ->where('expiry_status', '!=', 'QUARANTINED');
+
+                if ($batchId) {
+                    $batch = (clone $batchQuery)->where('id', $batchId)->lockForUpdate()->first();
+                } else {
+                    $batch = (clone $batchQuery)->orderBy('expiry_date', 'asc')->lockForUpdate()->first();
+                }
+
+                if (!$batch || $batch->available_quantity <= 0) {
+                    $item->update(['status' => 'OUT_OF_STOCK']);
+                    $allDispensed = false;
+                    continue;
+                }
+
+                $actualQty = min($dispenseQty, $batch->available_quantity);
+                if ($actualQty < $dispenseQty) {
+                    $allDispensed = false;
+                }
+
+                // Decrement stock
+                $batch->decrement('available_quantity', $actualQty);
+
+                // Stock transaction
+                StockTransaction::create([
+                    'hospital_id'          => $hospitalId,
+                    'hospital_medicine_id' => $item->hospital_medicine_id,
+                    'batch_id'             => $batch->id,
+                    'transaction_type'     => 'SALE_DISPENSE',
+                    'quantity'             => -$actualQty,
+                    'reference_id'         => $indent->id,
+                    'reference_type'       => 'WARD_INDENT',
+                    'notes'                => "Dispensed for Indent {$indent->indent_number} (Bed: {$indent->bed_number})",
+                    'performed_by_user_id' => $userId,
+                ]);
+
+                // Pricing calculation (Retail Tax Inclusive)
+                $unitPrice = (float) ($batch->selling_price > 0 ? $batch->selling_price : $batch->mrp);
+                $gstRate   = (float) ($item->medicine->gst_rate ?? 12);
+                $grossLine = round($unitPrice * $actualQty, 2);
+                $taxableLine = round($grossLine / (1 + ($gstRate / 100)), 2);
+                $taxLine     = round($grossLine - $taxableLine, 2);
+
+                // Post to IPD Billing Ledger
+                $ledgerItem = BillingLedgerItem::create([
+                    'hospital_id'        => $hospitalId,
+                    'patient_id'         => $indent->patient_id,
+                    'encounter_type'     => 'ipd',
+                    'encounter_id'       => $indent->ipd_admission_id,
+                    'category'           => 'pharmacy',
+                    'item_name'          => "{$item->medicine->brand_name} (Batch: {$batch->batch_number})",
+                    'unit_price'         => $unitPrice,
+                    'quantity'           => $actualQty,
+                    'tax_amount'         => $taxLine,
+                    'discount_amount'    => 0.00,
+                    'total_amount'       => $grossLine,
+                    'charged_at'         => now(),
+                    'charged_by_user_id' => $userId,
+                    'auto_generated'     => true,
+                    'notes'              => "Ward Indent: {$indent->indent_number}",
+                    'status'             => 'unbilled',
+                ]);
+
+                $item->update([
+                    'batch_id'               => $batch->id,
+                    'dispensed_quantity'     => $actualQty,
+                    'unit_price'             => $unitPrice,
+                    'gst_rate'               => $gstRate,
+                    'taxable_amount'         => $taxableLine,
+                    'tax_amount'             => $taxLine,
+                    'total_amount'           => $grossLine,
+                    'billing_ledger_item_id' => $ledgerItem->id,
+                    'status'                 => 'DISPENSED',
+                ]);
+
+                $totalTaxable += $taxableLine;
+                $totalTax     += $taxLine;
+                $totalAmount  += $grossLine;
+                $anyDispensed  = true;
+            }
+
+            $indentStatus = $allDispensed ? 'DISPENSED' : ($anyDispensed ? 'PARTIALLY_DISPENSED' : 'PENDING');
+
+            $indent->update([
+                'dispensed_by_user_id' => $userId,
+                'dispensed_at'         => now(),
+                'status'               => $indentStatus,
+                'total_taxable'        => round($totalTaxable, 2),
+                'total_tax'            => round($totalTax, 2),
+                'total_amount'         => round($totalAmount, 2),
+            ]);
+
+            return $this->showWardIndent($hospitalId, $indent->id);
+        });
+    }
+
+    public function rejectWardIndent(int $hospitalId, int $id, string $reason, int $userId): PharmacyWardIndent
+    {
+        $indent = PharmacyWardIndent::where('hospital_id', $hospitalId)->findOrFail($id);
+        $indent->update([
+            'status'           => 'REJECTED',
+            'rejection_reason' => $reason,
+        ]);
+        $indent->items()->update(['status' => 'REJECTED']);
+
+        return $this->showWardIndent($hospitalId, $id);
+    }
+
+    public function returnWardIndentItem(int $hospitalId, int $indentId, int $itemId, int $returnQuantity, int $userId): PharmacyWardIndent
+    {
+        return DB::transaction(function () use ($hospitalId, $indentId, $itemId, $returnQuantity, $userId) {
+            $indent = PharmacyWardIndent::where('hospital_id', $hospitalId)->findOrFail($indentId);
+            $item   = PharmacyWardIndentItem::where('ward_indent_id', $indent->id)->findOrFail($itemId);
+
+            $availableToReturn = $item->dispensed_quantity - $item->returned_quantity;
+            if ($returnQuantity <= 0 || $returnQuantity > $availableToReturn) {
+                throw new \Exception("Cannot return {$returnQuantity}. Max returnable quantity is {$availableToReturn}");
+            }
+
+            // Restore batch stock
+            if ($item->batch_id) {
+                $batch = PharmacyBatch::where('hospital_id', $hospitalId)->find($item->batch_id);
+                if ($batch) {
+                    $batch->increment('available_quantity', $returnQuantity);
+
+                    StockTransaction::create([
+                        'hospital_id'          => $hospitalId,
+                        'hospital_medicine_id' => $item->hospital_medicine_id,
+                        'batch_id'             => $batch->id,
+                        'transaction_type'     => 'CUSTOMER_RETURN',
+                        'quantity'             => $returnQuantity,
+                        'reference_id'         => $indent->id,
+                        'reference_type'       => 'WARD_INDENT_RETURN',
+                        'notes'                => "Returned from Ward Indent {$indent->indent_number}",
+                        'performed_by_user_id' => $userId,
+                    ]);
+                }
+            }
+
+            // Update item returned quantity
+            $newReturnedQty = $item->returned_quantity + $returnQuantity;
+            $newStatus      = ($newReturnedQty >= $item->dispensed_quantity) ? 'RETURNED' : 'DISPENSED';
+            $item->update([
+                'returned_quantity' => $newReturnedQty,
+                'status'            => $newStatus,
+            ]);
+
+            // Reversal on IPD Billing Ledger
+            if ($item->billing_ledger_item_id) {
+                $ledgerItem = BillingLedgerItem::find($item->billing_ledger_item_id);
+                if ($ledgerItem) {
+                    if ($newReturnedQty >= $item->dispensed_quantity && $ledgerItem->status === 'unbilled') {
+                        $ledgerItem->update(['status' => 'cancelled', 'notes' => 'Full return from ward indent']);
+                    } else if ($ledgerItem->status === 'unbilled') {
+                        $remainingQty = $item->dispensed_quantity - $newReturnedQty;
+                        $unitPrice    = (float) $ledgerItem->unit_price;
+                        $newTotal     = round($remainingQty * $unitPrice, 2);
+                        $ledgerItem->update([
+                            'quantity'     => $remainingQty,
+                            'total_amount' => $newTotal,
+                            'notes'        => "Adjusted for {$returnQuantity} returned items",
+                        ]);
+                    }
+                }
+            }
+
+            return $this->showWardIndent($hospitalId, $indent->id);
+        });
+    }
+
+    /**
+     * Low Stock Intelligence & Purchase Orders (PO)
+     */
+    public function getLowStockAlerts(int $hospitalId): array
+    {
+        $medicines = HospitalMedicine::where('hospital_id', $hospitalId)
+            ->with(['activeBatches'])
+            ->get();
+
+        $alerts = [];
+        foreach ($medicines as $med) {
+            $currentStock = (int) $med->activeBatches
+                ->where('expiry_date', '>=', now()->toDateString())
+                ->where('expiry_status', '!=', 'QUARANTINED')
+                ->sum('available_quantity');
+
+            $minLevel = (int) ($med->min_reorder_level ?: 10);
+
+            if ($currentStock <= $minLevel) {
+                $stripSize = (int) ($med->strip_size ?: 1);
+                $packSize  = (int) ($med->pack_size ?: 1);
+                $packRatio = max(1, $stripSize * $packSize);
+
+                $deficitUnits = max(0, $minLevel - $currentStock);
+                $suggestedPacks = max(1, (int) ceil(($deficitUnits + $minLevel) / $packRatio));
+
+                // Find last supplier from recent purchase
+                $lastPurchaseItem = PharmacyPurchaseItem::where('hospital_medicine_id', $med->id)
+                    ->whereHas('purchase', fn($q) => $q->where('hospital_id', $hospitalId))
+                    ->with('purchase.supplier:id,supplier_name,phone,gstin')
+                    ->latest('id')
+                    ->first();
+
+                $alerts[] = [
+                    'medicine_id'          => $med->id,
+                    'brand_name'           => $med->brand_name,
+                    'generic_name'         => $med->generic_name,
+                    'dosage_form'          => $med->dosage_form,
+                    'base_unit'            => $med->base_unit ?: 'Tab',
+                    'strip_size'           => $stripSize,
+                    'pack_size'            => $packSize,
+                    'current_stock_units'  => $currentStock,
+                    'current_stock_packs'  => floor($currentStock / $packRatio),
+                    'min_reorder_level'    => $minLevel,
+                    'deficit_units'        => $deficitUnits,
+                    'suggested_packs'      => $suggestedPacks,
+                    'default_purchase_rate'=> (float) $med->default_purchase_price,
+                    'mrp'                  => (float) $med->mrp,
+                    'gst_rate'             => (float) $med->gst_rate,
+                    'preferred_supplier'   => $lastPurchaseItem?->purchase?->supplier ?: null,
+                ];
+            }
+        }
+
+        // Sort by highest deficit first
+        usort($alerts, fn($a, $b) => $b['deficit_units'] <=> $a['deficit_units']);
+
+        return [
+            'total_low_stock_count' => count($alerts),
+            'items'                 => $alerts,
+        ];
+    }
+
+    public function getPurchaseOrders(int $hospitalId, array $filters = []): mixed
+    {
+        $query = PharmacyPurchaseOrder::where('hospital_id', $hospitalId)
+            ->with([
+                'supplier:id,supplier_name,contact_person,phone,email,gstin',
+                'items.medicine',
+                'createdBy:id,name',
+                'approvedBy:id,name',
+            ])
+            ->orderBy('created_at', 'desc');
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['supplier_id'])) {
+            $query->where('supplier_id', $filters['supplier_id']);
+        }
+
+        if (!empty($filters['start_date'])) {
+            $query->whereDate('po_date', '>=', $filters['start_date']);
+        }
+
+        if (!empty($filters['end_date'])) {
+            $query->whereDate('po_date', '<=', $filters['end_date']);
+        }
+
+        if (!empty($filters['search'])) {
+            $s = trim($filters['search']);
+            $query->where(function ($q) use ($s) {
+                $q->where('po_number', $this->likeOp(), "%{$s}%")
+                  ->orWhereHas('supplier', function ($sq) use ($s) {
+                      $sq->where('supplier_name', $this->likeOp(), "%{$s}%")
+                         ->orWhere('gstin', $this->likeOp(), "%{$s}%");
+                  });
+            });
+        }
+
+        $perPage = (int) ($filters['per_page'] ?? 20);
+        return $query->paginate($perPage);
+    }
+
+    public function createPurchaseOrder(int $hospitalId, array $data, int $userId): PharmacyPurchaseOrder
+    {
+        return DB::transaction(function () use ($hospitalId, $data, $userId) {
+            $year   = date('Y');
+            $random = strtoupper(substr(uniqid(), -5));
+            $poNumber = "PO-{$year}-{$random}";
+
+            $po = PharmacyPurchaseOrder::create([
+                'hospital_id'            => $hospitalId,
+                'po_number'              => $poNumber,
+                'supplier_id'            => (int) $data['supplier_id'],
+                'po_date'                => $data['po_date'] ?? now()->toDateString(),
+                'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
+                'status'                 => $data['status'] ?? 'ORDERED',
+                'notes'                  => $data['notes'] ?? null,
+                'created_by_user_id'     => $userId,
+            ]);
+
+            $subtotalAmount = 0.0;
+            $discountAmount = 0.0;
+            $taxableAmount  = 0.0;
+            $taxAmount      = 0.0;
+            $netAmount      = 0.0;
+
+            foreach ($data['items'] as $itemData) {
+                $med = HospitalMedicine::where('hospital_id', $hospitalId)->findOrFail($itemData['hospital_medicine_id']);
+
+                $packQty   = max(1, (int) $itemData['pack_quantity']);
+                $stripSize = max(1, (int) ($itemData['strip_size'] ?? $med->strip_size ?: 1));
+                $packSize  = max(1, (int) ($itemData['pack_size'] ?? $med->pack_size ?: 1));
+                $totalUnits= $packQty * $packSize * $stripSize;
+
+                $packRate  = (float) ($itemData['pack_purchase_rate'] ?? ($med->default_purchase_price * $packSize * $stripSize));
+                $unitPrice = round($packRate / ($packSize * $stripSize), 4);
+                $discPct   = (float) ($itemData['discount_percent'] ?? 0);
+                $gstRate   = (float) ($itemData['gst_rate'] ?? $med->gst_rate ?: 12);
+
+                $itemSubtotal = round($packQty * $packRate, 2);
+                $itemDiscount = round(($itemSubtotal * $discPct) / 100, 2);
+                $itemTaxable  = round($itemSubtotal - $itemDiscount, 2);
+                $itemTax      = round(($itemTaxable * $gstRate) / 100, 2);
+                $itemCgst     = round($itemTax / 2, 2);
+                $itemSgst     = round($itemTax - $itemCgst, 2);
+                $itemTotal    = round($itemTaxable + $itemTax, 2);
+
+                PharmacyPurchaseOrderItem::create([
+                    'purchase_order_id'    => $po->id,
+                    'hospital_medicine_id' => $med->id,
+                    'pack_quantity'        => $packQty,
+                    'strip_size'           => $stripSize,
+                    'pack_size'            => $packSize,
+                    'total_loose_units'    => $totalUnits,
+                    'pack_purchase_rate'   => $packRate,
+                    'unit_purchase_price'  => $unitPrice,
+                    'discount_percent'     => $discPct,
+                    'gst_rate'             => $gstRate,
+                    'taxable_amount'       => $itemTaxable,
+                    'cgst_amount'          => $itemCgst,
+                    'sgst_amount'          => $itemSgst,
+                    'total_amount'         => $itemTotal,
+                    'received_quantity'    => 0,
+                    'status'               => 'PENDING',
+                ]);
+
+                $subtotalAmount += $itemSubtotal;
+                $discountAmount += $itemDiscount;
+                $taxableAmount  += $itemTaxable;
+                $taxAmount      += $itemTax;
+                $netAmount      += $itemTotal;
+            }
+
+            $po->update([
+                'total_items_count' => count($data['items']),
+                'subtotal_amount'   => round($subtotalAmount, 2),
+                'discount_amount'   => round($discountAmount, 2),
+                'taxable_amount'    => round($taxableAmount, 2),
+                'tax_amount'        => round($taxAmount, 2),
+                'net_amount'        => round($netAmount, 2),
+            ]);
+
+            return $this->showPurchaseOrder($hospitalId, $po->id);
+        });
+    }
+
+    public function showPurchaseOrder(int $hospitalId, int $id): PharmacyPurchaseOrder
+    {
+        return PharmacyPurchaseOrder::where('hospital_id', $hospitalId)
+            ->with([
+                'supplier',
+                'items.medicine',
+                'createdBy:id,name',
+                'approvedBy:id,name',
+                'purchases',
+            ])
+            ->findOrFail($id);
+    }
+
+    public function updatePurchaseOrderStatus(int $hospitalId, int $id, string $status, int $userId): PharmacyPurchaseOrder
+    {
+        $po = PharmacyPurchaseOrder::where('hospital_id', $hospitalId)->findOrFail($id);
+        $po->update([
+            'status' => $status,
+            'approved_by_user_id' => $userId,
+        ]);
+        return $this->showPurchaseOrder($hospitalId, $id);
+    }
 }
+
 

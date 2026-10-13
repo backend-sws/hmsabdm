@@ -14,6 +14,13 @@ import type {
   PharmacySupplierLedger,
   PharmacySupplierReturn,
   ExpiryDashboardData,
+  GenericSubstituteResponse,
+  PatientMedicationHistoryResponse,
+  CdscoRegisterResponse,
+  GstReportResponse,
+  PharmacyWardIndent,
+  PharmacyPurchaseOrder,
+  LowStockAlertResponse,
 } from "@/types/pharmacy"
 
 export const pharmacyService = {
@@ -286,5 +293,142 @@ export const pharmacyService = {
       body: JSON.stringify(payload),
     })
   },
+
+  // Generic Salt Substitutes Intelligence
+  getSubstitutes: async (params?: { medicine_id?: number; generic_name?: string; search?: string }): Promise<GenericSubstituteResponse> => {
+    const query = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== "") {
+          query.append(key, String(val))
+        }
+      })
+    }
+    return apiClient<GenericSubstituteResponse>(`/pharmacy/substitutes?${query.toString()}`)
+  },
+
+  // Patient Past Medication History & 1-Click Refill
+  getPatientMedicationHistory: async (patientId: number): Promise<PatientMedicationHistoryResponse> => {
+    return apiClient<PatientMedicationHistoryResponse>(`/pharmacy/patients/${patientId}/medication-history`)
+  },
+
+  // CDSCO Schedule H / H1 & Narcotic Regulatory Register
+  getCdscoRegister: async (params?: {
+    schedule_type?: string
+    start_date?: string
+    end_date?: string
+    search?: string
+    per_page?: number
+    all?: boolean
+  }): Promise<CdscoRegisterResponse> => {
+    const query = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== "") {
+          query.append(key, String(val))
+        }
+      })
+    }
+    return apiClient<CdscoRegisterResponse>(`/pharmacy/regulatory-register?${query.toString()}`)
+  },
+
+  // Statutory GST Input/Output Ledger & Filing Report (GSTR-3B)
+  getGstReport: async (params?: {
+    start_date?: string
+    end_date?: string
+    period?: string
+  }): Promise<GstReportResponse> => {
+    const query = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== "") {
+          query.append(key, String(val))
+        }
+      })
+    }
+    return apiClient<GstReportResponse>(`/pharmacy/gst-report?${query.toString()}`)
+  },
+
+  // IPD Nursing Ward Drug Indents
+  getWardIndents: async (params?: Record<string, any>): Promise<{ data: PharmacyWardIndent[]; current_page: number; total: number }> => {
+    const query = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== "") {
+          query.append(key, String(val))
+        }
+      })
+    }
+    return apiClient(`/pharmacy/ward-indents?${query.toString()}`)
+  },
+
+  createWardIndent: async (payload: any): Promise<PharmacyWardIndent> => {
+    return apiClient<PharmacyWardIndent>("/pharmacy/ward-indents", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  getWardIndent: async (id: number): Promise<PharmacyWardIndent> => {
+    return apiClient<PharmacyWardIndent>(`/pharmacy/ward-indents/${id}`)
+  },
+
+  dispenseWardIndent: async (id: number, payload?: any): Promise<PharmacyWardIndent> => {
+    return apiClient<PharmacyWardIndent>(`/pharmacy/ward-indents/${id}/dispense`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    })
+  },
+
+  rejectWardIndent: async (id: number, reason: string): Promise<PharmacyWardIndent> => {
+    return apiClient<PharmacyWardIndent>(`/pharmacy/ward-indents/${id}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    })
+  },
+
+  returnWardIndentItem: async (indentId: number, itemId: number, return_quantity: number): Promise<PharmacyWardIndent> => {
+    return apiClient<PharmacyWardIndent>(`/pharmacy/ward-indents/${indentId}/items/${itemId}/return`, {
+      method: "POST",
+      body: JSON.stringify({ return_quantity }),
+    })
+  },
+
+  // Low Stock Intelligence & Purchase Orders (PO)
+  getLowStockAlerts: async (): Promise<LowStockAlertResponse> => {
+    return apiClient<LowStockAlertResponse>("/pharmacy/low-stock-alerts")
+  },
+
+  getPurchaseOrders: async (params?: Record<string, any>): Promise<{ data: PharmacyPurchaseOrder[]; current_page: number; total: number }> => {
+    const query = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== "") {
+          query.append(key, String(val))
+        }
+      })
+    }
+    return apiClient(`/pharmacy/purchase-orders?${query.toString()}`)
+  },
+
+  createPurchaseOrder: async (payload: any): Promise<PharmacyPurchaseOrder> => {
+    return apiClient<PharmacyPurchaseOrder>("/pharmacy/purchase-orders", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  getPurchaseOrder: async (id: number): Promise<PharmacyPurchaseOrder> => {
+    return apiClient<PharmacyPurchaseOrder>(`/pharmacy/purchase-orders/${id}`)
+  },
+
+  updatePurchaseOrderStatus: async (id: number, status: string): Promise<PharmacyPurchaseOrder> => {
+    return apiClient<PharmacyPurchaseOrder>(`/pharmacy/purchase-orders/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    })
+  },
 }
+
+
 

@@ -15,6 +15,7 @@ class PharmacyPurchase extends Model
     protected $fillable = [
         'hospital_id',
         'supplier_id',
+        'purchase_order_id',
         'grn_number',
         'supplier_invoice_no',
         'invoice_date',
@@ -61,6 +62,11 @@ class PharmacyPurchase extends Model
     public function supplier()
     {
         return $this->belongsTo(PharmacySupplier::class, 'supplier_id');
+    }
+
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(PharmacyPurchaseOrder::class, 'purchase_order_id');
     }
 
     public function items()

@@ -157,6 +157,8 @@ export interface IpdAdmission {
   department?: Department | null
   ward?: IpdWard | null
   bed?: IpdBed | null
+  bed_id?: number
+  attendant_name?: string
   attendant?: {
     name?: string
     relation?: string

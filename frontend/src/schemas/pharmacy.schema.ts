@@ -137,7 +137,13 @@ export const posCartItemSchema = z.object({
   gst_rate: z.number().min(0),
   hsn_code: z.string().optional(),
   strip_size: z.number().optional(),
+  pack_size: z.number().optional(),
+  base_unit: z.string().optional(),
+  package_type: z.string().optional(),
+  strip_mrp: z.number().optional(),
+  sell_mode: z.enum(["LOOSE", "STRIP"]).optional(),
   prescription_type: z.string().optional(),
+  is_tax_inclusive: z.boolean().optional(),
 })
 
 export type PosCartItemValues = z.infer<typeof posCartItemSchema>
@@ -148,11 +154,13 @@ export const posSaleCheckoutSchema = z.object({
   customer_name: z.string().min(1, "Customer name is required"),
   customer_phone: z.string().optional(),
   doctor_name: z.string().optional(),
+  doctor_reg_no: z.string().optional(),
   patient_id: z.number().optional(),
   opd_visit_id: z.number().optional(),
   ipd_admission_id: z.number().optional(),
   prescription_id: z.number().optional(),
   discount_amount: z.number().min(0).optional(),
+  tax_mode: z.enum(["INCLUSIVE", "EXCLUSIVE"]).optional(),
   payment_mode: z.enum(["CASH", "UPI", "CARD", "SPLIT", "IPD_LEDGER"]),
   payment_details: z.record(z.string(), z.any()).optional(),
   notes: z.string().optional(),
@@ -164,6 +172,7 @@ export const posSaleCheckoutSchema = z.object({
       discount_percent: z.number().min(0).max(100).optional(),
       gst_rate: z.number().optional(),
       hsn_code: z.string().optional(),
+      is_tax_inclusive: z.boolean().optional(),
     })
   ).min(1, "Add at least one medicine item to cart"),
 })

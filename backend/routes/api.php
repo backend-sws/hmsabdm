@@ -338,6 +338,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/prescriptions/{id}/dispense-details', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'prescriptionDispenseDetails']);
 
             // Omni-Channel Sales & POS
+            Route::get('/substitutes', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'substitutes']);
+            Route::get('/patients/{id}/medication-history', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'patientMedicationHistory']);
             Route::get('/sales', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'sales']);
             Route::post('/sales', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'processSale']);
             Route::get('/sales/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showSale']);
@@ -349,6 +351,27 @@ Route::prefix('v1')->group(function () {
 
             // Stock Movement Audit Ledger
             Route::get('/stock-transactions', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'stockTransactions']);
+
+            // Statutory CDSCO Regulatory Register (Drugs & Cosmetics Rules 1945)
+            Route::get('/regulatory-register', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'cdscoRegister']);
+
+            // Statutory GST Input/Output Ledger & Filing Report (GSTR-3B)
+            Route::get('/gst-report', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'gstReport']);
+
+            // IPD Nursing Ward Drug Indents & Requisitions
+            Route::get('/ward-indents', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'wardIndents']);
+            Route::post('/ward-indents', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'createWardIndent']);
+            Route::get('/ward-indents/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showWardIndent']);
+            Route::post('/ward-indents/{id}/dispense', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'dispenseWardIndent']);
+            Route::post('/ward-indents/{id}/reject', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'rejectWardIndent']);
+            Route::post('/ward-indents/{id}/items/{itemId}/return', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'returnWardIndentItem']);
+
+            // Low Stock Intelligence & Purchase Orders (PO)
+            Route::get('/low-stock-alerts', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'lowStockAlerts']);
+            Route::get('/purchase-orders', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'purchaseOrders']);
+            Route::post('/purchase-orders', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'createPurchaseOrder']);
+            Route::get('/purchase-orders/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showPurchaseOrder']);
+            Route::patch('/purchase-orders/{id}/status', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'updatePurchaseOrderStatus']);
         });
     });
 

@@ -3,8 +3,6 @@ import {
   X,
   RotateCcw,
   Building2,
-  Calendar,
-  AlertTriangle,
   Plus,
   Trash2,
   FileText,
@@ -58,8 +56,6 @@ export const SupplierReturnModal: React.FC<SupplierReturnModalProps> = ({
   // Line items for RTV
   const [items, setItems] = useState<ReturnLineItem[]>([])
 
-  // Batch search for adding to RTV
-  const [batchSearch, setBatchSearch] = useState("")
   const [selectedBatchId, setSelectedBatchId] = useState<number | "">("")
 
   // Result state after creation
@@ -69,7 +65,6 @@ export const SupplierReturnModal: React.FC<SupplierReturnModalProps> = ({
 
   const { data: suppliers = [] } = useSuppliers()
   const { data: batchesData } = useBatchStock({
-    search: batchSearch,
     per_page: 100,
   })
   const availableBatches = batchesData?.data || []

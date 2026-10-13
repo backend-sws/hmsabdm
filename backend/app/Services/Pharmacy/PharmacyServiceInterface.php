@@ -10,6 +10,8 @@ use App\Models\PharmacySale;
 use App\Models\PharmacyReturn;
 use App\Models\PharmacySupplierPayment;
 use App\Models\PharmacySupplierReturn;
+use App\Models\PharmacyWardIndent;
+use App\Models\PharmacyPurchaseOrder;
 
 interface PharmacyServiceInterface
 {
@@ -83,4 +85,39 @@ interface PharmacyServiceInterface
      */
     public function getStockTransactions(int $hospitalId, array $filters = []): mixed;
     public function getPharmacyDashboardStats(int $hospitalId): array;
+
+    /**
+     * Generic Salt Substitute Intelligence & Patient Medication History Refill
+     */
+    public function getGenericSubstitutes(int $hospitalId, array $params): array;
+    public function getPatientMedicationHistory(int $hospitalId, int $patientId): array;
+
+    /**
+     * Statutory Compliance: CDSCO Schedule H / H1 & Narcotic Regulatory Register
+     */
+    public function getCdscoRegulatoryRegister(int $hospitalId, array $filters = []): mixed;
+
+    /**
+     * GST Tax Intelligence & Filing Report (GSTR-3B & Input/Output Tax Ledger)
+     */
+    public function getGstReport(int $hospitalId, array $filters = []): array;
+
+    /**
+     * IPD Nursing Ward Drug Indents & Requisitions
+     */
+    public function getWardIndents(int $hospitalId, array $filters = []): mixed;
+    public function createWardIndent(int $hospitalId, array $data, int $userId): PharmacyWardIndent;
+    public function showWardIndent(int $hospitalId, int $id): PharmacyWardIndent;
+    public function dispenseWardIndent(int $hospitalId, int $id, array $dispenseData, int $userId): PharmacyWardIndent;
+    public function rejectWardIndent(int $hospitalId, int $id, string $reason, int $userId): PharmacyWardIndent;
+    public function returnWardIndentItem(int $hospitalId, int $indentId, int $itemId, int $returnQuantity, int $userId): PharmacyWardIndent;
+
+    /**
+     * Low Stock Intelligence & Purchase Orders (PO)
+     */
+    public function getLowStockAlerts(int $hospitalId): array;
+    public function getPurchaseOrders(int $hospitalId, array $filters = []): mixed;
+    public function createPurchaseOrder(int $hospitalId, array $data, int $userId): PharmacyPurchaseOrder;
+    public function showPurchaseOrder(int $hospitalId, int $id): PharmacyPurchaseOrder;
+    public function updatePurchaseOrderStatus(int $hospitalId, int $id, string $status, int $userId): PharmacyPurchaseOrder;
 }

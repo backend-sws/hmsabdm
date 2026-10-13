@@ -63,9 +63,6 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
   const [importMinReorder, setImportMinReorder] = useState(20)
   const [importPurchasePrice, setImportPurchasePrice] = useState<number | "">("")
   const [importSellingPrice, setImportSellingPrice] = useState<number | "">("")
-  const [importStripSize, setImportStripSize] = useState(10)
-  const [importBoxSize, setImportBoxSize] = useState(1)
-  const [importBaseUnit, setImportBaseUnit] = useState("Tab")
 
   // Search queries
   const { data: masterResults = [], isFetching: isSearchingMaster } =
@@ -137,9 +134,9 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
       mrp: selectedMaster.mrp || Number(importSellingPrice) || 0,
       rack_location: importRackLocation || undefined,
       min_reorder_level: importMinReorder || 20,
-      strip_size: importStripSize || 10,
-      box_size: importBoxSize || 1,
-      base_unit: importBaseUnit || "Tab",
+      strip_size: 10,
+      box_size: 1,
+      base_unit: "Tab",
     })
 
     onClose()
