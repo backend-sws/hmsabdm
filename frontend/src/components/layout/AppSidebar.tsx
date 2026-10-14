@@ -16,6 +16,7 @@ import {
   Receipt,
   FlaskConical,
   Pill,
+  Scissors,
 } from "lucide-react"
 
 interface AppSidebarProps {
@@ -79,10 +80,16 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
     {
+      title: "OT & Surgeries",
+      path: "/ot",
+      icon: Scissors,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"],
+    },
+    {
       title: "Emergency & Casualty",
       path: "/emergency",
       icon: Siren,
-      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"],
     },
     {
       title: "Laboratory Desk",

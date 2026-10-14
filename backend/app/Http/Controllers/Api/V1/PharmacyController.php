@@ -144,6 +144,10 @@ class PharmacyController extends Controller
             'prescription_type'      => 'nullable|string|in:OTC,SCHEDULE_H,SCHEDULE_H1,NARCOTIC',
             'item_code'              => 'nullable|string|max:50',
             'is_active'              => 'nullable|boolean',
+            'strip_size'             => 'nullable|integer|min:1',
+            'box_size'               => 'nullable|integer|min:1',
+            'base_unit'              => 'nullable|string|max:50',
+            'reorder_unit'           => 'nullable|string|max:50',
         ]);
 
         $hospitalId = $this->getHospitalId($request);
@@ -184,6 +188,11 @@ class PharmacyController extends Controller
             'max_stock_level'        => 'nullable|integer|min:0',
             'prescription_type'      => 'nullable|string|in:OTC,SCHEDULE_H,SCHEDULE_H1,NARCOTIC',
             'is_active'              => 'nullable|boolean',
+            'strip_size'             => 'nullable|integer|min:1',
+            'box_size'               => 'nullable|integer|min:1',
+            'base_unit'              => 'nullable|string|max:50',
+            'reorder_unit'           => 'nullable|string|max:50',
+            'update_active_batches'  => 'nullable|boolean',
         ]);
 
         try {

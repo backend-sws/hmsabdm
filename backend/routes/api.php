@@ -144,6 +144,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/admissions/{id}/chart', [\App\Http\Controllers\Api\V1\IpdController::class, 'chart']);
             Route::post('/admissions/{id}/transfer-bed', [\App\Http\Controllers\Api\V1\IpdController::class, 'transferBed']);
             Route::post('/admissions/{id}/discharge', [\App\Http\Controllers\Api\V1\IpdController::class, 'discharge']);
+            Route::get('/admissions/{id}/discharge-summary', [\App\Http\Controllers\Api\V1\IpdController::class, 'getDischargeSummary']);
+            Route::post('/admissions/{id}/discharge-summary', [\App\Http\Controllers\Api\V1\IpdController::class, 'saveDischargeSummary']);
+            Route::get('/admissions/{id}/discharge-summary/print', [\App\Http\Controllers\Api\V1\IpdController::class, 'getDischargePrintData']);
 
             // Doctor Inpatient Daily Rounds (SOAP Notes)
             Route::post('/admissions/{id}/rounds', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordRound']);
@@ -173,6 +176,18 @@ Route::prefix('v1')->group(function () {
 
             // Pending OPD Admission Referrals
             Route::get('/opd-referrals', [\App\Http\Controllers\Api\V1\IpdController::class, 'opdReferrals']);
+        });
+
+        // Operation Theatre & Surgeries Management (OT Scheduling & WHO Safety Checklist)
+        Route::prefix('ot')->group(function () {
+            Route::get('/theatres', [\App\Http\Controllers\Api\V1\OtController::class, 'theatres']);
+            Route::get('/schedules', [\App\Http\Controllers\Api\V1\OtController::class, 'schedules']);
+            Route::get('/schedules/{id}', [\App\Http\Controllers\Api\V1\OtController::class, 'show']);
+            Route::post('/schedules', [\App\Http\Controllers\Api\V1\OtController::class, 'store']);
+            Route::put('/schedules/{id}', [\App\Http\Controllers\Api\V1\OtController::class, 'update']);
+            Route::get('/schedules/{id}/checklist', [\App\Http\Controllers\Api\V1\OtController::class, 'getChecklist']);
+            Route::post('/schedules/{id}/checklist', [\App\Http\Controllers\Api\V1\OtController::class, 'saveChecklist']);
+            Route::get('/schedules/{id}/print', [\App\Http\Controllers\Api\V1\OtController::class, 'getPrintData']);
         });
 
 
@@ -261,6 +276,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/orders', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'index']);
             Route::get('/orders/{id}', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'show']);
             Route::post('/orders/direct-booking', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'directBooking']);
+            Route::post('/orders/ipd-requisition', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'createIpdOrder']);
             Route::put('/orders/{id}/direct-booking', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'updateDirectBooking']);
             Route::post('/orders/{id}/collect-payment', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'collectPayment']);
             Route::post('/orders/sync-billed', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'syncBilled']);

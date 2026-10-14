@@ -18,6 +18,7 @@ interface LabServiceInterface
 
     // Direct Walk-In Booking & Billing
     public function createDirectLabOrder(int $hospitalId, int $userId, array $data): LabOrder;
+    public function createIpdLabOrder(int $hospitalId, int $userId, array $data): LabOrder;
     public function updateDirectLabOrder(int $hospitalId, int $orderId, int $userId, array $data): LabOrder;
     public function collectInvoicePayment(int $hospitalId, int $orderId, array $data): LabOrder;
     public function revokeAuthorization(int $hospitalId, int $orderId, int $userId, ?string $reason = null): LabOrder;

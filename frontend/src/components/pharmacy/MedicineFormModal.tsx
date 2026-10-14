@@ -8,6 +8,8 @@ import {
   PlusCircle,
   Pill,
   Check,
+  Edit3,
+  Info,
 } from "lucide-react"
 import {
   createCustomMedicineSchema,
@@ -17,12 +19,14 @@ import {
   useSearchMasterMedicines,
   useImportMedicineMutation,
   useCreateCustomMedicineMutation,
+  useUpdateMedicineMutation,
 } from "@/hooks/usePharmacy"
-import type { MasterMedicine } from "@/types/pharmacy"
+import type { MasterMedicine, HospitalMedicine } from "@/types/pharmacy"
 
 interface MedicineFormModalProps {
   isOpen: boolean
   onClose: () => void
+  editingMedicine?: HospitalMedicine | null
 }
 
 const DOSAGE_FORMS = [
@@ -45,11 +49,14 @@ const GST_SLABS = [0, 5, 12, 18, 28]
 export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
   isOpen,
   onClose,
+  editingMedicine,
 }) => {
+  const isEditMode = !!editingMedicine
   const [activeTab, setActiveTab] = useState<"import" | "custom">("import")
   const [masterSearchQuery, setMasterSearchQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [selectedMaster, setSelectedMaster] = useState<MasterMedicine | null>(null)
+  const [updateActiveBatches, setUpdateActiveBatches] = useState(true)
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -70,6 +77,7 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
 
   const importMutation = useImportMedicineMutation()
   const createCustomMutation = useCreateCustomMedicineMutation()
+  const updateMutation = useUpdateMedicineMutation()
 
   // Custom Form
   const {
@@ -103,6 +111,62 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
       is_active: true,
     },
   })
+
+  // Pre-populate or reset form on open/change
+  useEffect(() => {
+    if (editingMedicine) {
+      setActiveTab("custom")
+      reset({
+        brand_name: editingMedicine.brand_name || "",
+        generic_name: editingMedicine.generic_name || "",
+        dosage_form: editingMedicine.dosage_form || "Tablet",
+        strength: editingMedicine.strength || "",
+        pack_size: editingMedicine.pack_size || editingMedicine.strip_size || 10,
+        strip_size: editingMedicine.strip_size || 10,
+        box_size: editingMedicine.box_size || 1,
+        base_unit: editingMedicine.base_unit || "Tab",
+        reorder_unit: editingMedicine.reorder_unit || "unit",
+        unit_name: editingMedicine.unit_name || "Tablets",
+        manufacturer: editingMedicine.manufacturer || "",
+        default_purchase_price: editingMedicine.default_purchase_price || 0,
+        default_selling_price: editingMedicine.default_selling_price || 0,
+        mrp: editingMedicine.mrp || 0,
+        hsn_code: editingMedicine.hsn_code || "3004",
+        gst_rate: editingMedicine.gst_rate ?? 12,
+        rack_location: editingMedicine.rack_location || "",
+        min_reorder_level: editingMedicine.min_reorder_level || 20,
+        prescription_type: (editingMedicine.prescription_type as any) || "SCHEDULE_H",
+        is_active: editingMedicine.is_active ?? true,
+      })
+      setUpdateActiveBatches(true)
+    } else {
+      setActiveTab("import")
+      setSelectedMaster(null)
+      reset({
+        brand_name: "",
+        generic_name: "",
+        dosage_form: "Tablet",
+        strength: "",
+        pack_size: 10,
+        strip_size: 10,
+        box_size: 1,
+        base_unit: "Tab",
+        reorder_unit: "unit",
+        unit_name: "Tablets",
+        manufacturer: "",
+        default_purchase_price: 0,
+        default_selling_price: 0,
+        mrp: 0,
+        hsn_code: "3004",
+        gst_rate: 12,
+        rack_location: "",
+        min_reorder_level: 20,
+        prescription_type: "SCHEDULE_H",
+        is_active: true,
+      })
+      setUpdateActiveBatches(false)
+    }
+  }, [editingMedicine, isOpen, reset])
 
   const watchPurchase = watch("default_purchase_price") || 0
   const watchSelling = watch("default_selling_price") || 0
@@ -143,7 +207,17 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
   }
 
   const onSubmitCustom = async (data: CreateCustomMedicineFormValues) => {
-    await createCustomMutation.mutateAsync(data)
+    if (editingMedicine) {
+      await updateMutation.mutateAsync({
+        id: editingMedicine.id,
+        payload: {
+          ...data,
+          update_active_batches: updateActiveBatches,
+        },
+      })
+    } else {
+      await createCustomMutation.mutateAsync(data)
+    }
     reset()
     onClose()
   }
@@ -155,14 +229,16 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-border">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Pill className="h-5 w-5" />
+              {isEditMode ? <Edit3 className="h-5 w-5" /> : <Pill className="h-5 w-5" />}
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Add Medicine to Hospital Formulary
+                {isEditMode ? `Edit Medicine: ${editingMedicine?.brand_name}` : "Add Medicine to Hospital Formulary"}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Import from National Drug Master or create 100% custom in-house formulation
+                {isEditMode
+                  ? `SKU: ${editingMedicine?.item_code || "MED-" + editingMedicine?.id} • Update Strip Packaging, Pricing & Master Rates`
+                  : "Import from National Drug Master or create 100% custom in-house formulation"}
               </p>
             </div>
           </div>
@@ -174,33 +250,50 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Toggle */}
-        <div className="flex border-b border-slate-200 bg-slate-50/50 px-6 dark:border-border dark:bg-muted/20">
-          <button
-            type="button"
-            onClick={() => setActiveTab("import")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
-              activeTab === "import"
-                ? "border-primary text-primary"
-                : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-            }`}
-          >
-            <Sparkles className="h-4 w-4" />
-            1-Click Import from National Master (200,000+ Drugs)
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("custom")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
-              activeTab === "custom"
-                ? "border-primary text-primary"
-                : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-            }`}
-          >
-            <PlusCircle className="h-4 w-4" />
-            Create Custom / In-House Medicine
-          </button>
-        </div>
+        {/* Tab Toggle / Edit Status */}
+        {isEditMode ? (
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-6 py-2.5 dark:border-border dark:bg-muted/20">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Hospital Master Record • Live Packaging & Rate Sync
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+                {editingMedicine?.dosage_form}
+              </span>
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-muted dark:text-slate-300">
+                {editingMedicine?.prescription_type}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex border-b border-slate-200 bg-slate-50/50 px-6 dark:border-border dark:bg-muted/20">
+            <button
+              type="button"
+              onClick={() => setActiveTab("import")}
+              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                activeTab === "import"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              }`}
+            >
+              <Sparkles className="h-4 w-4" />
+              1-Click Import from National Master (200,000+ Drugs)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("custom")}
+              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                activeTab === "custom"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              }`}
+            >
+              <PlusCircle className="h-4 w-4" />
+              Create Custom / In-House Medicine
+            </button>
+          </div>
+        )}
 
         {/* Content Body */}
         <div className="custom-scrollbar flex-1 overflow-y-auto p-6">
@@ -459,6 +552,13 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
                     </span>
                   </div>
 
+                  <div className="flex items-start gap-2 rounded-lg border border-sky-100 bg-sky-50/80 p-2.5 text-[11px] text-sky-800 dark:border-sky-900/30 dark:bg-sky-950/20 dark:text-sky-300">
+                    <Info className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400 mt-0.5" />
+                    <span>
+                      <strong>Packaging Ratio Note:</strong> Changing Strip Size (e.g. from 10 to 5 {watchBaseUnit}s) updates the default packaging ratio and retail loose-unit pricing in POS. New shipments arriving with different packaging can also specify their batch-wise pack size in Inward GRN.
+                    </span>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
                       <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -638,6 +738,28 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
                 </div>
               </div>
 
+              {/* Active Batches Sync (Edit Mode Only) */}
+              {isEditMode && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 dark:bg-primary/10">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={updateActiveBatches}
+                      onChange={(e) => setUpdateActiveBatches(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        Sync New MRP (₹{watch("mrp") || 0}) and Sale Price to Existing Stock
+                      </span>
+                      <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                        When enabled, all currently active non-expired batches in rack will immediately reflect this new MRP and selling price for future billing.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
+
               {/* Submit Buttons */}
               <div className="flex justify-end gap-3 pt-3">
                 <button
@@ -647,14 +769,25 @@ export const MedicineFormModal: React.FC<MedicineFormModalProps> = ({
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={createCustomMutation.isPending}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 disabled:opacity-50"
-                >
-                  <Check className="h-4 w-4" />
-                  {createCustomMutation.isPending ? "Creating..." : "Save Custom Medicine"}
-                </button>
+                {isEditMode ? (
+                  <button
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    <Check className="h-4 w-4" />
+                    {updateMutation.isPending ? "Saving Changes..." : "Save Changes"}
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={createCustomMutation.isPending}
+                    className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    <Check className="h-4 w-4" />
+                    {createCustomMutation.isPending ? "Creating..." : "Save Custom Medicine"}
+                  </button>
+                )}
               </div>
             </form>
           )}

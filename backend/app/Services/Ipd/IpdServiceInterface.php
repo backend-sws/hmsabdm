@@ -105,5 +105,20 @@ interface IpdServiceInterface
      * Acknowledge shift handover by incoming nurse.
      */
     public function acknowledgeShiftHandover(int $hospitalId, int $handoverId, string $incomingNurseName): array;
+
+    /**
+     * Get or prefill clinical discharge summary for an inpatient admission.
+     */
+    public function getDischargeSummary(int $hospitalId, int $admissionId): array;
+
+    /**
+     * Create or update clinical discharge summary (Draft or Finalized).
+     */
+    public function saveDischargeSummary(int $hospitalId, int $admissionId, array $data, int $userId): array;
+
+    /**
+     * Get complete printable NABH clinical discharge card payload.
+     */
+    public function getDischargePrintData(int $hospitalId, int $admissionId): array;
 }
 

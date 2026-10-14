@@ -34,8 +34,30 @@ export const EmergencyMlcModal: React.FC<EmergencyMlcModalProps> = ({
         </div>
       }
     >
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-mlc-memo, #printable-mlc-memo * {
+            visibility: visible;
+          }
+          #printable-mlc-memo {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 24px;
+            background: white !important;
+            color: black !important;
+            border: 2px solid #333 !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
       {mlcSlipData && (
-        <div className="p-6 border-2 border-dashed border-purple-500/40 rounded-2xl bg-purple-500/5 space-y-4 text-xs font-mono">
+        <div id="printable-mlc-memo" className="p-6 border-2 border-dashed border-purple-500/40 rounded-2xl bg-purple-500/5 space-y-4 text-xs font-mono">
           {/* Header */}
           <div className="text-center pb-3 border-b border-border/80">
             <h2 className="font-bold text-lg text-foreground uppercase tracking-widest">

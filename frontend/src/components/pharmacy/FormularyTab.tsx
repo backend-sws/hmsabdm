@@ -5,8 +5,10 @@ import {
   Plus,
   AlertTriangle,
   MapPin,
+  Edit3,
 } from "lucide-react"
 import { useFormulary } from "@/hooks/usePharmacy"
+import type { HospitalMedicine } from "@/types/pharmacy"
 import { MedicineFormModal } from "./MedicineFormModal"
 
 export const FormularyTab: React.FC = () => {
@@ -14,6 +16,7 @@ export const FormularyTab: React.FC = () => {
   const [dosageFilter, setDosageFilter] = useState("")
   const [lowStockOnly, setLowStockOnly] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingMedicine, setEditingMedicine] = useState<HospitalMedicine | null>(null)
 
   const { data: responseData, isLoading, isError } = useFormulary({
     search: searchQuery,
@@ -22,6 +25,21 @@ export const FormularyTab: React.FC = () => {
   })
 
   const medicines = responseData?.data || []
+
+  const handleOpenAdd = () => {
+    setEditingMedicine(null)
+    setIsAddModalOpen(true)
+  }
+
+  const handleOpenEdit = (med: HospitalMedicine) => {
+    setEditingMedicine(med)
+    setIsAddModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false)
+    setEditingMedicine(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -74,7 +92,7 @@ export const FormularyTab: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={handleOpenAdd}
           className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
@@ -115,7 +133,8 @@ export const FormularyTab: React.FC = () => {
                   <th className="px-3 py-3.5 text-right font-bold">Reorder Level</th>
                   <th className="px-3 py-3.5 text-right font-bold">Selling Price (₹)</th>
                   <th className="px-3 py-3.5 text-right font-bold">MRP (₹)</th>
-                  <th className="py-3.5 pl-3 pr-6 font-bold">Rack Location</th>
+                  <th className="px-3 py-3.5 font-bold">Rack Location</th>
+                  <th className="py-3.5 pl-3 pr-6 text-center font-bold">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-border/40">
@@ -217,7 +236,7 @@ export const FormularyTab: React.FC = () => {
                         ₹{med.mrp.toFixed(2)}
                       </td>
 
-                      <td className="py-3.5 pl-3 pr-6 font-medium text-slate-600 dark:text-slate-400">
+                      <td className="px-3 py-3.5 font-medium text-slate-600 dark:text-slate-400">
                         {med.rack_location ? (
                           <span className="flex items-center gap-1 font-mono">
                             <MapPin className="h-3 w-3 text-slate-400" />
@@ -226,6 +245,17 @@ export const FormularyTab: React.FC = () => {
                         ) : (
                           "—"
                         )}
+                      </td>
+
+                      <td className="py-3.5 pl-3 pr-6 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(med)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition-all hover:border-primary hover:bg-primary/5 hover:text-primary dark:border-border dark:bg-card dark:text-slate-200 dark:hover:border-primary dark:hover:text-primary"
+                        >
+                          <Edit3 className="h-3.5 w-3.5 text-primary" />
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   )
@@ -236,11 +266,12 @@ export const FormularyTab: React.FC = () => {
         )}
       </div>
 
-      {/* Add / Import Medicine Modal */}
+      {/* Add / Import / Edit Medicine Modal */}
       {isAddModalOpen && (
         <MedicineFormModal
           isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
+          onClose={handleCloseModal}
+          editingMedicine={editingMedicine}
         />
       )}
     </div>

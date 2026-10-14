@@ -125,6 +125,11 @@ class ServiceBindingProvider extends ServiceProvider
             \App\Services\Pharmacy\PharmacyServiceInterface::class,
             \App\Services\Pharmacy\PharmacyService::class
         );
+
+        $this->app->bind(
+            \App\Services\Ot\OtServiceInterface::class,
+            \App\Services\Ot\OtService::class
+        );
     }
 
 

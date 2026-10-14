@@ -247,14 +247,17 @@ class EmergencyController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:under_treatment,stabilized,admitted_to_ipd,transferred_external,discharged,brought_dead,expired',
-            'notes'  => 'nullable|string',
+            'status'          => 'required|string|in:under_treatment,stabilized,admitted_to_ipd,transferred_external,discharged,brought_dead,expired',
+            'notes'           => 'nullable|string',
+            'ward_id'         => 'nullable|integer|exists:wards,id',
+            'bed_id'          => 'nullable|integer|exists:beds,id',
+            'advance_deposit' => 'nullable|numeric|min:0',
         ]);
 
         $hospitalId = $this->getHospitalId($request);
 
         try {
-            $result = $this->emergencyService->updateTriageStatus($hospitalId, (int) $id, $validated['status'], $validated['notes'] ?? null);
+            $result = $this->emergencyService->updateTriageStatus($hospitalId, (int) $id, $validated['status'], $validated['notes'] ?? null, $validated);
             return $this->successResponse($result, 'Emergency triage status updated');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), null, 400);

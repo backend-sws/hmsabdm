@@ -13,6 +13,7 @@ class LabOrder extends Model
     protected $fillable = [
         'hospital_id',
         'patient_id',
+        'ipd_admission_id',
         'prescription_id',
         'doctor_id',
         'invoice_id',
@@ -20,6 +21,7 @@ class LabOrder extends Model
         'sample_accession_number',
         'urgency',
         'order_type',
+        'is_bedside_collection',
         'status',
         'token_number',
         'token_called_at',
@@ -42,14 +44,20 @@ class LabOrder extends Model
     ];
 
     protected $casts = [
-        'token_called_at'     => 'datetime',
-        'is_called'           => 'boolean',
-        'rejected_at'         => 'datetime',
-        'is_recollected'      => 'boolean',
-        'sample_collected_at' => 'datetime',
-        'result_entered_at'   => 'datetime',
-        'authorized_at'       => 'datetime',
+        'token_called_at'       => 'datetime',
+        'is_called'             => 'boolean',
+        'is_bedside_collection' => 'boolean',
+        'rejected_at'           => 'datetime',
+        'is_recollected'        => 'boolean',
+        'sample_collected_at'   => 'datetime',
+        'result_entered_at'     => 'datetime',
+        'authorized_at'         => 'datetime',
     ];
+
+    public function ipdAdmission()
+    {
+        return $this->belongsTo(IpdAdmission::class, 'ipd_admission_id');
+    }
 
     public function rejectedBy()
     {

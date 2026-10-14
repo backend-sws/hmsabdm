@@ -182,6 +182,9 @@ export interface MlcSlipData {
 export interface TriageStatusUpdatePayload {
   status: EmergencyStatus
   notes?: string
+  ward_id?: number
+  bed_id?: number
+  advance_deposit?: number
 }
 
 export interface EmergencyQueryParams {

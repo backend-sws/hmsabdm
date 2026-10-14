@@ -220,8 +220,33 @@ class PharmacyService implements PharmacyServiceInterface
             ->where('id', $medicineId)
             ->firstOrFail();
 
+        $updateActiveBatches = !empty($data['update_active_batches']);
+        unset($data['update_active_batches']);
+
         $medicine->update($data);
-        return $medicine->fresh();
+
+        // Optionally synchronize updated pricing and rack to currently active batches in stock
+        if ($updateActiveBatches) {
+            $batchUpdates = [];
+            if (isset($data['mrp'])) {
+                $batchUpdates['mrp'] = (float) $data['mrp'];
+            }
+            if (isset($data['default_selling_price'])) {
+                $batchUpdates['selling_price'] = (float) $data['default_selling_price'];
+            }
+            if (isset($data['default_purchase_price'])) {
+                $batchUpdates['purchase_rate'] = (float) $data['default_purchase_price'];
+            }
+            if (isset($data['rack_location'])) {
+                $batchUpdates['rack_location'] = $data['rack_location'];
+            }
+
+            if (!empty($batchUpdates)) {
+                $medicine->activeBatches()->update($batchUpdates);
+            }
+        }
+
+        return $medicine->fresh(['activeBatches', 'masterMedicine']);
     }
 
     /**
@@ -2233,7 +2258,7 @@ class PharmacyService implements PharmacyServiceInterface
     {
         $query = PharmacyWardIndent::where('hospital_id', $hospitalId)
             ->with([
-                'patient:id,uhid,name,gender,age,phone',
+                'patient:id,uhid,name,gender,dob,mobile',
                 'ipdAdmission:id,ipd_number,admission_date,doctor_id',
                 'requestedBy:id,name',
                 'dispensedBy:id,name',

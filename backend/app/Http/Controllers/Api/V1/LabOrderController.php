@@ -101,6 +101,32 @@ class LabOrderController extends Controller
         return $this->createdResponse($order, "Walk-in lab order booked successfully. Phlebotomy Token: {$order->token_number}");
     }
 
+    #[OA\Post(
+        path: "/api/v1/lab/orders/ipd-requisition",
+        summary: "Create inpatient bedside lab requisition with auto-billing to IPD ledger",
+        description: "Creates lab order requested by doctor/nurse at bedside for an admitted patient and adds charges to IPD billing ledger.",
+        tags: ["13. Lab — Orders & Billing"],
+        security: [["bearerAuth" => []]]
+    )]
+    public function createIpdOrder(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 1;
+
+        $validated = $request->validate([
+            'ipd_admission_id'      => 'required|integer|exists:ipd_admissions,id',
+            'template_ids'          => 'required|array|min:1',
+            'template_ids.*'        => 'integer|exists:lab_test_templates,id',
+            'doctor_id'             => 'nullable|integer|exists:doctors,id',
+            'urgency'               => 'nullable|string|in:Routine,Urgent,STAT',
+            'is_bedside_collection' => 'nullable|boolean',
+            'clinical_notes'        => 'nullable|string|max:1000',
+        ]);
+
+        $order = $this->labService->createIpdLabOrder($hospitalId, $userId, $validated);
+        return $this->createdResponse($order, "Bedside lab requisition created successfully. Order #{$order->order_number}");
+    }
+
     #[OA\Put(
         path: "/api/v1/lab/orders/{id}/direct-booking",
         summary: "Update existing direct lab booking & invoice",

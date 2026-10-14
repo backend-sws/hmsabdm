@@ -17,6 +17,7 @@ use App\Models\Invoice;
 use App\Models\BillingLedgerItem;
 use App\Models\LabAuditLog;
 use App\Models\User;
+use App\Models\IpdAdmission;
 use App\Http\Traits\CanFilterAndPaginate;
 
 class LabService implements LabServiceInterface
@@ -41,9 +42,23 @@ class LabService implements LabServiceInterface
                 'invoice',
                 'sampleCollector',
                 'authorizingDoctor',
+                'ipdAdmission.ward',
+                'ipdAdmission.bed',
             ])
             ->orderByRaw("CASE WHEN urgency = 'STAT' THEN 1 WHEN urgency = 'Urgent' THEN 2 ELSE 3 END ASC")
             ->orderBy('created_at', 'desc');
+
+        if ($req->filled('ipd_admission_id')) {
+            $query->where('ipd_admission_id', $req->query('ipd_admission_id'));
+        }
+
+        if ($req->filled('patient_id')) {
+            $query->where('patient_id', $req->query('patient_id'));
+        }
+
+        if ($req->filled('is_bedside_collection')) {
+            $query->where('is_bedside_collection', filter_var($req->query('is_bedside_collection'), FILTER_VALIDATE_BOOLEAN));
+        }
 
         if ($req->filled('status')) {
             $query->where('status', $req->query('status'));
@@ -187,6 +202,8 @@ class LabService implements LabServiceInterface
                 'patient',
                 'doctor',
                 'invoice',
+                'ipdAdmission.ward',
+                'ipdAdmission.bed',
                 'items.testTemplate.parameters.referenceRanges',
                 'items.results',
                 'sampleCollector',
@@ -255,11 +272,13 @@ class LabService implements LabServiceInterface
         ?array $previousValues = null,
         ?array $newValues = null
     ): LabAuditLog {
+        $validUserId = ($userId && User::where('id', $userId)->exists()) ? $userId : null;
+
         return LabAuditLog::create([
             'hospital_id'     => $hospitalId,
             'order_id'        => $orderId,
             'order_item_id'   => $orderItemId,
-            'user_id'         => $userId,
+            'user_id'         => $validUserId,
             'action'          => $action,
             'description'     => $description,
             'previous_values' => $previousValues,
@@ -1144,6 +1163,122 @@ class LabService implements LabServiceInterface
                     'status'           => 'pending_sample',
                 ]);
             }
+
+            return $this->getOrder($hospitalId, $labOrder->id);
+        });
+    }
+
+    /**
+     * Create IPD Bedside Lab Requisition:
+     * Ordered by Ward/ICU doctors/nurses for an admitted patient.
+     * Automatically registers in Central Lab worklist and charges to IPD billing ledger.
+     */
+    public function createIpdLabOrder(int $hospitalId, int $userId, array $data): LabOrder
+    {
+        return DB::transaction(function () use ($hospitalId, $userId, $data) {
+            $admissionId = (int) $data['ipd_admission_id'];
+            $admission = IpdAdmission::where('hospital_id', $hospitalId)
+                ->with(['patient', 'doctor', 'ward', 'bed'])
+                ->findOrFail($admissionId);
+
+            if ($admission->status === 'discharged') {
+                throw new \InvalidArgumentException("Cannot order bedside lab investigations for a discharged patient.");
+            }
+
+            $templateIds = $data['template_ids'] ?? [];
+            if (empty($templateIds)) {
+                throw new \InvalidArgumentException("Please select at least one lab test to order.");
+            }
+
+            $templates = LabTestTemplate::where(function ($q) use ($hospitalId) {
+                    $q->where('hospital_id', $hospitalId)
+                      ->orWhereNull('hospital_id');
+                })
+                ->whereIn('id', $templateIds)
+                ->where('is_active', true)
+                ->get();
+
+            if ($templates->isEmpty()) {
+                throw new \InvalidArgumentException("No valid active lab test templates found for selection.");
+            }
+
+            $urgency = in_array($data['urgency'] ?? 'Routine', ['Routine', 'Urgent', 'STAT']) ? $data['urgency'] : 'Routine';
+            $doctorId = $data['doctor_id'] ?? $admission->doctor_id;
+            $isBedside = filter_var($data['is_bedside_collection'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
+            // Generate Order Number
+            $datePrefix = date('Ymd');
+            $todayCount = LabOrder::where('hospital_id', $hospitalId)
+                ->whereDate('created_at', today())
+                ->count();
+            $orderNumber = sprintf('LAB-IPD-%s-%04d', $datePrefix, $todayCount + 1);
+
+            // Token / Bedside tag
+            $wardCode = $admission->ward?->code ?? $admission->ward?->name ?? 'WARD';
+            $bedNumber = $admission->bed?->bed_number ?? 'BED';
+            $tokenNumber = sprintf('IPD-%s-%s', strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $wardCode), 0, 4)), $bedNumber);
+
+            // Create LabOrder
+            $labOrder = LabOrder::create([
+                'hospital_id'           => $hospitalId,
+                'patient_id'            => $admission->patient_id,
+                'ipd_admission_id'      => $admission->id,
+                'doctor_id'             => $doctorId,
+                'order_number'          => $orderNumber,
+                'token_number'          => $tokenNumber,
+                'urgency'               => $urgency,
+                'order_type'            => 'IPD',
+                'is_bedside_collection' => $isBedside,
+                'status'                => 'pending_sample',
+                'clinical_notes'        => $data['clinical_notes'] ?? null,
+            ]);
+
+            // Create LabOrderItems & Post to IPD Billing Ledger
+            foreach ($templates as $tpl) {
+                LabOrderItem::create([
+                    'hospital_id'      => $hospitalId,
+                    'order_id'         => $labOrder->id,
+                    'test_template_id' => $tpl->id,
+                    'test_name'        => $tpl->test_name,
+                    'test_code'        => $tpl->test_code,
+                    'category'         => $tpl->category,
+                    'rate'             => $tpl->standard_price,
+                    'status'           => 'pending_sample',
+                ]);
+
+                // Auto-post to IPD Billing Ledger
+                BillingLedgerItem::create([
+                    'hospital_id'        => $hospitalId,
+                    'patient_id'         => $admission->patient_id,
+                    'encounter_type'     => 'ipd',
+                    'encounter_id'       => $admission->id,
+                    'charge_id'          => null,
+                    'category'           => 'investigation',
+                    'item_name'          => 'Lab: ' . $tpl->test_name,
+                    'unit_price'         => (float)$tpl->standard_price,
+                    'quantity'           => 1.0,
+                    'tax_amount'         => 0.00,
+                    'discount_amount'    => 0.00,
+                    'total_amount'       => (float)$tpl->standard_price,
+                    'charged_at'         => now(),
+                    'charged_by_user_id' => $userId,
+                    'auto_generated'     => true,
+                    'notes'              => "Bedside Lab Order: {$orderNumber} ({$urgency})",
+                    'status'             => 'unbilled', // Settled at IPD discharge settlement
+                ]);
+            }
+
+            // Log Audit
+            $this->logAudit(
+                $hospitalId,
+                $labOrder->id,
+                null,
+                $userId,
+                'ipd_requisition_created',
+                "IPD Bedside lab requisition created ({$urgency}) for {$admission->patient->name} (Bed: {$bedNumber}). Tests: " . $templates->pluck('test_name')->join(', '),
+                null,
+                ['order_number' => $orderNumber, 'tests_count' => $templates->count(), 'urgency' => $urgency]
+            );
 
             return $this->getOrder($hospitalId, $labOrder->id);
         });

@@ -1,14 +1,15 @@
 import React, { useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { RefreshCw } from "lucide-react"
 
 import { FormContainer } from "@/components/formContainer"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { ipdService } from "@/services/ipdService"
 import { emergencyService } from "@/services/emergencyService"
 import { queryKeys } from "@/constants/queryKeys"
-import type { EmergencyTriage, EmergencyStatus } from "@/types/emergency"
+import type { EmergencyTriage, EmergencyStatus, TriageStatusUpdatePayload } from "@/types/emergency"
 
 export interface EmergencyStatusModalProps {
   open: boolean
@@ -24,12 +25,24 @@ export const EmergencyStatusModal: React.FC<EmergencyStatusModalProps> = ({
   onSuccess,
 }) => {
   const queryClient = useQueryClient()
-  const [statusUpdate, setStatusUpdate] = useState<{
-    status: EmergencyStatus
-    notes: string
-  }>({
+  const [statusUpdate, setStatusUpdate] = useState<TriageStatusUpdatePayload>({
     status: "stabilized",
     notes: "",
+    ward_id: undefined,
+    bed_id: undefined,
+  })
+  const [selectedWardId, setSelectedWardId] = useState<number | undefined>(undefined)
+
+  const { data: wards = [] } = useQuery({
+    queryKey: queryKeys.ipd.wards,
+    queryFn: () => ipdService.getWards(),
+    enabled: open && statusUpdate.status === "admitted_to_ipd",
+  })
+
+  const { data: availableBeds = [] } = useQuery({
+    queryKey: queryKeys.ipd.availableBeds(selectedWardId),
+    queryFn: () => ipdService.getAvailableBeds(selectedWardId),
+    enabled: open && statusUpdate.status === "admitted_to_ipd" && !!selectedWardId,
   })
 
   const updateStatusMutation = useMutation({
@@ -92,6 +105,59 @@ export const EmergencyStatusModal: React.FC<EmergencyStatusModalProps> = ({
             <option value="expired">⬛ Expired in Casualty</option>
           </select>
         </div>
+
+        {statusUpdate.status === "admitted_to_ipd" && !selectedTriage?.ipd_admission_id && (
+          <div className="p-3 rounded-lg border border-blue-500/30 bg-blue-500/5 space-y-3">
+            <span className="font-semibold text-blue-700 dark:text-blue-300 block text-[11px]">
+              🏥 Allocate Inpatient Ward & Bed
+            </span>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Select Ward *</Label>
+                <select
+                  value={selectedWardId || ""}
+                  onChange={(e) => {
+                    const wid = e.target.value ? Number(e.target.value) : undefined
+                    setSelectedWardId(wid)
+                    setStatusUpdate((p) => ({ ...p, ward_id: wid, bed_id: undefined }))
+                  }}
+                  className="w-full text-xs rounded-md border border-input bg-background px-3 py-2 mt-1"
+                >
+                  <option value="">Select Ward</option>
+                  {wards.map((w: any) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name} ({w.gender_type || "General"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label>Select Bed *</Label>
+                <select
+                  value={statusUpdate.bed_id || ""}
+                  onChange={(e) =>
+                    setStatusUpdate((p) => ({
+                      ...p,
+                      bed_id: e.target.value ? Number(e.target.value) : undefined,
+                    }))
+                  }
+                  disabled={!selectedWardId}
+                  className="w-full text-xs rounded-md border border-input bg-background px-3 py-2 mt-1"
+                >
+                  <option value="">
+                    {selectedWardId ? "Select Available Bed" : "Choose Ward First"}
+                  </option>
+                  {availableBeds.map((b: any) => (
+                    <option key={b.id} value={b.id}>
+                      Bed #{b.bed_number}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div>
           <Label>Clinical Transition Notes</Label>

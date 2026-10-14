@@ -151,5 +151,20 @@ class IpdAdmission extends Model
     {
         return $this->belongsTo(User::class, 'discharged_by_user_id');
     }
+
+    public function labOrders()
+    {
+        return $this->hasMany(LabOrder::class, 'ipd_admission_id')->orderBy('created_at', 'desc');
+    }
+
+    public function wardIndents()
+    {
+        return $this->hasMany(PharmacyWardIndent::class, 'ipd_admission_id')->orderBy('created_at', 'desc');
+    }
+
+    public function dischargeSummary()
+    {
+        return $this->hasOne(IpdDischargeSummary::class, 'ipd_admission_id');
+    }
 }
 

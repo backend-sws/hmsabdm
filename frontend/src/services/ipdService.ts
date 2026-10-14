@@ -25,7 +25,10 @@ import type {
   CreateBedPayload,
   BatchCreateBedsPayload,
   UpdateBedPayload,
+  DischargeSummary,
+  DischargePrintData,
 } from "@/types/ipd"
+import type { VitalRecord } from "@/types/opd"
 
 export const ipdService = {
   /**
@@ -112,6 +115,52 @@ export const ipdService = {
    */
   getInpatientChart: async (id: number): Promise<InpatientChart> => {
     return apiClient<InpatientChart>(`/ipd/admissions/${id}/chart`)
+  },
+
+  /**
+   * Get chronological Bedside Vitals history for an IPD admission
+   */
+  getIpdVitals: async (admissionId: number): Promise<VitalRecord[]> => {
+    const res = await apiClient<any>(`/vitals/ipd/${admissionId}`)
+    return Array.isArray(res) ? res : res?.data || []
+  },
+
+  /**
+   * Record Bedside Vitals entry for an IPD Inpatient
+   */
+  recordIpdVital: async (payload: {
+    patient_id: number
+    ipd_admission_id: number
+    encounter_type?: string
+    temperature?: number
+    temperature_unit?: "F" | "C"
+    blood_pressure_sys?: number
+    blood_pressure_dia?: number
+    pulse_rate?: number
+    respiratory_rate?: number
+    oxygen_saturation?: number
+    blood_glucose?: number
+    glucose_type?: "fasting" | "random" | "post_meal"
+    weight?: number
+    height?: number
+    custom_vitals?: {
+      avpu?: "Alert" | "Voice" | "Pain" | "Unresponsive"
+      oxygen_supplement?: string
+      o2_flow_rate?: number
+      pain_score?: number
+      remarks?: string
+      recorded_by_name?: string
+      [key: string]: any
+    }
+    recorded_at?: string
+  }): Promise<VitalRecord> => {
+    return apiClient<VitalRecord>("/vitals", {
+      method: "POST",
+      body: JSON.stringify({
+        ...payload,
+        encounter_type: payload.encounter_type || "ipd",
+      }),
+    })
   },
 
   /**
@@ -349,5 +398,35 @@ export const ipdService = {
     return apiClient<any>(`/beds/${id}`, {
       method: "DELETE",
     })
+  },
+
+  /**
+   * Get or prefill clinical discharge summary for an admission
+   */
+  getDischargeSummary: async (admissionId: number): Promise<DischargeSummary> => {
+    const res = await apiClient<any>(`/ipd/admissions/${admissionId}/discharge-summary`)
+    return res?.data || res
+  },
+
+  /**
+   * Create or update clinical discharge summary (Draft or Finalize)
+   */
+  saveDischargeSummary: async (
+    admissionId: number,
+    payload: Partial<DischargeSummary> & { mark_as_discharged?: boolean }
+  ): Promise<DischargeSummary> => {
+    const res = await apiClient<any>(`/ipd/admissions/${admissionId}/discharge-summary`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+    return res?.data || res
+  },
+
+  /**
+   * Get printable NABH discharge card data
+   */
+  getDischargePrintData: async (admissionId: number): Promise<DischargePrintData> => {
+    const res = await apiClient<any>(`/ipd/admissions/${admissionId}/discharge-summary/print`)
+    return res?.data || res
   },
 }

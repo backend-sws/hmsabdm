@@ -210,6 +210,8 @@ export function useUpdateMedicineMutation() {
     onSuccess: () => {
       toast.success("Medicine catalog updated successfully!")
       queryClient.invalidateQueries({ queryKey: ["pharmacy", "formulary"] })
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "batches"] })
+      queryClient.invalidateQueries({ queryKey: ["pharmacy", "dashboard-stats"] })
     },
     onError: (err: any) => {
       toast.error(err?.message || "Failed to update medicine")

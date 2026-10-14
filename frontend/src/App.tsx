@@ -25,6 +25,7 @@ import { LabReportViewPage } from "@/pages/lab/LabReportViewPage"
 import { PublicLabReportPage } from "@/pages/lab/PublicLabReportPage"
 import { SettingsPage } from "@/pages/settings/SettingsPage"
 import { PharmacyDeskPage } from "@/pages/pharmacy/PharmacyDeskPage"
+import { OperationTheatrePage } from "@/pages/ot/OperationTheatrePage"
 import InputHelperDemoPage from "@/pages/demo/InputHelperDemoPage"
 
 const queryClient = new QueryClient({
@@ -132,8 +133,16 @@ export default function App() {
               <Route
                 path="/emergency"
                 element={
-                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"]}>
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"]}>
                     <EmergencyDeskPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ot"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"]}>
+                    <OperationTheatrePage />
                   </ProtectedRoute>
                 }
               />

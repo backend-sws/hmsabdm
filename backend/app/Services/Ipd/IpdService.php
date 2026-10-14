@@ -13,6 +13,9 @@ use App\Models\IpdShiftHandover;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
 use App\Models\BillingLedgerItem;
+use App\Models\IpdDischargeSummary;
+use App\Models\Hospital;
+use App\Models\HospitalSetting;
 use App\Services\Patient\PatientServiceInterface;
 use App\Http\Traits\CanFilterAndPaginate;
 use Illuminate\Support\Facades\DB;
@@ -905,6 +908,340 @@ class IpdService implements IpdServiceInterface
         ]);
 
         return $handover->fresh()->load(['patient', 'ward'])->toArray();
+    }
+
+    /**
+     * Get or auto-prefill clinical discharge summary for an IPD admission.
+     */
+    public function getDischargeSummary(int $hospitalId, int $admissionId): array
+    {
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)
+            ->with([
+                'patient',
+                'doctor.department',
+                'ward',
+                'bed',
+                'dischargeSummary.preparedByUser:id,name',
+                'dischargeSummary.finalizedByUser:id,name',
+                'dischargeSummary.followUpDoctor:id,name,qualification',
+                'doctorRounds.doctor:id,name',
+                'vitals' => fn($q) => $q->orderBy('recorded_at', 'desc')->limit(5),
+                'prescriptions.items.medicine',
+                'labOrders' => fn($q) => $q->with('items.labTest')->where('status', 'completed'),
+                'nursingProcedures',
+            ])
+            ->findOrFail($admissionId);
+
+        if ($admission->dischargeSummary) {
+            $data = $admission->dischargeSummary->toArray();
+            $data['patient'] = $admission->patient;
+            $data['ipd_admission'] = [
+                'id'             => $admission->id,
+                'ipd_number'     => $admission->ipd_number,
+                'admission_date' => $admission->admission_date,
+                'ward'           => $admission->ward?->name,
+                'bed'            => $admission->bed?->bed_number,
+                'status'         => $admission->status,
+            ];
+            return $data;
+        }
+
+        // Auto-generate proposal from chart
+        $latestVital = $admission->vitals->first();
+        $dischargeVitals = [
+            'temperature'      => $latestVital?->temperature ?? '',
+            'systolic_bp'      => $latestVital?->systolic_bp ?? '',
+            'diastolic_bp'     => $latestVital?->diastolic_bp ?? '',
+            'pulse_rate'       => $latestVital?->pulse_rate ?? '',
+            'respiratory_rate' => $latestVital?->respiratory_rate ?? '',
+            'spo2'             => $latestVital?->spo2 ?? '',
+        ];
+
+        // Hospital course from doctor rounds SOAP notes
+        $hospitalCourseLines = [];
+        if (!empty($admission->reason_for_admission)) {
+            $hospitalCourseLines[] = "Admitted with complaints of: " . $admission->reason_for_admission . ".";
+        }
+
+        foreach ($admission->doctorRounds->sortBy('round_date') as $round) {
+            $dateStr = $round->round_date ? (is_string($round->round_date) ? $round->round_date : $round->round_date->format('d M Y')) : '';
+            $doc = $round->doctor?->name ?? 'Doctor';
+            $soapParts = array_filter([
+                $round->subjective ? "S: " . $round->subjective : null,
+                $round->objective ? "O: " . $round->objective : null,
+                $round->assessment ? "Assessment: " . $round->assessment : null,
+                $round->plan ? "Plan: " . $round->plan : null,
+            ]);
+            if (!empty($soapParts)) {
+                $hospitalCourseLines[] = "• " . ($dateStr ? "[{$dateStr} - Dr. {$doc}]: " : "") . implode("; ", $soapParts);
+            }
+        }
+
+        if (empty($hospitalCourseLines)) {
+            $hospitalCourse = "Patient admitted under Dr. " . ($admission->doctor?->name ?? 'Attending Consultant') . ". Managed conservatively with supportive care. Vitals monitored and responded well to treatment.";
+        } else {
+            $hospitalCourse = implode("\n\n", $hospitalCourseLines);
+        }
+
+        // Procedures summary
+        $procList = $admission->nursingProcedures->map(function ($proc) {
+            return "• " . ($proc->procedure_name ?? 'Procedure') . ($proc->performed_at ? " on " . date('d M Y', strtotime($proc->performed_at)) : "");
+        })->implode("\n");
+
+        // Lab investigations summary
+        $labList = $admission->labOrders->flatMap(function ($order) {
+            return $order->items->map(function ($item) {
+                $testName = $item->labTest?->name ?? 'Investigation';
+                $val = !empty($item->result_value) ? ": {$item->result_value} " . ($item->unit ?? '') : " (Completed)";
+                return "• {$testName}{$val}";
+            });
+        })->implode("\n");
+
+        // Pre-populate take-home medications from active inpatient prescriptions if any
+        $prefilledMeds = [];
+        foreach ($admission->prescriptions as $rx) {
+            foreach ($rx->items as $item) {
+                $medName = $item->medicine?->name ?? $item->medicine_name ?? 'Medicine';
+                $prefilledMeds[] = [
+                    'medicine_name' => $medName,
+                    'dosage_form'   => $item->dosage_form ?? 'Tablet',
+                    'dose'          => $item->dose ?? '1 Tab',
+                    'route'         => $item->route ?? 'Oral',
+                    'frequency'     => $item->frequency ?? '1-0-1',
+                    'duration'      => $item->duration ?? '5 Days',
+                    'instructions'  => $item->instructions ?? 'After meals',
+                ];
+            }
+        }
+
+        return [
+            'id'                          => null,
+            'hospital_id'                 => $hospitalId,
+            'ipd_admission_id'            => $admission->id,
+            'patient_id'                  => $admission->patient_id,
+            'doctor_id'                   => $admission->doctor_id,
+            'prepared_by_user_id'         => null,
+            'finalized_by_user_id'        => null,
+            'summary_number'              => null,
+            'status'                      => 'draft',
+            'discharge_type'              => $admission->discharge_type ?? 'normal',
+            'admission_date'              => $admission->admission_date?->toISOString() ?? (string) now()->toISOString(),
+            'discharge_date'              => $admission->discharge_date?->toISOString() ?? (string) now()->toISOString(),
+            'admission_diagnosis'         => $admission->diagnosis ?? $admission->reason_for_admission ?? '',
+            'final_diagnosis'             => $admission->final_diagnosis ?? $admission->diagnosis ?? '',
+            'icd10_code'                  => '',
+            'chief_complaints'            => $admission->reason_for_admission ?? '',
+            'history_of_present_illness'  => '',
+            'past_history_and_allergies'  => !empty($admission->patient?->allergies) ? (is_array($admission->patient->allergies) ? implode(', ', $admission->patient->allergies) : (string)$admission->patient->allergies) : 'No known drug allergies (NKDA)',
+            'condition_at_discharge'      => 'Patient is hemodynamically stable, afebrile, and ambulatory at time of discharge.',
+            'discharge_vitals'            => $dischargeVitals,
+            'hospital_course'             => $hospitalCourse,
+            'procedures_surgeries'        => $procList,
+            'investigations_summary'      => $labList,
+            'treatment_given'             => 'Intravenous fluids, analgesics, supportive medical care as per hospital protocol.',
+            'discharge_medications'       => $prefilledMeds,
+            'dietary_advice'              => 'Normal balanced diet. Adequate oral fluid hydration. Avoid spicy and oily foods.',
+            'physical_activity_advice'    => 'Gentle ambulation allowed. Avoid strenuous physical activities and heavy lifting for 2 weeks.',
+            'wound_care_instructions'     => 'Keep surgical/IV site clean and dry. Watch for any redness, swelling, or active discharge.',
+            'emergency_red_flags'         => 'Report to Emergency / Casualty immediately in case of: High persistent fever (>101°F), severe breathlessness, uncontrolled acute pain, persistent vomiting, or active bleeding.',
+            'follow_up_date'              => now()->addDays(7)->toDateString(),
+            'follow_up_doctor_id'         => $admission->doctor_id,
+            'follow_up_instructions'      => 'Review in OPD after 7 days with all discharge documents and follow-up reports.',
+            'finalized_at'                => null,
+            'patient'                     => $admission->patient,
+            'ipd_admission'               => [
+                'id'             => $admission->id,
+                'ipd_number'     => $admission->ipd_number,
+                'admission_date' => $admission->admission_date,
+                'ward'           => $admission->ward?->name,
+                'bed'            => $admission->bed?->bed_number,
+                'status'         => $admission->status,
+            ],
+        ];
+    }
+
+    /**
+     * Create or update clinical discharge summary (draft or finalized).
+     */
+    public function saveDischargeSummary(int $hospitalId, int $admissionId, array $data, int $userId): array
+    {
+        return DB::transaction(function () use ($hospitalId, $admissionId, $data, $userId) {
+            $admission = IpdAdmission::where('hospital_id', $hospitalId)->findOrFail($admissionId);
+
+            $summary = IpdDischargeSummary::where('hospital_id', $hospitalId)
+                ->where('ipd_admission_id', $admissionId)
+                ->first();
+
+            $status = $data['status'] ?? ($summary?->status ?? 'draft');
+
+            // Generate summary number if not existing
+            $summaryNumber = $summary?->summary_number;
+            if (empty($summaryNumber)) {
+                $year = date('Y');
+                $count = IpdDischargeSummary::where('hospital_id', $hospitalId)->whereYear('created_at', $year)->count() + 1;
+                $summaryNumber = sprintf("DS-%s-%04d", $year, $count);
+            }
+
+            $isFinalizing = ($status === 'finalized' && (!$summary || $summary->status !== 'finalized'));
+
+            $fields = [
+                'hospital_id'                 => $hospitalId,
+                'ipd_admission_id'            => $admissionId,
+                'patient_id'                  => $admission->patient_id,
+                'doctor_id'                   => $data['doctor_id'] ?? $admission->doctor_id,
+                'summary_number'              => $summaryNumber,
+                'status'                      => $status,
+                'discharge_type'              => $data['discharge_type'] ?? 'normal',
+                'admission_date'              => $data['admission_date'] ?? $admission->admission_date,
+                'discharge_date'              => $data['discharge_date'] ?? now(),
+                'admission_diagnosis'         => $data['admission_diagnosis'] ?? null,
+                'final_diagnosis'             => $data['final_diagnosis'] ?? null,
+                'icd10_code'                  => $data['icd10_code'] ?? null,
+                'chief_complaints'            => $data['chief_complaints'] ?? null,
+                'history_of_present_illness'  => $data['history_of_present_illness'] ?? null,
+                'past_history_and_allergies'  => $data['past_history_and_allergies'] ?? null,
+                'condition_at_discharge'      => $data['condition_at_discharge'] ?? null,
+                'discharge_vitals'            => $data['discharge_vitals'] ?? null,
+                'hospital_course'             => $data['hospital_course'] ?? null,
+                'procedures_surgeries'        => $data['procedures_surgeries'] ?? null,
+                'investigations_summary'      => $data['investigations_summary'] ?? null,
+                'treatment_given'             => $data['treatment_given'] ?? null,
+                'discharge_medications'       => $data['discharge_medications'] ?? [],
+                'dietary_advice'              => $data['dietary_advice'] ?? null,
+                'physical_activity_advice'    => $data['physical_activity_advice'] ?? null,
+                'wound_care_instructions'     => $data['wound_care_instructions'] ?? null,
+                'emergency_red_flags'         => $data['emergency_red_flags'] ?? null,
+                'follow_up_date'              => $data['follow_up_date'] ?? null,
+                'follow_up_doctor_id'         => $data['follow_up_doctor_id'] ?? $admission->doctor_id,
+                'follow_up_instructions'      => $data['follow_up_instructions'] ?? null,
+            ];
+
+            $validUserId = ($userId && \App\Models\User::where('id', $userId)->exists()) ? $userId : null;
+
+            if (!$summary) {
+                $fields['prepared_by_user_id'] = $validUserId;
+            }
+
+            if ($isFinalizing) {
+                $fields['finalized_at'] = now();
+                $fields['finalized_by_user_id'] = $validUserId;
+            }
+
+            if ($summary) {
+                $summary->update($fields);
+            } else {
+                $summary = IpdDischargeSummary::create($fields);
+            }
+
+            // Sync with IpdAdmission if finalized
+            if ($status === 'finalized') {
+                $admissionUpdates = [
+                    'final_diagnosis'   => $fields['final_diagnosis'],
+                    'discharge_summary' => $fields['hospital_course'],
+                    'discharge_advice'  => trim(($fields['follow_up_instructions'] ?? '') . "\n" . ($fields['dietary_advice'] ?? '')),
+                    'discharge_type'    => $fields['discharge_type'],
+                ];
+
+                if (!empty($data['mark_as_discharged']) || $admission->status === 'admitted') {
+                    $admissionUpdates['status'] = 'discharged';
+                    $admissionUpdates['discharge_date'] = $fields['discharge_date'];
+                    $admissionUpdates['discharged_by_user_id'] = $userId;
+
+                    // Release bed if bed still assigned
+                    if ($admission->bed_id) {
+                        Bed::where('id', $admission->bed_id)->update([
+                            'status'               => 'available',
+                            'current_admission_id' => null,
+                        ]);
+                    }
+                }
+
+                $admission->update($admissionUpdates);
+            }
+
+            return $summary->fresh([
+                'patient',
+                'doctor',
+                'followUpDoctor',
+                'preparedByUser',
+                'finalizedByUser',
+            ])->toArray();
+        });
+    }
+
+    /**
+     * Get complete printable discharge card data.
+     */
+    public function getDischargePrintData(int $hospitalId, int $admissionId): array
+    {
+        $hospital = Hospital::findOrFail($hospitalId);
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)
+            ->with([
+                'patient',
+                'doctor.department',
+                'ward',
+                'bed',
+                'dischargeSummary.preparedByUser',
+                'dischargeSummary.finalizedByUser',
+                'dischargeSummary.followUpDoctor',
+            ])
+            ->findOrFail($admissionId);
+
+        $summary = $admission->dischargeSummary;
+
+        $hospitalPhone = HospitalSetting::get($hospitalId, 'hospital_phone', $hospital->phone ?? '');
+        $hospitalEmail = HospitalSetting::get($hospitalId, 'hospital_email', $hospital->email ?? '');
+        $hospitalLogo = HospitalSetting::get($hospitalId, 'hospital_logo', '');
+        $hospitalTagline = HospitalSetting::get($hospitalId, 'hospital_tagline', 'Excellence in Inpatient & Clinical Care');
+        $nabhAccredited = HospitalSetting::get($hospitalId, 'nabh_accredited', true);
+
+        return [
+            'hospital' => [
+                'name'            => $hospital->name,
+                'code'            => $hospital->code,
+                'address'         => $hospital->address,
+                'city'            => $hospital->city,
+                'state'           => $hospital->state,
+                'pincode'         => $hospital->pincode,
+                'phone'           => $hospitalPhone,
+                'email'           => $hospitalEmail,
+                'logo_url'        => $hospitalLogo,
+                'tagline'         => $hospitalTagline,
+                'nabh_accredited' => (bool)$nabhAccredited,
+                'abdm_hip_id'     => $hospital->abdm_hip_id,
+            ],
+            'admission' => [
+                'id'             => $admission->id,
+                'ipd_number'     => $admission->ipd_number,
+                'admission_date' => $admission->admission_date?->format('d M Y, h:i A'),
+                'discharge_date' => $summary?->discharge_date ? $summary->discharge_date->format('d M Y, h:i A') : ($admission->discharge_date ? $admission->discharge_date->format('d M Y, h:i A') : now()->format('d M Y, h:i A')),
+                'length_of_stay' => $admission->admission_date ? ceil($admission->admission_date->diffInHours($summary?->discharge_date ?? now()) / 24) . ' Day(s)' : '-',
+                'ward'           => $admission->ward?->name ?? 'General Ward',
+                'bed'            => $admission->bed?->bed_number ?? 'Bed',
+                'status'         => $admission->status,
+            ],
+            'patient' => [
+                'id'          => $admission->patient?->id,
+                'name'        => $admission->patient?->name,
+                'uhid'        => $admission->patient?->uhid,
+                'age'         => $admission->patient?->age ?? ($admission->patient?->dob ? \Carbon\Carbon::parse($admission->patient->dob)->age : '-'),
+                'gender'      => $admission->patient?->gender,
+                'phone'       => $admission->patient?->phone ?? $admission->patient?->mobile,
+                'blood_group' => $admission->patient?->blood_group ?? '-',
+                'address'     => $admission->patient?->address,
+            ],
+            'doctor' => [
+                'name'          => $admission->doctor?->name ?? 'Attending Consultant',
+                'qualification' => $admission->doctor?->qualification ?? 'MBBS, MD',
+                'department'    => $admission->doctor?->department?->name ?? 'General Medicine',
+                'reg_no'        => $admission->doctor?->reg_no ?? 'MCI-' . ($admission->doctor_id ?? 101),
+            ],
+            'follow_up_doctor' => [
+                'name'          => $summary?->followUpDoctor?->name ?? $admission->doctor?->name ?? 'Attending Consultant',
+                'qualification' => $summary?->followUpDoctor?->qualification ?? $admission->doctor?->qualification ?? '',
+            ],
+            'summary' => $summary ? $summary->toArray() : null,
+        ];
     }
 }
 

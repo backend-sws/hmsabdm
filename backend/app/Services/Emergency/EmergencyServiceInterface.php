@@ -27,5 +27,5 @@ interface EmergencyServiceInterface
     /**
      * Update clinical status of an emergency triage (e.g. stabilized, discharged, admitted).
      */
-    public function updateTriageStatus(int $hospitalId, int $triageId, string $status, ?string $notes = null): array;
+    public function updateTriageStatus(int $hospitalId, int $triageId, string $status, ?string $notes = null, array $extra = []): array;
 }

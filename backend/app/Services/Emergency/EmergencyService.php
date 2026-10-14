@@ -38,9 +38,12 @@ class EmergencyService implements EmergencyServiceInterface
                 $tempSeq = str_pad($lastTempCount + 1, 5, '0', STR_PAD_LEFT);
                 $tempUhid = "EMG-{$year}-{$tempSeq}";
 
-                $isUnknown = !empty($data['is_unknown_patient']) || empty($data['patient_name']);
+                $isUnknown = !empty($data['is_unknown_patient']) || empty(trim($data['patient_name'] ?? ''));
                 $gender = $data['gender'] ?? 'O';
-                $patientName = $data['patient_name'] ?? ($isUnknown ? ("Unknown " . ($gender === 'F' ? 'Female' : 'Male') . " ({$tempSeq})") : 'Emergency Patient');
+                $trimmedName = trim($data['patient_name'] ?? '');
+                $patientName = !empty($trimmedName)
+                    ? $trimmedName
+                    : ($isUnknown ? ("Unknown " . ($gender === 'F' ? 'Female' : ($gender === 'M' ? 'Male' : 'Patient')) . " ({$tempSeq})") : 'Emergency Patient');
 
                 $dob = null;
                 if (!empty($data['approximate_age'])) {
@@ -357,30 +360,59 @@ class EmergencyService implements EmergencyServiceInterface
     /**
      * Update clinical status of an emergency triage.
      */
-    public function updateTriageStatus(int $hospitalId, int $triageId, string $status, ?string $notes = null): array
+    public function updateTriageStatus(int $hospitalId, int $triageId, string $status, ?string $notes = null, array $extra = []): array
     {
-        $triage = EmergencyTriage::where('hospital_id', $hospitalId)->findOrFail($triageId);
+        return DB::transaction(function () use ($hospitalId, $triageId, $status, $notes, $extra) {
+            $triage = EmergencyTriage::where('hospital_id', $hospitalId)->findOrFail($triageId);
 
-        $updateData = ['status' => $status];
-        if ($notes) {
-            $updateData['clinical_notes'] = ($triage->clinical_notes ? $triage->clinical_notes . "\n" : '') . "[" . now()->toDateTimeString() . "] " . $notes;
-        }
-
-        if ($status === 'stabilized') {
-            $updateData['stabilized_at'] = now();
-        } elseif ($status === 'discharged' || $status === 'transferred_external') {
-            $updateData['discharged_at'] = now();
-            // Free the bed if currently occupied
-            if ($triage->bed_id) {
-                Bed::where('id', $triage->bed_id)->update(['status' => 'available', 'current_admission_id' => null]);
+            $updateData = ['status' => $status];
+            if ($notes) {
+                $updateData['clinical_notes'] = ($triage->clinical_notes ? $triage->clinical_notes . "\n" : '') . "[" . now()->toDateTimeString() . "] " . $notes;
             }
-            if ($triage->ipd_admission_id) {
-                IpdAdmission::where('id', $triage->ipd_admission_id)->update(['status' => 'discharged', 'discharge_date' => now()]);
+
+            if ($status === 'stabilized') {
+                $updateData['stabilized_at'] = now();
+            } elseif ($status === 'admitted_to_ipd') {
+                if (empty($triage->ipd_admission_id) && !empty($extra['bed_id'])) {
+                    $bed = Bed::where('hospital_id', $hospitalId)->findOrFail($extra['bed_id']);
+                    $wardId = $extra['ward_id'] ?? $bed->ward_id;
+                    $bed->update(['status' => 'occupied']);
+
+                    $ipdAdmission = IpdAdmission::create([
+                        'hospital_id'      => $hospitalId,
+                        'patient_id'       => $triage->patient_id,
+                        'doctor_id'        => $triage->doctor_id,
+                        'department_id'    => $triage->doctor?->department_id,
+                        'ward_id'          => $wardId,
+                        'bed_id'           => $bed->id,
+                        'admission_type'   => 'emergency',
+                        'admission_reason' => $triage->chief_complaint ?? 'Admitted from Emergency Casualty',
+                        'is_mlc'           => !empty($triage->is_mlc),
+                        'mlc_details'      => $triage->mlc_injuries_details,
+                        'status'           => 'admitted',
+                        'admission_date'   => now(),
+                        'advance_deposit'  => (float) ($extra['advance_deposit'] ?? 0),
+                    ]);
+
+                    $bed->update(['current_admission_id' => $ipdAdmission->id]);
+                    $updateData['ipd_admission_id'] = $ipdAdmission->id;
+                    $updateData['ward_id'] = $wardId;
+                    $updateData['bed_id'] = $bed->id;
+                }
+            } elseif ($status === 'discharged' || $status === 'transferred_external') {
+                $updateData['discharged_at'] = now();
+                // Free the bed if currently occupied
+                if ($triage->bed_id) {
+                    Bed::where('id', $triage->bed_id)->update(['status' => 'available', 'current_admission_id' => null]);
+                }
+                if ($triage->ipd_admission_id) {
+                    IpdAdmission::where('id', $triage->ipd_admission_id)->update(['status' => 'discharged', 'discharge_date' => now()]);
+                }
             }
-        }
 
-        $triage->update($updateData);
+            $triage->update($updateData);
 
-        return $triage->fresh(['patient', 'doctor', 'ward', 'bed', 'ipdAdmission'])->toArray();
+            return $triage->fresh(['patient', 'doctor', 'ward', 'bed', 'ipdAdmission'])->toArray();
+        });
     }
 }

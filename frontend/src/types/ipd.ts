@@ -463,3 +463,121 @@ export interface InpatientChart {
     ledger_items: Array<any>
   }
 }
+
+export interface DischargeMedicationItem {
+  medicine_name: string
+  dosage_form?: string
+  dose?: string
+  route?: string
+  frequency?: string
+  duration?: string
+  instructions?: string
+}
+
+export interface DischargeVitals {
+  temperature?: string | number
+  systolic_bp?: string | number
+  diastolic_bp?: string | number
+  pulse_rate?: string | number
+  respiratory_rate?: string | number
+  spo2?: string | number
+  [key: string]: any
+}
+
+export interface DischargeSummary {
+  id: number | null
+  hospital_id?: number
+  ipd_admission_id: number
+  patient_id: number
+  doctor_id?: number | null
+  prepared_by_user_id?: number | null
+  finalized_by_user_id?: number | null
+  summary_number?: string | null
+  status: 'draft' | 'finalized'
+  discharge_type: 'normal' | 'dama' | 'lama' | 'absconded' | 'referred' | 'expired'
+  admission_date?: string
+  discharge_date?: string
+  admission_diagnosis?: string
+  final_diagnosis?: string
+  icd10_code?: string
+  chief_complaints?: string
+  history_of_present_illness?: string
+  past_history_and_allergies?: string
+  condition_at_discharge?: string
+  discharge_vitals?: DischargeVitals
+  hospital_course?: string
+  procedures_surgeries?: string
+  investigations_summary?: string
+  treatment_given?: string
+  discharge_medications: DischargeMedicationItem[]
+  dietary_advice?: string
+  physical_activity_advice?: string
+  wound_care_instructions?: string
+  emergency_red_flags?: string
+  follow_up_date?: string
+  follow_up_doctor_id?: number | null
+  follow_up_instructions?: string
+  finalized_at?: string | null
+  patient?: Patient
+  doctor?: Doctor
+  follow_up_doctor?: Doctor
+  prepared_by_user?: { id: number; name: string }
+  finalized_by_user?: { id: number; name: string }
+  ipd_admission?: {
+    id: number
+    ipd_number: string
+    admission_date?: string
+    ward?: string
+    bed?: string
+    status?: string
+  }
+}
+
+export interface DischargePrintData {
+  hospital: {
+    name: string
+    code?: string
+    address?: string
+    city?: string
+    state?: string
+    pincode?: string
+    phone?: string
+    email?: string
+    logo_url?: string
+    tagline?: string
+    nabh_accredited?: boolean
+    abdm_hip_id?: string
+  }
+  admission: {
+    id: number
+    ipd_number: string
+    admission_date: string
+    discharge_date: string
+    length_of_stay: string
+    ward: string
+    bed: string
+    status: string
+  }
+  patient: {
+    id?: number
+    name: string
+    uhid: string
+    age: string | number
+    gender: string
+    phone?: string
+    blood_group?: string
+    address?: string
+  }
+  doctor: {
+    name: string
+    qualification?: string
+    department?: string
+    reg_no?: string
+  }
+  follow_up_doctor: {
+    name: string
+    qualification?: string
+  }
+  summary: DischargeSummary | null
+}
+

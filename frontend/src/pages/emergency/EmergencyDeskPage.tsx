@@ -18,6 +18,9 @@ import {
   Stethoscope,
   ChevronRight,
   UserCheck,
+  Scissors,
+  FlaskConical,
+  Pill,
 } from "lucide-react"
 
 import { PageHeader } from "@/components/common/PageHeader"
@@ -33,6 +36,9 @@ import {
   EmergencyMlcModal,
   EmergencyDetailModal,
 } from "@/components/emergency"
+import { ScheduleSurgeryModal } from "@/components/ot/ScheduleSurgeryModal"
+import { CreateIpdLabOrderModal } from "@/components/lab/CreateIpdLabOrderModal"
+import { CreateWardIndentModal } from "@/components/pharmacy/CreateWardIndentModal"
 
 import { emergencyService } from "@/services/emergencyService"
 import { queryKeys } from "@/constants/queryKeys"
@@ -60,6 +66,9 @@ export const EmergencyDeskPage: React.FC = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false)
 
   const [selectedTriage, setSelectedTriage] = useState<EmergencyTriage | null>(null)
+  const [selectedTriageForOt, setSelectedTriageForOt] = useState<EmergencyTriage | null>(null)
+  const [selectedTriageForLab, setSelectedTriageForLab] = useState<EmergencyTriage | null>(null)
+  const [selectedTriageForIndent, setSelectedTriageForIndent] = useState<EmergencyTriage | null>(null)
   const [mlcSlipData, setMlcSlipData] = useState<MlcSlipData | null>(null)
 
   // ─── Queries ────────────────────────────────────────────────────────
@@ -259,15 +268,52 @@ export const EmergencyDeskPage: React.FC = () => {
     {
       key: "actions",
       header: "Actions",
-      className: "w-[170px] text-right",
+      className: "w-[240px] text-right",
       cell: (row) => (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1 flex-wrap">
+          {/* Emergency OT Surgery Requisition */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-1.5 text-[10px] gap-1 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            onClick={() => setSelectedTriageForOt(row)}
+            title="Book Emergency Surgery in OT"
+          >
+            <Scissors className="h-3 w-3" /> OT
+          </Button>
+
+          {/* Bedside STAT Lab Requisition */}
+          {row.ipd_admission_id && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-1.5 text-[10px] gap-1 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-900/60 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+              onClick={() => setSelectedTriageForLab(row)}
+              title="Order STAT Bedside Lab Investigations"
+            >
+              <FlaskConical className="h-3 w-3" /> Lab
+            </Button>
+          )}
+
+          {/* Crash Cart / STAT Pharmacy Requisition */}
+          {row.ipd_admission_id && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-1.5 text-[10px] gap-1 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-900/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+              onClick={() => setSelectedTriageForIndent(row)}
+              title="Request STAT Emergency Drugs from Pharmacy"
+            >
+              <Pill className="h-3 w-3" /> Rx
+            </Button>
+          )}
+
           {/* MLC Slip Button if Medico-Legal */}
           {row.is_mlc && (
             <Button
               size="sm"
               variant="outline"
-              className="h-7 px-2 text-[10px] gap-1 text-purple-700 dark:text-purple-300 border-purple-400/40 hover:bg-purple-500/10"
+              className="h-7 px-1.5 text-[10px] gap-1 text-purple-700 dark:text-purple-300 border-purple-400/40 hover:bg-purple-500/10"
               onClick={() => handleOpenMlcSlip(row)}
               title="Print Police Intimation Memo"
             >
@@ -280,7 +326,7 @@ export const EmergencyDeskPage: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 px-2 text-[10px] gap-1 text-amber-700 dark:text-amber-400 border-amber-400/40 hover:bg-amber-500/10"
+              className="h-7 px-1.5 text-[10px] gap-1 text-amber-700 dark:text-amber-400 border-amber-400/40 hover:bg-amber-500/10"
               onClick={() => {
                 setSelectedTriage(row)
                 setLinkModalOpen(true)
@@ -295,7 +341,7 @@ export const EmergencyDeskPage: React.FC = () => {
           <Button
             size="sm"
             variant="default"
-            className="h-7 px-2.5 text-[11px] gap-1 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90"
+            className="h-7 px-2 text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90"
             onClick={() => {
               setSelectedTriage(row)
               setStatusModalOpen(true)
@@ -610,6 +656,56 @@ export const EmergencyDeskPage: React.FC = () => {
         onOpenChange={setDetailModalOpen}
         selectedTriage={selectedTriage}
       />
+
+      {/* ─── Emergency Surgery Booking in OT ─── */}
+      {selectedTriageForOt && (
+        <ScheduleSurgeryModal
+          isOpen={!!selectedTriageForOt}
+          onClose={() => setSelectedTriageForOt(null)}
+          prefillPatientId={selectedTriageForOt.patient_id ? Number(selectedTriageForOt.patient_id) : undefined}
+          prefillPatientName={selectedTriageForOt.patient_name || selectedTriageForOt.patient?.name}
+          prefillUhid={selectedTriageForOt.uhid || selectedTriageForOt.patient?.uhid}
+          prefillAdmissionId={selectedTriageForOt.ipd_admission_id || undefined}
+          prefillDoctorId={selectedTriageForOt.doctor_id ? Number(selectedTriageForOt.doctor_id) : undefined}
+          onSuccess={() => {
+            refetchTriages()
+          }}
+        />
+      )}
+
+      {/* ─── Bedside STAT Lab Requisition ─── */}
+      {selectedTriageForLab && (
+        <CreateIpdLabOrderModal
+          isOpen={!!selectedTriageForLab}
+          onClose={() => setSelectedTriageForLab(null)}
+          onSuccess={() => {
+            refetchTriages()
+          }}
+          admissionId={selectedTriageForLab.ipd_admission_id || 0}
+          patientName={selectedTriageForLab.patient_name || selectedTriageForLab.patient?.name || "Casualty Patient"}
+          uhid={selectedTriageForLab.uhid || selectedTriageForLab.patient?.uhid || ""}
+          wardName={selectedTriageForLab.ward?.name || "Emergency & Casualty"}
+          bedNumber={selectedTriageForLab.bed?.bed_number || "ER-Bay"}
+          doctorId={selectedTriageForLab.doctor_id ? Number(selectedTriageForLab.doctor_id) : null}
+          doctorName={selectedTriageForLab.doctor?.name}
+        />
+      )}
+
+      {/* ─── Crash Cart / STAT Pharmacy Indent ─── */}
+      {selectedTriageForIndent && (
+        <CreateWardIndentModal
+          isOpen={!!selectedTriageForIndent}
+          onClose={() => setSelectedTriageForIndent(null)}
+          onSuccess={() => {
+            refetchTriages()
+          }}
+          prefillAdmissionId={selectedTriageForIndent.ipd_admission_id || undefined}
+          prefillWardName={selectedTriageForIndent.ward?.name || "Emergency & Casualty"}
+          prefillBedNumber={selectedTriageForIndent.bed?.bed_number || "ER-Bay"}
+          prefillPatientName={selectedTriageForIndent.patient_name || selectedTriageForIndent.patient?.name}
+          prefillUhid={selectedTriageForIndent.uhid || selectedTriageForIndent.patient?.uhid}
+        />
+      )}
     </div>
   )
 }

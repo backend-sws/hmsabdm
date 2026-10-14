@@ -117,6 +117,7 @@ export interface LabOrder {
   id: number
   hospital_id: number
   patient_id: number
+  ipd_admission_id?: number | null
   prescription_id?: number | null
   doctor_id?: number | null
   invoice_id?: number | null
@@ -124,6 +125,7 @@ export interface LabOrder {
   sample_accession_number?: string | null
   urgency: "Routine" | "Urgent" | "STAT"
   order_type: "OPD" | "IPD" | "Emergency" | "External"
+  is_bedside_collection?: boolean
   status: "pending_sample" | "sample_collected" | "sample_rejected" | "in_progress" | "result_entered" | "completed" | "partially_authorized" | "authorized" | "cancelled"
   token_number?: string | null
   token_called_at?: string | null
@@ -169,6 +171,19 @@ export interface LabOrder {
     registration_number?: string
   }
   items?: LabOrderItem[]
+  ipd_admission?: {
+    id: number
+    admission_number: string
+    ward?: {
+      id: number
+      name: string
+      code?: string
+    }
+    bed?: {
+      id: number
+      bed_number: string
+    }
+  }
   invoice?: {
     id: number
     invoice_number: string

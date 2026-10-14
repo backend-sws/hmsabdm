@@ -792,6 +792,25 @@ export const LabDeskPage: React.FC = () => {
                             </span>
                           )}
 
+                          {/* IPD Inpatient Location & Bedside Collection Tag */}
+                          {(ord.order_type === "IPD" || ord.ipd_admission_id) && (
+                            <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded">
+                                IPD Inpatient
+                              </span>
+                              {ord.ipd_admission?.ward && (
+                                <span className="text-[10px] font-semibold text-foreground">
+                                  {ord.ipd_admission.ward.name} • Bed #{ord.ipd_admission.bed?.bed_number || "—"}
+                                </span>
+                              )}
+                              {ord.is_bedside_collection && (
+                                <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1 py-0.2 rounded border border-emerald-500/20">
+                                  Bedside Draw
+                                </span>
+                              )}
+                            </div>
+                          )}
+
                           {/* Specimen Rejection alert */}
                           {ord.rejection_reason && (
                             <div className="mt-1">

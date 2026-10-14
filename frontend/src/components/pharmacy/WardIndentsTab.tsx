@@ -1,5 +1,4 @@
 import React, { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
 import {
   Bed,
   Plus,
@@ -9,7 +8,6 @@ import {
   RotateCcw,
   XCircle,
   Pill,
-  Send,
   Loader2,
   User,
   ShieldAlert,
@@ -19,11 +17,9 @@ import {
   useDispenseWardIndentMutation,
   useRejectWardIndentMutation,
   useReturnWardIndentItemMutation,
-  useCreateWardIndentMutation,
-  useFormulary,
 } from "@/hooks/usePharmacy"
-import { ipdService } from "@/services/ipdService"
-import type { PharmacyWardIndent, PharmacyWardIndentItem, HospitalMedicine } from "@/types/pharmacy"
+import type { PharmacyWardIndent, PharmacyWardIndentItem } from "@/types/pharmacy"
+import { CreateWardIndentModal } from "./CreateWardIndentModal"
 
 export const WardIndentsTab: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("ALL")
@@ -606,6 +602,7 @@ export const WardIndentsTab: React.FC = () => {
       {/* CREATE WARD INDENT MODAL */}
       {isCreateModalOpen && (
         <CreateWardIndentModal
+          isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => {
             setIsCreateModalOpen(false)
@@ -613,278 +610,6 @@ export const WardIndentsTab: React.FC = () => {
           }}
         />
       )}
-    </div>
-  )
-}
-
-// Subcomponent: Create Ward Indent Modal
-const CreateWardIndentModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({
-  onClose,
-  onSuccess,
-}) => {
-  const [selectedAdmissionId, setSelectedAdmissionId] = useState<number | undefined>(undefined)
-  const [wardName, setWardName] = useState("")
-  const [bedNumber, setBedNumber] = useState("")
-  const [priority, setPriority] = useState<"ROUTINE" | "URGENT" | "STAT">("ROUTINE")
-  const [notes, setNotes] = useState("")
-
-  // Medicine items
-  const [items, setItems] = useState<
-    Array<{ hospital_medicine_id: number; requested_quantity: number; dosage_instruction?: string; name: string }>
-  >([])
-
-  // Search Medicines
-  const [medSearch, setMedSearch] = useState("")
-  const { data: formularyData } = useFormulary({ search: medSearch, per_page: 10 })
-  const searchResults: HospitalMedicine[] = formularyData?.data || []
-
-  // Fetch Active Inpatients
-  const { data: admissionsData } = useQuery({
-    queryKey: ["ipd", "admissions", { status: "admitted" }],
-    queryFn: () => ipdService.getAdmissions({ status: "admitted" }),
-  })
-  const admittedPatients: any[] = (admissionsData as any)?.data || []
-
-  const createMutation = useCreateWardIndentMutation()
-
-  const handleSelectAdmission = (admId: number) => {
-    setSelectedAdmissionId(admId)
-    const adm = admittedPatients.find((a) => a.id === admId)
-    if (adm) {
-      setWardName(adm.bed?.ward?.name || adm.ward_name || "General Ward")
-      setBedNumber(adm.bed?.bed_number || adm.bed_number || "Bed")
-    }
-  }
-
-  const handleAddMedicine = (med: HospitalMedicine) => {
-    if (items.some((it) => it.hospital_medicine_id === med.id)) return
-    setItems((prev) => [
-      ...prev,
-      {
-        hospital_medicine_id: med.id,
-        requested_quantity: 1,
-        dosage_instruction: "1 Tab Stat",
-        name: med.brand_name,
-      },
-    ])
-    setMedSearch("")
-  }
-
-  const handleRemoveItem = (index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedAdmissionId || items.length === 0) return
-
-    await createMutation.mutateAsync({
-      ipd_admission_id: selectedAdmissionId,
-      ward_name: wardName,
-      bed_number: bedNumber,
-      priority,
-      notes,
-      items: items.map((it) => ({
-        hospital_medicine_id: it.hospital_medicine_id,
-        requested_quantity: it.requested_quantity,
-        dosage_instruction: it.dosage_instruction,
-      })),
-    })
-    onSuccess()
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-border dark:bg-card">
-        <div className="flex items-center justify-between border-b pb-4">
-          <div>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white">
-              Create Inpatient Ward Drug Indent
-            </h3>
-            <p className="text-xs text-slate-500">
-              Bedside drug requisition for admitted patient in ICU / Ward
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-1 text-slate-400 hover:bg-slate-100"
-          >
-            ✕
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          {/* Patient Selection */}
-          <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Select Admitted Patient:
-            </label>
-            <select
-              value={selectedAdmissionId || ""}
-              onChange={(e) => handleSelectAdmission(parseInt(e.target.value))}
-              required
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold outline-none focus:border-primary dark:border-border dark:bg-card"
-            >
-              <option value="">-- Choose Admitted Patient --</option>
-              {admittedPatients.map((adm) => (
-                <option key={adm.id} value={adm.id}>
-                  {adm.patient?.name} ({adm.patient?.uhid}) • {adm.ipd_number} • Bed: {adm.bed?.bed_number || adm.bed_number || "Bed"}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Ward:</label>
-              <input
-                type="text"
-                value={wardName}
-                onChange={(e) => setWardName(e.target.value)}
-                placeholder="e.g. ICU, Ward 3"
-                className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none dark:border-border dark:bg-card"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Bed Number:</label>
-              <input
-                type="text"
-                value={bedNumber}
-                onChange={(e) => setBedNumber(e.target.value)}
-                placeholder="e.g. Bed-12"
-                className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none dark:border-border dark:bg-card"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Priority:</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-bold outline-none dark:border-border dark:bg-card"
-              >
-                <option value="ROUTINE">Routine</option>
-                <option value="URGENT">Urgent</option>
-                <option value="STAT">STAT (Emergency)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Add Medicines */}
-          <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Search & Add Medications:
-            </label>
-            <div className="relative mt-1">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <input
-                type="text"
-                value={medSearch}
-                onChange={(e) => setMedSearch(e.target.value)}
-                placeholder="Type brand name or generic salt..."
-                className="w-full rounded-xl border border-slate-200 py-2 pl-8 pr-3 text-xs outline-none focus:border-primary dark:border-border dark:bg-card"
-              />
-            </div>
-
-            {/* Dropdown Results */}
-            {medSearch.trim().length >= 2 && searchResults.length > 0 && (
-              <div className="mt-1 max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-border dark:bg-card">
-                {searchResults.map((m) => (
-                  <div
-                    key={m.id}
-                    onClick={() => handleAddMedicine(m)}
-                    className="flex cursor-pointer items-center justify-between p-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
-                  >
-                    <div>
-                      <span className="font-bold">{m.brand_name}</span>
-                      <span className="ml-2 text-slate-400 text-[11px]">{m.generic_name}</span>
-                    </div>
-                    <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
-                      ₹{m.mrp}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Added Items List */}
-          {items.length > 0 && (
-            <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-3 dark:border-border dark:bg-slate-900/30">
-              <span className="text-xs font-bold text-slate-600">Requisition Items ({items.length}):</span>
-              {items.map((it, idx) => (
-                <div key={it.hospital_medicine_id} className="flex items-center justify-between gap-3 bg-white p-2 rounded-xl border border-slate-200 text-xs dark:border-border dark:bg-card">
-                  <span className="font-bold">{it.name}</span>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Dosage instruction"
-                      value={it.dosage_instruction}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        setItems((prev) =>
-                          prev.map((item, i) => (i === idx ? { ...item, dosage_instruction: val } : item))
-                        )
-                      }}
-                      className="rounded-lg border px-2 py-1 text-xs"
-                    />
-                    <input
-                      type="number"
-                      min={1}
-                      value={it.requested_quantity}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 1
-                        setItems((prev) =>
-                          prev.map((item, i) => (i === idx ? { ...item, requested_quantity: val } : item))
-                        )
-                      }}
-                      className="w-14 rounded-lg border text-center font-bold px-1 py-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItem(idx)}
-                      className="text-rose-500 hover:text-rose-700"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Notes / Remarks:</label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Post-op recovery drug indent"
-              className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none dark:border-border dark:bg-card"
-            />
-          </div>
-
-          <div className="mt-5 flex items-center justify-end gap-3 border-t pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={createMutation.isPending || !selectedAdmissionId || items.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-primary/90 disabled:opacity-50"
-            >
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Send Indent to Pharmacy
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   )
 }

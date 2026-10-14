@@ -648,5 +648,95 @@ class IpdController extends Controller
 
         return $this->successResponse($data, 'OPD admission referrals retrieved successfully');
     }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/discharge-summary",
+        summary: "Get or auto-prefill Clinical Discharge Summary",
+        description: "Returns existing discharge summary or generates a prefilled draft from admission SOAP rounds, lab investigations, and vitals.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Discharge summary retrieved")]
+    public function getDischargeSummary(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        try {
+            $data = $this->ipdService->getDischargeSummary($hospitalId, (int) $id);
+            return $this->successResponse($data, 'Discharge summary retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Post(
+        path: "/api/v1/ipd/admissions/{id}/discharge-summary",
+        summary: "Create or update Clinical Discharge Summary (Draft or Finalize)",
+        description: "Saves clinical narrative, diagnoses, take-home Rx medication list, follow-up plan, and optionally finalizes & discharges patient.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Discharge summary saved")]
+    public function saveDischargeSummary(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 1;
+
+        $validated = $request->validate([
+            'status'                     => 'nullable|string|in:draft,finalized',
+            'discharge_type'             => 'nullable|string|in:normal,dama,lama,absconded,referred,expired',
+            'admission_date'             => 'nullable|date',
+            'discharge_date'             => 'nullable|date',
+            'admission_diagnosis'        => 'nullable|string',
+            'final_diagnosis'            => 'nullable|string',
+            'icd10_code'                 => 'nullable|string',
+            'chief_complaints'           => 'nullable|string',
+            'history_of_present_illness' => 'nullable|string',
+            'past_history_and_allergies' => 'nullable|string',
+            'condition_at_discharge'     => 'nullable|string',
+            'discharge_vitals'           => 'nullable|array',
+            'hospital_course'            => 'nullable|string',
+            'procedures_surgeries'       => 'nullable|string',
+            'investigations_summary'     => 'nullable|string',
+            'treatment_given'            => 'nullable|string',
+            'discharge_medications'      => 'nullable|array',
+            'dietary_advice'             => 'nullable|string',
+            'physical_activity_advice'   => 'nullable|string',
+            'wound_care_instructions'    => 'nullable|string',
+            'emergency_red_flags'        => 'nullable|string',
+            'follow_up_date'             => 'nullable|date',
+            'follow_up_doctor_id'        => 'nullable|integer',
+            'follow_up_instructions'     => 'nullable|string',
+            'mark_as_discharged'         => 'nullable|boolean',
+        ]);
+
+        try {
+            $saved = $this->ipdService->saveDischargeSummary($hospitalId, (int) $id, $validated, $userId);
+            return $this->successResponse($saved, 'Discharge summary saved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/discharge-summary/print",
+        summary: "Get complete printable NABH Discharge Card Data",
+        description: "Returns hospital letterhead details, patient demographic info, summary, medications, and digital sign-off blocks.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Discharge print data retrieved")]
+    public function getDischargePrintData(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        try {
+            $printData = $this->ipdService->getDischargePrintData($hospitalId, (int) $id);
+            return $this->successResponse($printData, 'Discharge card print data retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
 }
 

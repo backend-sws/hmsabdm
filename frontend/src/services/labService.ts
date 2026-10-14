@@ -156,6 +156,9 @@ export const labService = {
     status?: string
     urgency?: string
     order_type?: string
+    ipd_admission_id?: number
+    patient_id?: number
+    is_bedside_collection?: boolean
     search?: string
     date?: string
     page?: number
@@ -165,6 +168,9 @@ export const labService = {
     if (params?.status) q.set("status", params.status)
     if (params?.urgency) q.set("urgency", params.urgency)
     if (params?.order_type) q.set("order_type", params.order_type)
+    if (params?.ipd_admission_id) q.set("ipd_admission_id", String(params.ipd_admission_id))
+    if (params?.patient_id) q.set("patient_id", String(params.patient_id))
+    if (params?.is_bedside_collection !== undefined) q.set("is_bedside_collection", String(params.is_bedside_collection))
     if (params?.search) q.set("search", params.search)
     if (params?.date) q.set("date", params.date)
     if (params?.page) q.set("page", String(params.page))
@@ -172,6 +178,23 @@ export const labService = {
 
     const res = await apiClient<any>(`/lab/orders?${q.toString()}`)
     return res
+  },
+
+  /**
+   * Create Bedside Lab Requisition for an Admitted IPD Patient (with Auto-Billing to IPD Ledger)
+   */
+  createIpdLabOrder: async (payload: {
+    ipd_admission_id: number
+    template_ids: number[]
+    doctor_id?: number | null
+    urgency?: "Routine" | "Urgent" | "STAT"
+    is_bedside_collection?: boolean
+    clinical_notes?: string
+  }): Promise<LabOrder> => {
+    return apiClient<LabOrder>("/lab/orders/ipd-requisition", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
   },
 
   /**
