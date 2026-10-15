@@ -6,6 +6,7 @@ import {
   ChevronsRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useTheme } from "@/context/ThemeContext"
 
 export interface PaginationProps {
   currentPage: number
@@ -32,6 +33,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   showPageSize = true,
   showFirstLast = true,
 }) => {
+  const { colorConfig } = useTheme()
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize))
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages)
 
@@ -150,9 +152,9 @@ export const Pagination: React.FC<PaginationProps> = ({
                   size="sm"
                   variant={p === safeCurrentPage ? "default" : "ghost"}
                   onClick={() => onPageChange(p)}
-                  className={`h-8 min-w-8 px-2.5 rounded-md text-xs transition-colors ${
+                  className={`h-8 min-w-8 px-2.5 rounded-md text-xs transition-all ${
                     p === safeCurrentPage
-                      ? "bg-primary text-primary-foreground font-bold shadow-xs hover:bg-primary/90"
+                      ? `bg-gradient-to-r ${colorConfig.gradient} text-white font-bold shadow-xs ${colorConfig.shadow}`
                       : "text-muted-foreground hover:text-foreground hover:bg-muted font-medium"
                   }`}
                 >

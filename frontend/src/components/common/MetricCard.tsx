@@ -53,7 +53,7 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-border/70 bg-card p-5 sm:p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
+        "group relative overflow-hidden rounded-xl border border-border/70 bg-card p-4 sm:p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
         className
       )}
     >
@@ -66,7 +66,7 @@ export function MetricCard({
         {icon && (
           <div
             className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-transform group-hover:scale-105 shadow-2xs",
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105 shadow-2xs",
               iconBg || "bg-primary/10 text-primary"
             )}
           >
@@ -75,12 +75,12 @@ export function MetricCard({
         )}
       </div>
 
-      <div className="mt-4 flex items-end justify-between gap-2 pt-2 border-t border-border/40">
+      <div className="mt-3.5 flex items-end justify-between gap-2 pt-2 border-t border-border/40">
         <div className="space-y-1">
           {change && (
             <div
               className={cn(
-                "inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border",
+                "inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border",
                 trend === "up" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
                 trend === "down" && "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
                 trend === "neutral" && "bg-muted text-muted-foreground border-border"

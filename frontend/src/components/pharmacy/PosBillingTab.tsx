@@ -754,7 +754,7 @@ export const PosBillingTab: React.FC<PosBillingTabProps> = ({
   ])
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 w-full min-w-0">
       {/* LEFT SIDE: POS Channel, Patient Search, Medicine Selector, and Cart (8 Cols) */}
       <div className="space-y-4 lg:col-span-8">
         {/* 1. Channel Selector Toggle & Doctor Prescriptions Queue Button */}

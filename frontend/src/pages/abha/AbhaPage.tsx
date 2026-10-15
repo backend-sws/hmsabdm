@@ -314,6 +314,7 @@ export const AbhaPage: React.FC = () => {
     <div className="space-y-6 pb-12">
       {/* ── Page Header ── */}
       <PageHeader
+        icon={QrCode}
         title="ABHA Management Desk"
         subtitle="Ayushman Bharat Digital Mission (ABDM) — Create, Verify, Search & Link ABHA Health ID"
         actions={

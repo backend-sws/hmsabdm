@@ -17,7 +17,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { FilterBar } from "@/components/filter-bar"
 import SectionCard from "@/components/SectionCard"
 import StatCardsRow, { type StatItem } from "@/components/common/stat-cards-row"
-import PageHeaderBanner from "@/components/common/PageHeaderBanner"
+import { PageHeader } from "@/components/common/PageHeader"
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/confirmDialog"
 import { useDisclosure } from "@/hooks/useDisclosure"
@@ -208,12 +208,21 @@ export function HospitalsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeaderBanner
+      <PageHeader
         title="Super Admin – Hospital Facilities"
-        badgeText="Super Admin Portal"
         subtitle="Onboard, manage, and authorize healthcare facilities registered with NHA ABDM registry."
-        imageSrc="/hospital.png"
-        imageAlt="Hospital Facility"
+        badgeText="Super Admin Portal"
+        badgeVariant="default"
+        icon={Building2}
+        actions={
+          <Button
+            onClick={() => editDisclosure.onOpen()}
+            className="bg-primary font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] h-9 gap-1.5 text-xs sm:text-sm shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            Onboard Hospital
+          </Button>
+        }
       />
 
       <StatCardsRow stats={stats} isLoading={isLoading} />

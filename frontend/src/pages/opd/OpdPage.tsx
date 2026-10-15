@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 
 import { useAuth } from "@/context/AuthContext"
+import { PageHeader } from "@/components/common/PageHeader"
 import { OpdDoctorDeskTab } from "./tabs/OpdDoctorDeskTab"
 import { OpdTriageTab } from "./tabs/OpdTriageTab"
 import { OpdCentralMonitorTab } from "./tabs/OpdCentralMonitorTab"
@@ -36,71 +37,67 @@ export const OpdPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* ────────────────────────────────────────────────────────────────
           COMPACT MASTER HEADER & CLINICAL WORKSTATION TABS
          ──────────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pb-2.5 border-b border-border">
-        {/* Compact Title & Badge */}
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-            <Stethoscope className="h-4.5 w-4.5" />
-          </div>
-          <h1 className="text-lg font-bold tracking-tight text-foreground">
-            OPD Clinical Workstation
-          </h1>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+      <PageHeader
+        title="OPD Clinical Workstation"
+        subtitle="Live doctor consultation desk, nurse triage vitals, and facility queues"
+        icon={Stethoscope}
+        badge={
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
             OPD Hub
           </span>
-        </div>
+        }
+        actions={
+          <div className="inline-flex p-1 rounded-xl bg-muted/60 border border-border gap-1 overflow-x-auto scrollbar-none max-w-full">
+            <button
+              onClick={() => handleTabChange("doctor-desk")}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+                activeTab === "doctor-desk"
+                  ? "bg-background text-primary font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Stethoscope className="h-4 w-4" /> Doctor Desk
+            </button>
 
-        {/* Compact Segmented Tabs */}
-        <div className="inline-flex p-1 rounded-xl bg-muted/60 border border-border gap-1 overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => handleTabChange("doctor-desk")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
-              activeTab === "doctor-desk"
-                ? "bg-background text-primary font-semibold shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Stethoscope className="h-4 w-4" /> Doctor Desk
-          </button>
+            <button
+              onClick={() => handleTabChange("triage")}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+                activeTab === "triage"
+                  ? "bg-background text-teal-600 dark:text-teal-400 font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Activity className="h-4 w-4" /> Nurse Triage
+            </button>
 
-          <button
-            onClick={() => handleTabChange("triage")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
-              activeTab === "triage"
-                ? "bg-background text-teal-600 dark:text-teal-400 font-semibold shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Activity className="h-4 w-4" /> Nurse Triage
-          </button>
+            <button
+              onClick={() => handleTabChange("monitor")}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+                activeTab === "monitor"
+                  ? "bg-background text-primary font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Building2 className="h-4 w-4" /> Facility Monitor
+            </button>
 
-          <button
-            onClick={() => handleTabChange("monitor")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
-              activeTab === "monitor"
-                ? "bg-background text-primary font-semibold shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Building2 className="h-4 w-4" /> Facility Monitor
-          </button>
-
-          <button
-            onClick={() => handleTabChange("history")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
-              activeTab === "history"
-                ? "bg-background text-emerald-600 dark:text-emerald-400 font-semibold shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <FileText className="h-4 w-4" /> Consultations Log
-          </button>
-        </div>
-      </div>
+            <button
+              onClick={() => handleTabChange("history")}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+                activeTab === "history"
+                  ? "bg-background text-emerald-600 dark:text-emerald-400 font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FileText className="h-4 w-4" /> Consultations Log
+            </button>
+          </div>
+        }
+      />
 
       {/* ────────────────────────────────────────────────────────────────
           ACTIVE WORKSTATION CONTENT

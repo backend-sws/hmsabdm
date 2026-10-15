@@ -16,6 +16,9 @@ import {
   Clock,
   Printer,
   Sparkles,
+  Upload,
+  Image,
+  Globe,
 } from "lucide-react"
 
 import { generateDoctorSlots } from "@/utils/slotGenerator"
@@ -34,6 +37,7 @@ import { Badge } from "@/components/ui/badge"
 import { settingsService } from "@/services/settingsService"
 import { hospitalService } from "@/services/hospitalService"
 import { useAuth } from "@/context/AuthContext"
+import { useBranding } from "@/context/BrandingContext"
 import { queryKeys } from "@/constants/queryKeys"
 import type {
   HospitalProfile,
@@ -174,6 +178,78 @@ export const SettingsPage: React.FC = () => {
     },
     onError: (err: any) => toast.error(err.message || "Failed to update profile"),
   })
+
+  // ─── Tab 1: Hospital Branding State & Handlers ───────────────────────
+  const {
+    brandName,
+    brandTagline,
+    brandLogo,
+    brandFavicon,
+    updateBranding,
+    isUpdating: brandingUpdating,
+  } = useBranding()
+
+  const [brandingForm, setBrandingForm] = useState({
+    brandName: "",
+    brandTagline: "",
+    brandLogo: "",
+    brandFavicon: "",
+  })
+
+  React.useEffect(() => {
+    setBrandingForm({
+      brandName: brandName || hospital?.name || "",
+      brandTagline: brandTagline || "",
+      brandLogo: brandLogo || "",
+      brandFavicon: brandFavicon || "",
+    })
+  }, [brandName, brandTagline, brandLogo, brandFavicon, hospital?.name])
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Logo file size must be less than 2MB")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string
+      setBrandingForm((prev) => ({ ...prev, brandLogo: dataUrl }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleFaviconFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 512 * 1024) {
+      toast.error("Favicon file size must be less than 512KB")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string
+      setBrandingForm((prev) => ({ ...prev, brandFavicon: dataUrl }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleSaveBranding = async () => {
+    try {
+      await updateBranding({
+        brandName: brandingForm.brandName.trim() || "Demo Care Hospital",
+        brandTagline: brandingForm.brandTagline.trim(),
+        brandLogo: brandingForm.brandLogo.trim(),
+        brandFavicon: brandingForm.brandFavicon.trim(),
+      })
+      if (brandingForm.brandName && brandingForm.brandName !== profileForm.name) {
+        setProfileForm((prev) => ({ ...prev, name: brandingForm.brandName }))
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save branding")
+    }
+  }
 
   // ─── Tab 2: Numbering Forms State & Mutations ────────────────────────
   const [uhidForm, setUhidForm] = useState({
@@ -721,6 +797,7 @@ export const SettingsPage: React.FC = () => {
           TOP BAR: PAGE HEADER
          ──────────────────────────────────────────────────────────────── */}
       <PageHeader
+        icon={Sliders}
         title="Hospital System Settings & ABDM Config"
         subtitle="Manage facility credentials, ABDM gateway integration, document numbering rules & dynamic clinical parameters"
         badgeText="Admin Configuration"
@@ -732,7 +809,7 @@ export const SettingsPage: React.FC = () => {
          ──────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {[
-          { id: "profile", label: "Hospital Profile & ABDM", desc: "Facility ID & HIP Config", icon: Building2 },
+          { id: "profile", label: "Branding & Hospital Profile", desc: "Logo, Brand Name, Favicon & HIP", icon: Building2 },
           { id: "numbering", label: "Document Numbering", desc: "UHID, OPD, IPD Sequences", icon: Binary },
           { id: "vitals", label: "Clinical Vitals Master", desc: "Dynamic Vitals & Range", icon: Activity, badge: vitals.length },
           { id: "patient_fields", label: "Patient Demographics", desc: "Registration Fields", icon: UserPlus },
@@ -800,10 +877,202 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
-          TAB 1: HOSPITAL PROFILE & ABDM HIP
+          TAB 1: HOSPITAL BRANDING & PROFILE & ABDM HIP
          ════════════════════════════════════════════════════════════════ */}
       {activeTab === "profile" && (
         <div className="w-full space-y-5">
+          {/* Card 1: Custom Hospital Brand, Logo & Favicon */}
+          <div className="p-5 rounded-xl border border-border bg-card space-y-5 text-xs shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" /> Hospital Brand & Visual Identity
+                </h3>
+                <p className="text-muted-foreground text-xs mt-0.5">
+                  Set custom hospital name, tagline, brand logo, and favicon displayed in the header, sidebar, and browser tab.
+                </p>
+              </div>
+              <Badge variant="outline" className="text-[11px] font-medium self-start sm:self-auto gap-1">
+                <Globe className="h-3 w-3 text-primary" /> White-Labeling
+              </Badge>
+            </div>
+
+            {/* Live Header Preview */}
+            <div className="rounded-lg border border-border/80 bg-muted/40 p-3.5 space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <span>Live Header Preview</span>
+                <span className="text-[10px] lowercase font-normal">(how staff and doctors see it in the app)</span>
+              </p>
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 shadow-2xs">
+                {brandingForm.brandLogo ? (
+                  <img
+                    src={brandingForm.brandLogo}
+                    alt="Preview"
+                    className="h-8 w-8 object-contain rounded-md border border-border/60 shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-2xs shrink-0 font-bold text-sm">
+                    <Activity className="h-4 w-4" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground leading-tight truncate">
+                    {brandingForm.brandName || "Hospital Brand Name"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground font-medium leading-tight truncate">
+                    {brandingForm.brandTagline || "Healthcare Operations & Digital Health Center"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Hospital Display / Brand Name *</Label>
+                <Input
+                  value={brandingForm.brandName}
+                  onChange={(e) => setBrandingForm({ ...brandingForm, brandName: e.target.value })}
+                  placeholder="e.g. City Multi-Speciality Hospital"
+                  className="mt-1 text-xs font-semibold"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Appears in header, reports, and page titles.</p>
+              </div>
+
+              <div>
+                <Label>Brand Tagline / Subtitle</Label>
+                <Input
+                  value={brandingForm.brandTagline}
+                  onChange={(e) => setBrandingForm({ ...brandingForm, brandTagline: e.target.value })}
+                  placeholder="e.g. Multi-Speciality Healthcare & Trauma Center"
+                  className="mt-1 text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Short subtitle under the hospital name.</p>
+              </div>
+            </div>
+
+            {/* Brand Logo & Favicon Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              {/* Brand Logo */}
+              <div className="rounded-lg border border-border/80 bg-card p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="font-semibold text-xs flex items-center gap-1.5">
+                    <Image className="h-3.5 w-3.5 text-primary" /> Hospital Brand Logo
+                  </Label>
+                  {brandingForm.brandLogo && (
+                    <button
+                      type="button"
+                      onClick={() => setBrandingForm({ ...brandingForm, brandLogo: "" })}
+                      className="text-[11px] text-rose-500 hover:underline cursor-pointer"
+                    >
+                      Clear Logo
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-muted/50 overflow-hidden">
+                    {brandingForm.brandLogo ? (
+                      <img src={brandingForm.brandLogo} alt="Logo" className="h-full w-full object-contain p-1" />
+                    ) : (
+                      <Building2 className="h-5 w-5 text-muted-foreground/60" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs">
+                      <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Upload Logo File</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLogoFileUpload}
+                      />
+                    </label>
+                    <p className="text-[10px] text-muted-foreground">PNG, JPG, SVG or WebP (max 2MB)</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Or enter Image URL:</Label>
+                  <Input
+                    value={brandingForm.brandLogo}
+                    onChange={(e) => setBrandingForm({ ...brandingForm, brandLogo: e.target.value })}
+                    placeholder="https://example.com/logo.png"
+                    className="mt-1 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Favicon */}
+              <div className="rounded-lg border border-border/80 bg-card p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="font-semibold text-xs flex items-center gap-1.5">
+                    <Globe className="h-3.5 w-3.5 text-primary" /> Browser Tab Favicon
+                  </Label>
+                  {brandingForm.brandFavicon && (
+                    <button
+                      type="button"
+                      onClick={() => setBrandingForm({ ...brandingForm, brandFavicon: "" })}
+                      className="text-[11px] text-rose-500 hover:underline cursor-pointer"
+                    >
+                      Clear Favicon
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-muted/50 overflow-hidden">
+                    {brandingForm.brandFavicon ? (
+                      <img src={brandingForm.brandFavicon} alt="Favicon" className="h-6 w-6 object-contain" />
+                    ) : (
+                      <Globe className="h-5 w-5 text-muted-foreground/60" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs">
+                      <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Upload Favicon</span>
+                      <input
+                        type="file"
+                        accept="image/*,.ico"
+                        className="hidden"
+                        onChange={handleFaviconFileUpload}
+                      />
+                    </label>
+                    <p className="text-[10px] text-muted-foreground">ICO, PNG or SVG (max 512KB)</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Or enter Favicon URL:</Label>
+                  <Input
+                    value={brandingForm.brandFavicon}
+                    onChange={(e) => setBrandingForm({ ...brandingForm, brandFavicon: e.target.value })}
+                    placeholder="/favicon.ico or https://.../favicon.png"
+                    className="mt-1 text-xs font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <Button
+                type="button"
+                onClick={handleSaveBranding}
+                disabled={brandingUpdating}
+                className="gap-2 rounded-lg"
+              >
+                {brandingUpdating ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save Branding & Visual Identity
+              </Button>
+            </div>
+          </div>
+
+          {/* Card 2: Facility Identity & ABDM */}
           <div className="p-5 rounded-xl border border-border bg-card space-y-4 text-xs">
             <div className="flex justify-between items-start">
               <div>

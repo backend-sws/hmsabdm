@@ -300,7 +300,7 @@ export const OpdDoctorDeskTab: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setDateMode("today")}
-                className={`px-2 py-0.5 text-[11px] rounded-md font-medium transition-all ${
+                className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all ${
                   dateMode === "today"
                     ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -318,7 +318,7 @@ export const OpdDoctorDeskTab: React.FC = () => {
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                 }`}
               >
-                ⏪ Yesterday
+                Yesterday
               </button>
 
               <button
@@ -478,23 +478,25 @@ export const OpdDoctorDeskTab: React.FC = () => {
             </button>
             <button
               onClick={() => setStatusFilter("vitals_ready")}
-              className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded-md font-medium transition-all ${
                 statusFilter === "vitals_ready"
                   ? "bg-emerald-600 text-white font-semibold shadow-xs"
                   : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
               }`}
             >
-              🟢 Vitals Ready
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span>Vitals Ready</span>
             </button>
             <button
               onClick={() => setStatusFilter("triage_pending")}
-              className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded-md font-medium transition-all ${
                 statusFilter === "triage_pending"
                   ? "bg-amber-600 text-white font-semibold shadow-xs"
                   : "text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
               }`}
             >
-              🟡 Triage Pending
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              <span>Triage Pending</span>
             </button>
             <button
               onClick={() => setStatusFilter("waiting")}

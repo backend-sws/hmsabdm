@@ -16,6 +16,8 @@ export interface User {
   hospital_id?: string | number | null
   hospitalId?: string | number | null
   hospitalName?: string
+  hospital_name?: string
+  hospital?: { id: string | number; name: string; code: string } | null
   avatarUrl?: string
   department?: string
 }

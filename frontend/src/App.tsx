@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@ta
 import { Toaster } from "sonner"
 import { toastApiError } from "@/lib/errorHandler"
 import { AuthProvider } from "@/context/AuthContext"
+import { BrandingProvider } from "@/context/BrandingContext"
+import { ThemeProvider } from "@/context/ThemeContext"
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { LoginPage } from "@/pages/login/LoginPage"
@@ -26,6 +28,7 @@ import { PublicLabReportPage } from "@/pages/lab/PublicLabReportPage"
 import { SettingsPage } from "@/pages/settings/SettingsPage"
 import { PharmacyDeskPage } from "@/pages/pharmacy/PharmacyDeskPage"
 import { OperationTheatrePage } from "@/pages/ot/OperationTheatrePage"
+import { InsuranceDeskPage } from "@/pages/insurance/InsuranceDeskPage"
 import InputHelperDemoPage from "@/pages/demo/InputHelperDemoPage"
 
 const queryClient = new QueryClient({
@@ -68,8 +71,10 @@ export default function App() {
         }}
       />
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
+        <ThemeProvider>
+          <BrandingProvider>
+            <BrowserRouter>
+            <Routes>
             {/* Public Login Route */}
             <Route path="/login" element={<LoginPage />} />
 
@@ -151,6 +156,14 @@ export default function App() {
                 element={
                   <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "RECEPTIONIST"]}>
                     <BillingDeskPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/insurance"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"]}>
+                    <InsuranceDeskPage />
                   </ProtectedRoute>
                 }
               />
@@ -244,6 +257,8 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        </BrandingProvider>
+        </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
   )

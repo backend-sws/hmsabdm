@@ -130,6 +130,11 @@ class ServiceBindingProvider extends ServiceProvider
             \App\Services\Ot\OtServiceInterface::class,
             \App\Services\Ot\OtService::class
         );
+
+        $this->app->bind(
+            \App\Services\Insurance\InsuranceServiceInterface::class,
+            \App\Services\Insurance\InsuranceService::class
+        );
     }
 
 

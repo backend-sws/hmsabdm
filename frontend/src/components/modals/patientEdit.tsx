@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import { useNavigate } from "react-router"
 import { useForm, type SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -240,31 +241,46 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
     return genderVal || "N/A"
   }
 
+  // Close drawer on Escape key
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose(false)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [open, onClose])
+
   if (!open) return null
 
-  return (
-    <>
-      {/* ─── Backdrop Overlay ────────────────────────────────────────── */}
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* ─── Full-screen Backdrop Overlay ────────────────────────────── */}
       <div
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
         onClick={() => onClose(false)}
         aria-hidden="true"
       />
 
       {/* ─── Slide-Over Sheet (Right Drawer) ─────────────────────────── */}
       <div
-        className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-card border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 ease-out"
-        role="dialog"
-        aria-modal="true"
+        className="fixed inset-y-0 right-0 z-10 w-full max-w-2xl bg-card border-l border-border shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 ease-out"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer Sticky Header */}
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card/95 backdrop-blur-xs px-6 py-4 shadow-2xs">
-          <div className="space-y-0.5">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card px-6 py-4 shadow-2xs shrink-0">
+          <div className="space-y-0.5 min-w-0 pr-4">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <User className="h-4 w-4" />
               </span>
-              <h2 className="text-base font-bold text-foreground">
+              <h2 className="text-base font-bold text-foreground truncate">
                 {isViewMode
                   ? `Patient Profile - ${patient?.name || ""}`
                   : isCreateMode
@@ -272,7 +288,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
                   : `Edit Patient Record - ${patient?.name || ""}`}
               </h2>
             </div>
-            <p className="text-xs text-muted-foreground pl-9">
+            <p className="text-xs text-muted-foreground pl-9 truncate">
               {isViewMode
                 ? "Hospital registry demographic details & ABHA credentials"
                 : isCreateMode
@@ -991,7 +1007,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
         </div>
 
         {/* Drawer Sticky Footer */}
-        <div className="sticky bottom-0 z-20 flex items-center justify-between border-t border-border bg-card/95 backdrop-blur-xs px-6 py-4 shadow-lg">
+        <div className="sticky bottom-0 z-20 flex items-center justify-between border-t border-border bg-card px-6 py-4 shadow-lg shrink-0">
           <Button
             type="button"
             variant="outline"
@@ -1074,6 +1090,7 @@ export default function PatientEdit({ open, onClose, patient }: PatientEditProps
           onClose(false)
         }}
       />
-    </>
+    </div>,
+    document.body
   )
 }

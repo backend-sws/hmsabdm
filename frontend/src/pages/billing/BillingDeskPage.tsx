@@ -543,6 +543,7 @@ export const BillingDeskPage: React.FC = () => {
         subtitle="Customizable tariff catalog, patient running ledger accumulator, automated bed calculations & tax invoices"
         badgeText="Finance & Tariff"
         badgeVariant="default"
+        icon={Receipt}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -599,10 +600,10 @@ export const BillingDeskPage: React.FC = () => {
       {/* ────────────────────────────────────────────────────────────────
           NAVIGATION TABS
          ──────────────────────────────────────────────────────────────── */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border overflow-x-auto scrollbar-none gap-1 pb-0.5">
         <button
           onClick={() => setActiveTab("opd-counter")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "opd-counter"
               ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -613,7 +614,7 @@ export const BillingDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("tariff")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "tariff"
               ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -624,7 +625,7 @@ export const BillingDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("ledger")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "ledger"
               ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -635,7 +636,7 @@ export const BillingDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("rules")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "rules"
               ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -646,7 +647,7 @@ export const BillingDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("invoices")}
-          className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "invoices"
               ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"

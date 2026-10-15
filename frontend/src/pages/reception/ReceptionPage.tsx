@@ -335,6 +335,7 @@ export const ReceptionPage: React.FC = () => {
       <PageHeader
         title="Reception & OPD Desk"
         subtitle="Unified Patient Registration, ABDM M1 Fast-track, Scan & Share Queue & OPD Slips"
+        icon={UserPlus}
       />
 
       {/* If ReceiptCard is active, display the printable OPD slip directly */}

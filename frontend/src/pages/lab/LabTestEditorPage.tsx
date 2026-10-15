@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/common/LoadingSpinner"
 import { RichHtmlEditor } from "@/components/common/RichHtmlEditor"
+import { PageHeader } from "@/components/common/PageHeader"
 import { labService } from "@/services/labService"
 import type { LabTestTemplate, LabReferenceRange } from "@/types/lab"
 
@@ -508,9 +509,12 @@ export const LabTestEditorPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20 w-full animate-in fade-in duration-150">
-      {/* ── STICKY TOP APP HEADER ── */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border py-3 px-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      {/* ── SOLID, NON-TRANSPARENT PAGE HEADER ── */}
+      <PageHeader
+        icon={FlaskConical}
+        title={isEditing ? `Edit Test: ${testName || "Loading..."}` : "Create New Pathology Test Template"}
+        subtitle="Full parameter-level measurement methods, formulas, dropdown selections, and multi-tier age/gender ranges."
+        backButton={
           <Button
             variant="outline"
             size="sm"
@@ -521,51 +525,44 @@ export const LabTestEditorPage: React.FC = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Catalog
           </Button>
-
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-black text-foreground tracking-tight">
-                {isEditing ? `Edit Test: ${testName || "Loading..."}` : "Create New Pathology Test Template"}
-              </h1>
-              {testCode && (
-                <Badge variant="outline" className="font-mono text-xs font-bold text-primary bg-primary/5">
-                  {testCode}
-                </Badge>
-              )}
-              <Badge variant="secondary" className="text-xs font-medium">
-                {category}
+        }
+        badge={
+          <div className="flex items-center gap-1.5">
+            {testCode && (
+              <Badge variant="outline" className="font-mono text-xs font-bold text-primary bg-primary/10 border-primary/25">
+                {testCode}
               </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Full parameter-level measurement methods, formulas, dropdown selections, and multi-tier age/gender ranges.
-            </p>
+            )}
+            <Badge variant="secondary" className="text-xs font-medium">
+              {category}
+            </Badge>
           </div>
-        </div>
+        }
+        actions={
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/lab")}
+              className="h-9 px-3 text-xs"
+            >
+              Cancel
+            </Button>
 
-        {/* Top Right Save & Action Buttons */}
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/lab")}
-            className="h-9 px-3 text-xs"
-          >
-            Cancel
-          </Button>
-
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending || !testName.trim() || !testCode.trim()}
-            className="h-9 px-5 text-xs font-bold gap-2 shadow-xs bg-primary hover:bg-primary/90 text-primary-foreground"
-            title="Save changes (Ctrl + S)"
-          >
-            <Save className="h-4 w-4" />
-            {saveMutation.isPending ? "Saving Test..." : isEditing ? "Save Changes" : "Create Test Template"}
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending || !testName.trim() || !testCode.trim()}
+              className="h-9 px-5 text-xs font-bold gap-2 shadow-xs bg-primary hover:bg-primary/90 text-primary-foreground"
+              title="Save changes (Ctrl + S)"
+            >
+              <Save className="h-4 w-4" />
+              {saveMutation.isPending ? "Saving Test..." : isEditing ? "Save Changes" : "Create Test Template"}
+            </Button>
+          </div>
+        }
+      />
 
       {/* ── SECTION 1: TEST IDENTITY & CLINICAL MASTER SETTINGS ── */}
       <Card className="border-border bg-card shadow-xs">
@@ -1403,6 +1400,41 @@ export const LabTestEditorPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── SOLID BOTTOM ACTION BAR (NO TRANSPARENCY) ── */}
+      <div className="sticky bottom-0 z-20 -mx-4 sm:-mx-6 lg:-mx-7 -mb-4 sm:-mb-6 lg:-mb-7 px-4 sm:px-6 lg:px-7 py-3 bg-card border-t border-border shadow-lg flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-medium">
+            {parameterCount} Parameters • {formulaCount} Formulas • {headingCount} Headings
+          </span>
+          <span className="hidden sm:inline text-muted-foreground/40">•</span>
+          <span className="hidden sm:inline font-mono text-[11px] text-muted-foreground">
+            Press <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted text-[10px]">Ctrl + S</kbd> to save
+          </span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/lab")}
+            className="h-9 px-4 text-xs font-semibold"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending || !testName.trim() || !testCode.trim()}
+            className="h-9 px-5 text-xs font-bold gap-2 shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            <Save className="h-4 w-4" />
+            {saveMutation.isPending ? "Saving Test..." : isEditing ? "Save Changes" : "Create Test Template"}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

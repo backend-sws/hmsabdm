@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 
 import { PageHeader } from "@/components/common/PageHeader"
+import { StatCardsRow } from "@/components/common/stat-cards-row"
 import { SectionCard } from "@/components/SectionCard"
 import { DataTable, type Column } from "@/components/common/DataTable"
 import { LoadingSpinner } from "@/components/common/LoadingSpinner"
@@ -337,6 +338,7 @@ export const IpdDeskPage: React.FC = () => {
       <PageHeader
         title="IPD Inpatient & Bed Desk"
         subtitle="Manage hospital wards, visual bed occupancy matrix, inpatient admissions, and bedside charts."
+        icon={Bed}
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -378,80 +380,48 @@ export const IpdDeskPage: React.FC = () => {
         }
       />
 
-      {/* ── Key Metrics Strip ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        <Card className="shadow-2xs border-border/80">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-              <Bed className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Total Beds</p>
-              <h3 className="text-xl font-bold text-foreground">{summary.total_beds}</h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-2xs border-border/80">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Available (Vacant)</p>
-              <h3 className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                {summary.available_beds}
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-2xs border-border/80">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-              <User className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Admitted Inpatients</p>
-              <h3 className="text-xl font-bold text-rose-600 dark:text-rose-400">
-                {summary.occupied_beds}
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-2xs border-border/80">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Maintenance / Blocked</p>
-              <h3 className="text-xl font-bold text-foreground">{summary.maintenance_beds}</h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-2xs border-border/80 col-span-2 sm:col-span-1">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-              <Activity className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Occupancy Rate</p>
-              <h3 className="text-xl font-bold text-foreground">
-                {Number(summary.occupancy_rate || 0).toFixed(1)}%
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* ── Key Metrics Strip (Unified StatCardsRow) ── */}
+      <StatCardsRow
+        columns={5}
+        stats={[
+          {
+            title: "Total Beds",
+            value: summary.total_beds,
+            icon: <Bed className="h-5 w-5" />,
+            colorScheme: "blue",
+          },
+          {
+            title: "Available (Vacant)",
+            value: summary.available_beds,
+            icon: <Sparkles className="h-5 w-5" />,
+            colorScheme: "emerald",
+          },
+          {
+            title: "Admitted Inpatients",
+            value: summary.occupied_beds,
+            icon: <User className="h-5 w-5" />,
+            colorScheme: "rose",
+          },
+          {
+            title: "Maintenance / Blocked",
+            value: summary.maintenance_beds,
+            icon: <AlertTriangle className="h-5 w-5" />,
+            colorScheme: "amber",
+          },
+          {
+            title: "Occupancy Rate",
+            value: `${Number(summary.occupancy_rate || 0).toFixed(1)}%`,
+            icon: <Activity className="h-5 w-5" />,
+            colorScheme: "purple",
+          },
+        ]}
+      />
 
       {/* ── View Switcher Tabs ── */}
-      <div className="flex border-b border-border bg-card/60 p-1.5 rounded-xl shadow-xs gap-2">
+      <div className="flex border-b border-border bg-card/60 p-1.5 rounded-xl shadow-xs gap-2 overflow-x-auto scrollbar-none">
         <button
           onClick={() => setActiveTab("matrix")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-lg transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
             activeTab === "matrix"
               ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -463,7 +433,7 @@ export const IpdDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("admissions")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-lg transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
             activeTab === "admissions"
               ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -475,7 +445,7 @@ export const IpdDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("referrals")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-lg transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
             activeTab === "referrals"
               ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -492,7 +462,7 @@ export const IpdDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("wards_setup")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-lg transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
             activeTab === "wards_setup"
               ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:bg-accent hover:text-foreground"

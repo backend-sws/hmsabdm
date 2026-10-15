@@ -71,6 +71,16 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   unpaid: { label: "Unpaid", className: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" },
   draft: { label: "Draft", className: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20" },
 
+  // Insurance / Pre-Auth / Claims
+  submitted: { label: "Submitted", className: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25" },
+  approved: { label: "Approved", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25" },
+  settled: { label: "Settled", className: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 border-emerald-500/30" },
+  under_review: { label: "Under Review", className: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/25" },
+  queried: { label: "Queried (Shortfall)", className: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30" },
+  denied: { label: "Denied", className: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/25" },
+  rejected: { label: "Rejected", className: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/25" },
+  enhancement_requested: { label: "Enhancement Pending", className: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/25" },
+
   // Red / Critical / Cancelled / Rejected
   cancelled: { label: "Cancelled", className: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" },
   sample_rejected: { label: "Rejected", className: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" },

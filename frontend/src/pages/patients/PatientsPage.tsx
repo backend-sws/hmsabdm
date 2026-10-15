@@ -355,6 +355,7 @@ export const PatientsPage: React.FC = () => {
         subtitle="Manage hospital patient records, search UHIDs, and access ABDM digital health profiles."
         badgeText="Active Registry"
         badgeVariant="default"
+        icon={Users}
         actions={
           <div className="flex items-center gap-2">
             <Button

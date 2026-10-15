@@ -264,6 +264,63 @@ Route::prefix('v1')->group(function () {
             Route::put('/triages/{id}/status', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'updateStatus']);
         });
 
+        // ── Insurance / TPA / Ayushman Bharat Enterprise Desk ─────────────────
+        Route::prefix('insurance')->group(function () {
+            // Dashboard KPIs
+            Route::get('/dashboard', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'dashboard']);
+
+            // Payers Master (TPA / CGHS / ESIC / PMJAY / Corporate)
+            Route::get('/payers', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPayers']);
+            Route::post('/payers', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createPayer']);
+            Route::put('/payers/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updatePayer']);
+            Route::delete('/payers/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'deletePayer']);
+            Route::get('/payers/{id}/tariffs', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPayerTariffs']);
+            Route::post('/payers/{id}/tariffs', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'saveTariffPackage']);
+            Route::delete('/payers/{id}/tariffs/{tariffId}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'deleteTariffPackage']);
+
+            // Patient Insurance Policies (Dual COB support)
+            Route::get('/patients/{patientId}/policies', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPatientInsurances']);
+            Route::post('/patients/{patientId}/policies', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'addPatientInsurance']);
+            Route::put('/policies/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updatePatientInsurance']);
+            Route::post('/policies/{id}/verify', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'verifyEligibility']);
+
+            // Pre-Authorization Lifecycle
+            Route::get('/preauth', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPreauths']);
+            Route::post('/preauth', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createPreauth']);
+            Route::get('/preauth/expiring', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'expiringPreauths']);
+            Route::get('/preauth/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPreauth']);
+            Route::put('/preauth/{id}/status', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updatePreauthStatus']);
+            Route::post('/preauth/{id}/respond-query', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'respondToQuery']);
+            Route::post('/preauth/{id}/enhancement', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createEnhancement']);
+            Route::post('/preauth/{id}/followup', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'addPreauthFollowup']);
+
+            // Claims Management (Cashless / Reimbursement / Corporate Billing)
+            Route::get('/claims', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getClaims']);
+            Route::post('/claims', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createClaim']);
+            Route::get('/claims/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getClaim']);
+            Route::put('/claims/{id}/status', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updateClaimStatus']);
+            Route::post('/claims/{id}/settle', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'settleClaim']);
+            Route::post('/claims/{id}/resubmit', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'resubmitClaim']);
+            Route::post('/claims/{id}/grievance', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'raiseGrievance']);
+            Route::get('/claims/{id}/dossier', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getClaimDossier']);
+            Route::post('/claims/{id}/followup', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'addClaimFollowup']);
+
+            // IRDAI Non-Payable Items Master
+            Route::get('/non-payables', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getNonPayableItems']);
+            Route::post('/non-payables', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'saveNonPayableItem']);
+            Route::delete('/non-payables/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'deleteNonPayableItem']);
+            Route::get('/detect-non-payables/{admissionId}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'detectNonPayables']);
+
+            // AR Aging Ledger & Settlement Tracking
+            Route::get('/ar-ledger', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getArLedger']);
+            Route::get('/ar-summary', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getArSummary']);
+
+            // Implant / High-Cost Device Prior Approvals
+            Route::get('/implants', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getImplantApprovals']);
+            Route::post('/implants', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createImplantApproval']);
+            Route::put('/implants/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updateImplantApproval']);
+        });
+
         // Final Tax Invoices
         Route::prefix('invoices')->group(function () {
             Route::get('/{id}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'show']);

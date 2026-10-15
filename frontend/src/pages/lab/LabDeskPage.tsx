@@ -26,11 +26,11 @@ import {
 } from "lucide-react"
 
 import { PageHeader } from "@/components/common/PageHeader"
+import { StatCardsRow } from "@/components/common/stat-cards-row"
 import { SectionCard } from "@/components/SectionCard"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/common/LoadingSpinner"
 import { EmptyState } from "@/components/common/EmptyState"
 
@@ -421,6 +421,7 @@ export const LabDeskPage: React.FC = () => {
       <PageHeader
         title="Laboratory & Diagnostics Desk"
         subtitle="Live diagnostic worklist, phlebotomy barcode tracking, result entry with automatic formulas, and authorized reports."
+        icon={FlaskConical}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -466,80 +467,60 @@ export const LabDeskPage: React.FC = () => {
         }
       />
 
-      {/* Metric Cards Banner */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <Card className="border-border bg-card">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">Pending Sample</span>
-              <TestTube2 className="h-4 w-4 text-amber-500" />
-            </div>
-            <div className="mt-1 text-2xl font-bold text-foreground font-mono">{metrics.pending}</div>
-            <span className="text-[10px] text-muted-foreground">Awaiting phlebotomy</span>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">Sample Collected</span>
-              <Barcode className="h-4 w-4 text-blue-500" />
-            </div>
-            <div className="mt-1 text-2xl font-bold text-foreground font-mono">{metrics.collected}</div>
-            <span className="text-[10px] text-muted-foreground">In processing lab</span>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">STAT Urgency</span>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </div>
-            <div className="mt-1 text-2xl font-bold text-red-600 font-mono">{metrics.statCount}</div>
-            <span className="text-[10px] text-muted-foreground">Critical fast-track</span>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">Awaiting Review</span>
-              <Clock className="h-4 w-4 text-indigo-500" />
-            </div>
-            <div className="mt-1 text-2xl font-bold text-foreground font-mono">{metrics.readyToSign}</div>
-            <span className="text-[10px] text-muted-foreground">Needs pathologist sign</span>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">Authorized Final</span>
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
-            </div>
-            <div className="mt-1 text-2xl font-bold text-foreground font-mono">{metrics.authorized}</div>
-            <span className="text-[10px] text-muted-foreground">Reports released</span>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">Test Catalog</span>
-              <Sparkles className="h-4 w-4 text-purple-500" />
-            </div>
-            <div className="mt-1 text-2xl font-bold text-foreground font-mono">{metrics.totalTemplates}</div>
-            <span className="text-[10px] text-muted-foreground">Pre-seeded tests</span>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Metric Cards Banner (Unified StatCardsRow) ── */}
+      <StatCardsRow
+        columns={6}
+        stats={[
+          {
+            title: "Pending Sample",
+            value: metrics.pending,
+            description: "Awaiting phlebotomy",
+            icon: <TestTube2 className="h-5 w-5" />,
+            colorScheme: "amber",
+          },
+          {
+            title: "Sample Collected",
+            value: metrics.collected,
+            description: "In processing lab",
+            icon: <Barcode className="h-5 w-5" />,
+            colorScheme: "blue",
+          },
+          {
+            title: "STAT Urgency",
+            value: metrics.statCount,
+            description: "Critical fast-track",
+            icon: <AlertTriangle className="h-5 w-5" />,
+            colorScheme: "rose",
+          },
+          {
+            title: "Awaiting Review",
+            value: metrics.readyToSign,
+            description: "Needs pathologist sign",
+            icon: <Clock className="h-5 w-5" />,
+            colorScheme: "indigo",
+          },
+          {
+            title: "Authorized Final",
+            value: metrics.authorized,
+            description: "Reports released",
+            icon: <ShieldCheck className="h-5 w-5" />,
+            colorScheme: "emerald",
+          },
+          {
+            title: "Test Catalog",
+            value: metrics.totalTemplates,
+            description: "Pre-seeded tests",
+            icon: <Sparkles className="h-5 w-5" />,
+            colorScheme: "purple",
+          },
+        ]}
+      />
 
       {/* View Switcher Tabs */}
-      <div className="flex border-b border-border text-xs font-semibold">
+      <div className="flex border-b border-border text-xs sm:text-sm font-semibold overflow-x-auto scrollbar-none gap-1 pb-0.5">
         <button
           onClick={() => setActiveTab("worklist")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
             activeTab === "worklist"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -551,7 +532,7 @@ export const LabDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("phlebotomy")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
             activeTab === "phlebotomy"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -563,7 +544,7 @@ export const LabDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("invoices")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
             activeTab === "invoices"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -575,7 +556,7 @@ export const LabDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("archive")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
             activeTab === "archive"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -587,7 +568,7 @@ export const LabDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("catalog")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
             activeTab === "catalog"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"

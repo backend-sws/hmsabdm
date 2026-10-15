@@ -56,6 +56,13 @@ class IpdAdmission extends Model
         'payment_breakdown' => 'array',
     ];
 
+    protected $appends = ['admission_number'];
+
+    public function getAdmissionNumberAttribute(): ?string
+    {
+        return $this->attributes['ipd_number'] ?? null;
+    }
+
     protected static function booted()
     {
         static::creating(function (IpdAdmission $admission) {
@@ -165,6 +172,21 @@ class IpdAdmission extends Model
     public function dischargeSummary()
     {
         return $this->hasOne(IpdDischargeSummary::class, 'ipd_admission_id');
+    }
+
+    public function preauths()
+    {
+        return $this->hasMany(InsurancePreauth::class, 'admission_id')->orderBy('created_at', 'desc');
+    }
+
+    public function claims()
+    {
+        return $this->hasMany(InsuranceClaim::class, 'admission_id')->orderBy('created_at', 'desc');
+    }
+
+    public function implantApprovals()
+    {
+        return $this->hasMany(InsuranceImplantApproval::class, 'admission_id')->orderBy('created_at', 'desc');
     }
 }
 

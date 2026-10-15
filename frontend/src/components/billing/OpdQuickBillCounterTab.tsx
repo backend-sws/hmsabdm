@@ -248,16 +248,16 @@ export const OpdQuickBillCounterTab: React.FC = () => {
       {/* ────────────────────────────────────────────────────────────────
           1. TOP FILTER BAR
          ──────────────────────────────────────────────────────────────── */}
-      <div className="bg-card p-3 rounded-2xl border border-border flex flex-col md:flex-row items-center justify-between gap-3 shadow-xs">
+      <div className="bg-card p-3 rounded-2xl border border-border flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-xs">
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
           {/* Search Token / UHID / Name */}
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <div className="relative flex-1 sm:w-72 sm:flex-none">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search Token #, UHID, Patient..."
-              className="pl-8 text-xs h-8 bg-background"
+              className="pl-9 text-xs sm:text-sm h-9 bg-background"
             />
           </div>
 
@@ -267,24 +267,24 @@ export const OpdQuickBillCounterTab: React.FC = () => {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="text-xs h-8 font-mono bg-background w-36"
+              className="text-xs h-9 font-mono bg-background w-36"
             />
             <Button
               size="sm"
               variant="outline"
               onClick={() => setSelectedDate(new Date().toISOString().substring(0, 10))}
-              className="h-8 text-[11px] px-2"
+              className="h-9 text-xs px-3"
             >
               Today
             </Button>
           </div>
 
           {/* Status Filter Tabs */}
-          <div className="flex items-center bg-muted/40 p-0.5 rounded-lg border border-border text-[11px]">
+          <div className="flex items-center bg-muted/40 p-0.5 rounded-lg border border-border text-xs">
             <button
               type="button"
               onClick={() => setStatusFilter("all")}
-              className={`px-2.5 py-1 rounded-md transition-all font-semibold ${
+              className={`px-3 py-1.5 rounded-md transition-all font-semibold ${
                 statusFilter === "all" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -293,7 +293,7 @@ export const OpdQuickBillCounterTab: React.FC = () => {
             <button
               type="button"
               onClick={() => setStatusFilter("pending")}
-              className={`px-2.5 py-1 rounded-md transition-all font-semibold ${
+              className={`px-3 py-1.5 rounded-md transition-all font-semibold ${
                 statusFilter === "pending" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 font-bold" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -302,7 +302,7 @@ export const OpdQuickBillCounterTab: React.FC = () => {
             <button
               type="button"
               onClick={() => setStatusFilter("billed")}
-              className={`px-2.5 py-1 rounded-md transition-all font-semibold ${
+              className={`px-3 py-1.5 rounded-md transition-all font-semibold ${
                 statusFilter === "billed" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -317,7 +317,7 @@ export const OpdQuickBillCounterTab: React.FC = () => {
             variant="outline"
             onClick={() => refetch()}
             disabled={isRefetching}
-            className="h-8 text-xs gap-1.5"
+            className="h-9 text-xs gap-1.5 px-3"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`} /> Refresh
           </Button>

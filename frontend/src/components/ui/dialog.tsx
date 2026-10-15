@@ -95,7 +95,7 @@ export const DialogContent: React.FC<DialogContentProps> = ({
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={() => {
           if (closeOnOutsideClick) handleClose()
         }}
@@ -105,7 +105,7 @@ export const DialogContent: React.FC<DialogContentProps> = ({
       {/* Modal Card */}
       <div
         className={cn(
-          "relative w-full rounded-2xl bg-card border border-border shadow-2xl p-6 z-10 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 text-card-foreground",
+          "relative w-full rounded-2xl bg-card border border-border/80 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] p-6 z-10 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 text-card-foreground",
           sizeClasses[size],
           className
         )}

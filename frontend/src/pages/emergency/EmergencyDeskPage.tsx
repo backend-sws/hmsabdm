@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 
 import { PageHeader } from "@/components/common/PageHeader"
+import { StatCardsRow } from "@/components/common/stat-cards-row"
 import { DataTable, type Column } from "@/components/common/DataTable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -377,6 +378,7 @@ export const EmergencyDeskPage: React.FC = () => {
         subtitle="Fast-track 5-second casualty admissions, ESI priority tagging, unknown casualty management & MLC police intimations"
         badgeText="Live Casualty"
         badgeVariant="destructive"
+        icon={Siren}
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -402,139 +404,82 @@ export const EmergencyDeskPage: React.FC = () => {
       />
 
       {/* ────────────────────────────────────────────────────────────────
-          EMERGENCY PRIORITY COUNTERS (KPI CARDS)
+          EMERGENCY PRIORITY COUNTERS (UNIFIED STATCARDSROW)
          ──────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* RED PRIORITY */}
-        <div
-          onClick={() => setPriorityFilter(priorityFilter === "red" ? "all" : "red")}
-          className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${
-            priorityFilter === "red"
-              ? "border-rose-500 bg-rose-500/10 ring-2 ring-rose-500/20 shadow-md"
-              : "border-border bg-card hover:border-rose-500/40"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-              RED (P1)
-            </span>
-            <Siren className="h-4 w-4 text-rose-600 animate-pulse" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-2">
-            {counters?.red_priority ?? 0}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Resuscitation / Immediate</p>
-        </div>
-
-        {/* YELLOW PRIORITY */}
-        <div
-          onClick={() => setPriorityFilter(priorityFilter === "yellow" ? "all" : "yellow")}
-          className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${
-            priorityFilter === "yellow"
-              ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/20 shadow-md"
-              : "border-border bg-card hover:border-amber-500/40"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-              YELLOW (P2)
-            </span>
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-2">
-            {counters?.yellow_priority ?? 0}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Urgent / Emergent</p>
-        </div>
-
-        {/* GREEN PRIORITY */}
-        <div
-          onClick={() => setPriorityFilter(priorityFilter === "green" ? "all" : "green")}
-          className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${
-            priorityFilter === "green"
-              ? "border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20 shadow-md"
-              : "border-border bg-card hover:border-emerald-500/40"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-              GREEN (P3)
-            </span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-2">
-            {counters?.green_priority ?? 0}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Less Urgent / Stable</p>
-        </div>
-
-        {/* ACTIVE IN CASUALTY */}
-        <div
-          onClick={() => setStatusFilter(statusFilter === "under_treatment" ? "all" : "under_treatment")}
-          className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${
-            statusFilter === "under_treatment"
-              ? "border-sky-500 bg-sky-500/10 ring-2 ring-sky-500/20 shadow-md"
-              : "border-border bg-card hover:border-sky-500/40"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
-              ACTIVE IN ER
-            </span>
-            <Activity className="h-4 w-4 text-sky-600" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-sky-600 dark:text-sky-400 mt-2">
-            {counters?.active_in_er ?? 0}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Under Treatment</p>
-        </div>
-
-        {/* MLC CASES */}
-        <div
-          onClick={() => setMlcFilter(mlcFilter === true ? undefined : true)}
-          className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${
-            mlcFilter === true
-              ? "border-purple-500 bg-purple-500/10 ring-2 ring-purple-500/20 shadow-md"
-              : "border-border bg-card hover:border-purple-500/40"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-              MLC CASES
-            </span>
-            <ShieldAlert className="h-4 w-4 text-purple-600" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400 mt-2">
-            {counters?.mlc_cases ?? 0}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Medico-Legal Intimations</p>
-        </div>
-
-        {/* TOTAL ADMITTED TODAY */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              TODAY TOTAL
-            </span>
-            <HeartPulse className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-foreground mt-2">
-            {counters?.total_today ?? 0}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Casualty Footfall</p>
-        </div>
-      </div>
+      <StatCardsRow
+        columns={6}
+        stats={[
+          {
+            title: "RED (P1)",
+            value: counters?.red_priority ?? 0,
+            description: "Resuscitation / Immediate",
+            icon: <Siren className="h-5 w-5 text-rose-600 animate-pulse" />,
+            colorScheme: "rose",
+            onClick: () => setPriorityFilter(priorityFilter === "red" ? "all" : "red"),
+            active: priorityFilter === "red",
+          },
+          {
+            title: "YELLOW (P2)",
+            value: counters?.yellow_priority ?? 0,
+            description: "Urgent / Emergent",
+            icon: <AlertTriangle className="h-5 w-5 text-amber-600" />,
+            colorScheme: "amber",
+            onClick: () => setPriorityFilter(priorityFilter === "yellow" ? "all" : "yellow"),
+            active: priorityFilter === "yellow",
+          },
+          {
+            title: "GREEN (P3)",
+            value: counters?.green_priority ?? 0,
+            description: "Less Urgent / Stable",
+            icon: <CheckCircle2 className="h-5 w-5 text-emerald-600" />,
+            colorScheme: "emerald",
+            onClick: () => setPriorityFilter(priorityFilter === "green" ? "all" : "green"),
+            active: priorityFilter === "green",
+          },
+          {
+            title: "ACTIVE IN ER",
+            value: counters?.active_in_er ?? 0,
+            description: "Under Treatment",
+            icon: <Activity className="h-5 w-5" />,
+            colorScheme: "cyan",
+            onClick: () => setStatusFilter(statusFilter === "under_treatment" ? "all" : "under_treatment"),
+            active: statusFilter === "under_treatment",
+          },
+          {
+            title: "MLC CASES",
+            value: counters?.mlc_cases ?? 0,
+            description: "Medico-Legal Intimations",
+            icon: <ShieldAlert className="h-5 w-5" />,
+            colorScheme: "purple",
+            onClick: () => setMlcFilter(mlcFilter === true ? undefined : true),
+            active: mlcFilter === true,
+          },
+          {
+            title: "TODAY TOTAL",
+            value: counters?.total_today ?? 0,
+            description: "Casualty Footfall",
+            icon: <HeartPulse className="h-5 w-5" />,
+            colorScheme: "blue",
+            onClick: () => {
+              setPriorityFilter("all")
+              setStatusFilter("all")
+              setMlcFilter(undefined)
+            },
+            active: priorityFilter === "all" && statusFilter === "all" && mlcFilter === undefined,
+          },
+        ]}
+      />
 
       {/* ────────────────────────────────────────────────────────────────
           FILTER & SEARCH CONTROLS
          ──────────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border/80">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border/80">
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Priority filter pills */}
           <div className="inline-flex rounded-lg border border-input p-0.5 bg-muted/40">
             <button
               onClick={() => setPriorityFilter("all")}
-              className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all ${
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
                 priorityFilter === "all" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground"
               }`}
             >
@@ -542,27 +487,30 @@ export const EmergencyDeskPage: React.FC = () => {
             </button>
             <button
               onClick={() => setPriorityFilter("red")}
-              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md font-semibold transition-all ${
                 priorityFilter === "red" ? "bg-rose-600 text-white shadow-xs" : "text-rose-600 hover:text-rose-700"
               }`}
             >
-              🔴 Red
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+              <span>Red (P1)</span>
             </button>
             <button
               onClick={() => setPriorityFilter("yellow")}
-              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md font-semibold transition-all ${
                 priorityFilter === "yellow" ? "bg-amber-600 text-white shadow-xs" : "text-amber-600 hover:text-amber-700"
               }`}
             >
-              🟡 Yellow
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              <span>Yellow (P2)</span>
             </button>
             <button
               onClick={() => setPriorityFilter("green")}
-              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md font-semibold transition-all ${
                 priorityFilter === "green" ? "bg-emerald-600 text-white shadow-xs" : "text-emerald-600 hover:text-emerald-700"
               }`}
             >
-              🟢 Green
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span>Green (P3)</span>
             </button>
           </div>
 
@@ -570,7 +518,7 @@ export const EmergencyDeskPage: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs rounded-lg border border-input bg-background px-3 py-1.5 text-foreground focus:outline-hidden"
+            className="h-9 text-xs sm:text-sm rounded-lg border border-input bg-background px-3 py-1.5 text-foreground focus:outline-hidden"
           >
             <option value="all">All Statuses</option>
             <option value="under_treatment">Under Treatment</option>

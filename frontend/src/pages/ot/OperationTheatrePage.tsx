@@ -21,6 +21,7 @@ import {
 import { ScheduleSurgeryModal } from "@/components/ot/ScheduleSurgeryModal"
 import { WhoSurgicalSafetyModal } from "@/components/ot/WhoSurgicalSafetyModal"
 import { PrintOtChecklistModal } from "@/components/ot/PrintOtChecklistModal"
+import { PageHeader } from "@/components/common/PageHeader"
 
 export const OperationTheatrePage: React.FC = () => {
   const queryClient = useQueryClient()
@@ -87,49 +88,40 @@ export const OperationTheatrePage: React.FC = () => {
   })
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-      {/* ── Top Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-10 w-10 rounded-xl bg-purple-600/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 flex items-center justify-center font-bold">
-              <Scissors className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Operation Theatres & Surgical Desk
-                <Badge variant="outline" className="border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs">
-                  WHO & NABH Accredited
-                </Badge>
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Live Operation Theatre status, surgical case bookings, and WHO Surgical Safety Checklist sign-off.
-              </p>
-            </div>
+    <div className="space-y-6">
+      {/* ── Standard Page Header ── */}
+      <PageHeader
+        title="Operation Theatres & Surgical Desk"
+        subtitle="Live Operation Theatre status, surgical case bookings, and WHO Surgical Safety Checklist sign-off."
+        icon={Scissors}
+        badge={
+          <Badge variant="outline" className="border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs">
+            WHO & NABH Accredited
+          </Badge>
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => refetch()}
+              disabled={isRefetching}
+              className="gap-1.5 text-xs h-9"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => setScheduleModalOpen(true)}
+              className="gap-1.5 text-xs h-9 bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-xs"
+            >
+              <Plus className="h-4 w-4" /> Book New Surgery
+            </Button>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => refetch()}
-            disabled={isRefetching}
-            className="gap-1.5 text-xs"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => setScheduleModalOpen(true)}
-            className="gap-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-xs"
-          >
-            <Plus className="h-4 w-4" /> Book New Surgery
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Live Theatre Status Cards Strip ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -197,13 +189,13 @@ export const OperationTheatrePage: React.FC = () => {
       </div>
 
       {/* ── Filters & Search Toolbar ── */}
-      <div className="p-4 rounded-xl border border-border bg-card shadow-2xs space-y-3">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="p-3 sm:p-4 rounded-xl border border-border bg-card shadow-2xs">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           {/* Search */}
-          <div className="relative w-full sm:w-80">
+          <div className="relative flex-1 min-w-[240px]">
             <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted-foreground" />
             <Input
-              className="pl-9 text-xs"
+              className="pl-9 text-xs sm:text-sm h-9"
               placeholder="Search by patient, procedure, surgeon, or booking..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -211,7 +203,7 @@ export const OperationTheatrePage: React.FC = () => {
           </div>
 
           {/* Quick Filters */}
-          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Date */}
             <div className="flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
@@ -224,44 +216,56 @@ export const OperationTheatrePage: React.FC = () => {
             </div>
 
             {/* Quick Today Button */}
-            <Button
-              size="sm"
-              variant={selectedDate === new Date().toISOString().split("T")[0] ? "default" : "outline"}
-              className="text-xs h-9"
-              onClick={() => setSelectedDate(new Date().toISOString().split("T")[0])}
-            >
-              Today
-            </Button>
+            <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/40 gap-0.5">
+              <button
+                type="button"
+                onClick={() => setSelectedDate(new Date().toISOString().split("T")[0])}
+                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
+                  selectedDate === new Date().toISOString().split("T")[0]
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Today
+              </button>
 
-            <Button
-              size="sm"
-              variant={selectedDate === "" ? "default" : "outline"}
-              className="text-xs h-9"
-              onClick={() => setSelectedDate("")}
-            >
-              All Dates
-            </Button>
+              <button
+                type="button"
+                onClick={() => setSelectedDate("")}
+                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
+                  selectedDate === ""
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                All Dates
+              </button>
+            </div>
 
             {/* Theatre Filter */}
-            <Select value={selectedTheatreId} onValueChange={(val) => setSelectedTheatreId(val)}>
-              <SelectItem value="">All Theatres</SelectItem>
-              {theatres.map((t) => (
-                <SelectItem key={t.id} value={String(t.id)}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </Select>
+            <div className="w-full sm:w-44">
+              <Select value={selectedTheatreId} onValueChange={(val) => setSelectedTheatreId(val)}>
+                <SelectItem value="">All Theatres</SelectItem>
+                {theatres.map((t) => (
+                  <SelectItem key={t.id} value={String(t.id)}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
 
             {/* Status Filter */}
-            <Select value={selectedStatus} onValueChange={(val) => setSelectedStatus(val)}>
-              <SelectItem value="">All Statuses</SelectItem>
-              <SelectItem value="booked">Booked</SelectItem>
-              <SelectItem value="pre_op_ready">Pre-Op Ready</SelectItem>
-              <SelectItem value="in_theatre">In Theatre</SelectItem>
-              <SelectItem value="recovery">PACU Recovery</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="postponed">Postponed</SelectItem>
-            </Select>
+            <div className="w-full sm:w-36">
+              <Select value={selectedStatus} onValueChange={(val) => setSelectedStatus(val)}>
+                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="booked">Booked</SelectItem>
+                <SelectItem value="pre_op_ready">Pre-Op Ready</SelectItem>
+                <SelectItem value="in_theatre">In Theatre</SelectItem>
+                <SelectItem value="recovery">PACU Recovery</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="postponed">Postponed</SelectItem>
+              </Select>
+            </div>
           </div>
         </div>
       </div>

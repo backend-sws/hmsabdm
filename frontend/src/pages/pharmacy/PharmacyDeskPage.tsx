@@ -18,6 +18,7 @@ import {
   useWardIndents,
   useLowStockAlerts,
 } from "@/hooks/usePharmacy"
+import { PageHeader } from "@/components/common/PageHeader"
 import { pharmacyService } from "@/services/pharmacyService"
 import { PharmacyStatsHeader } from "@/components/pharmacy/PharmacyStatsHeader"
 import { PosBillingTab } from "@/components/pharmacy/PosBillingTab"
@@ -96,37 +97,32 @@ export const PharmacyDeskPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* Page Title & KPI Stats */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-              Hospital Pharmacy & Supply Chain Desk
-            </h1>
-            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
-              Enterprise Suite
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Omni-Channel Point of Sale, Vendor Credit Ledger, Medicine Formulary, Batch Surveillance & Inward GRNs
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* Page Title & Header */}
+      <PageHeader
+        title="Hospital Pharmacy & Supply Chain Desk"
+        subtitle="Omni-Channel Point of Sale, Vendor Credit Ledger, Medicine Formulary, Batch Surveillance & Inward GRNs"
+        icon={Pill}
+        badge={
+          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary border border-primary/20">
+            Enterprise Suite
+          </span>
+        }
+      />
 
       {/* KPI Stats Bar */}
       <PharmacyStatsHeader stats={stats} isLoading={isLoadingStats} />
 
       {/* Main Workstation Navigation Tabs */}
-      <div className="border-b border-slate-200 dark:border-border">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="border-b border-border">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveTab("pos")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
               activeTab === "pos"
                 ? "border-primary text-primary"
-                : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <ShoppingCart className="h-4 w-4" />
@@ -136,10 +132,10 @@ export const PharmacyDeskPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab("prescriptions")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
               activeTab === "prescriptions"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
-                : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <Stethoscope className="h-4 w-4" />

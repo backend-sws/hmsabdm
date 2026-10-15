@@ -9,6 +9,7 @@ import {
   ShieldAlert,
   Users,
   Activity,
+  Building2,
 } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -18,7 +19,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { FilterBar } from "@/components/filter-bar"
 import SectionCard from "@/components/SectionCard"
 import StatCardsRow, { type StatItem } from "@/components/common/stat-cards-row"
-import PageHeaderBanner from "@/components/common/PageHeaderBanner"
+import { PageHeader } from "@/components/common/PageHeader"
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/confirmDialog"
 import { useDisclosure } from "@/hooks/useDisclosure"
@@ -192,13 +193,21 @@ export function DepartmentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeaderBanner
+      <PageHeader
         title="Hospital Clinical Departments"
-        badgeText="Core Infrastructure"
-        badgeVariant="blue"
         subtitle="Manage hospital clinical departments, OPD wings, and assigned medical staff."
-        imageSrc="/hospital.png"
-        imageAlt="Clinical Department Header"
+        badgeText="Core Infrastructure"
+        badgeVariant="default"
+        icon={Building2}
+        actions={
+          <Button
+            onClick={() => editDisclosure.onOpen()}
+            className="bg-primary font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] h-9 gap-1.5 text-xs sm:text-sm shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            Add Department
+          </Button>
+        }
       />
 
       <StatCardsRow stats={stats} isLoading={isLoading} />
