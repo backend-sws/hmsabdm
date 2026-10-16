@@ -94,6 +94,13 @@ interface AbdmServiceInterface
     public function downloadQrCode(string $token): array;
 
     /**
+     * Complete Login verification by selecting ABHA number / account
+     * POST /v3/profile/login/verify/user
+     * Exchanges Transfer token (T-token) for an Account/Transaction token (X-token)
+     */
+    public function verifyUser(string $transferToken, string $txnId, string $abhaNumber): array;
+
+    /**
      * Decrypt the Demographic data from Scan and Share Webhook
      */
     public function decryptScanAndSharePayload(string $encryptedPayload): array;

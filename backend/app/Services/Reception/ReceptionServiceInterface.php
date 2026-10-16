@@ -27,7 +27,7 @@ interface ReceptionServiceInterface
     /**
      * Confirm a queue token and map it to a doctor/department
      */
-    public function confirmQueue(int $hospitalId, int $queueId, int $doctorId, int $departmentId, ?int $appointmentTypeId = null): array;
+    public function confirmQueue(int $hospitalId, int $queueId, int $doctorId, int $departmentId, ?int $appointmentTypeId = null, array $extra = []): array;
 
     /**
      * Create an OPD visit for a patient
@@ -37,6 +37,21 @@ interface ReceptionServiceInterface
     /**
      * Fast-track 1-click Re-visit token generation for existing patients with free follow-up rule check
      */
-    public function quickRevisit(int $hospitalId, array $data): array;
+    public function quickRevisit(?int $hospitalId, array $data): array;
+
+    /**
+     * Check if an existing patient is eligible for free follow-up (15-day validity)
+     */
+    public function checkRevisitEligibility(?int $hospitalId, array $data): array;
+
+    /**
+     * Get OPD visits / issued tokens history for the reception desk
+     */
+    public function getVisits(int $hospitalId, $request = null);
+
+    /**
+     * Get summary counts for issued OPD tokens
+     */
+    public function getVisitStats(int $hospitalId, ?string $date = null): array;
 }
 

@@ -1,13 +1,30 @@
 export const INITIAL_FILTERS = {
   search: "",
+  gender: "",
+  abha_status: "",
   page: 1,
   limit: 10,
 }
+
+export const ABHA_STATUS_OPTIONS = [
+  { label: "ABHA Linked (Digitized)", value: "linked" },
+  { label: "Normal Registry (Non-ABHA)", value: "not_linked" },
+]
 
 export const GENDER_OPTIONS = [
   { label: "Male", value: "M" },
   { label: "Female", value: "F" },
   { label: "Other", value: "O" },
+]
+
+export const ID_PROOF_OPTIONS = [
+  { value: "aadhaar", label: "Aadhaar Card" },
+  { value: "pan", label: "PAN Card" },
+  { value: "voter_id", label: "Voter ID" },
+  { value: "driving_license", label: "Driving License" },
+  { value: "passport", label: "Passport" },
+  { value: "ration_card", label: "Ration Card" },
+  { value: "other", label: "Other Official Govt ID" },
 ]
 
 export const BLOOD_GROUP_OPTIONS = [

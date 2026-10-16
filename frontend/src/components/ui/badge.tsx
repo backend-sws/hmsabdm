@@ -1,24 +1,27 @@
+import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+          "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-secondary/40 bg-secondary/80 text-secondary-foreground hover:bg-secondary",
         destructive:
-          "border-transparent bg-destructive/15 text-destructive border-destructive/20 dark:bg-destructive/25",
-        outline: "text-foreground border-border",
+          "border-destructive/30 bg-destructive/10 text-destructive dark:bg-destructive/20 hover:bg-destructive/25",
+        outline: "text-foreground border-border/80 bg-background/60 backdrop-blur-xs",
         success:
-          "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+          "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-950/40 hover:bg-emerald-500/20",
         warning:
-          "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+          "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 dark:bg-amber-950/40 hover:bg-amber-500/20",
         info:
-          "border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-400",
+          "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300 dark:bg-sky-950/40 hover:bg-sky-500/20",
+        purple:
+          "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300 dark:bg-purple-950/40 hover:bg-purple-500/20",
       },
     },
     defaultVariants: {
@@ -29,11 +32,18 @@ const badgeVariants = cva(
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+    VariantProps<typeof badgeVariants> {
+  dot?: boolean
+}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, variant, dot, children, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <div className={cn(badgeVariants({ variant }), className)} {...props}>
+      {dot && (
+        <span className="h-1.5 w-1.5 rounded-full bg-current shrink-0 animate-pulse" />
+      )}
+      {children}
+    </div>
   )
 }
 

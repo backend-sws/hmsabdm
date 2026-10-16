@@ -64,6 +64,28 @@ class PrescriptionController extends Controller
         return $this->successResponse($results, 'ICD-10 search results');
     }
 
+    #[OA\Get(
+        path: "/api/v1/investigations/search",
+        summary: "Search Diagnostic Investigations (Lab, Radiology & Cardiology)",
+        description: "Autocomplete search across hospital charges master and clinical diagnostic catalog.",
+        security: [["bearerAuth" => []]],
+        tags: ["13. E-Prescription & Master Catalogs"]
+    )]
+    #[OA\Parameter(name: "q", in: "query", description: "Search query (e.g. CBC, X-Ray, ECG, USG)", required: false, schema: new OA\Schema(type: "string", example: "CBC"))]
+    #[OA\Parameter(name: "category", in: "query", description: "Optional filter: Pathology, Radiology, Cardiology", required: false, schema: new OA\Schema(type: "string", example: "Pathology"))]
+    #[OA\Parameter(name: "limit", in: "query", description: "Max results (default: 25)", required: false, schema: new OA\Schema(type: "integer", example: 25))]
+    #[OA\Response(response: 200, description: "List of matching diagnostic investigations")]
+    public function searchInvestigations(Request $request)
+    {
+        $query = $request->query('q', '');
+        $category = $request->query('category');
+        $limit = (int) $request->query('limit', 25);
+
+        $results = $this->prescriptionService->searchInvestigations($query, $category, $limit);
+
+        return $this->successResponse($results, 'Diagnostic investigations search results');
+    }
+
     // ====================================================
     // 📝 2. CREATE PRESCRIPTION
     // ====================================================
@@ -131,6 +153,56 @@ class PrescriptionController extends Controller
     #[OA\Response(response: 201, description: "Prescription created successfully")]
     public function store(Request $request)
     {
+        // 1. Normalize chief_complaints to ensure it is always an array
+        if ($request->has('chief_complaints')) {
+            $cc = $request->input('chief_complaints');
+            if (is_string($cc)) {
+                $raw = trim($cc);
+                if ($raw === '') {
+                    $request->merge(['chief_complaints' => []]);
+                } else {
+                    $split = preg_split('/[\r\n,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY);
+                    $request->merge(['chief_complaints' => array_values(array_map('trim', $split ?: [$raw]))]);
+                }
+            } elseif ($cc === null) {
+                $request->merge(['chief_complaints' => []]);
+            }
+        }
+
+        // 2. Normalize opd_visit_id from visit_id alias if provided
+        if (!$request->has('opd_visit_id') && $request->has('visit_id')) {
+            $request->merge(['opd_visit_id' => $request->input('visit_id')]);
+        }
+
+        // 3. Normalize items from medicines array alias if provided
+        if (!$request->has('items') && $request->has('medicines') && is_array($request->input('medicines'))) {
+            $items = array_map(function ($med) {
+                return [
+                    'medicine_id'   => $med['medicine_id'] ?? null,
+                    'medicine_name' => $med['medicine_name'] ?? $med['name'] ?? '',
+                    'dosage'        => $med['dosage'] ?? null,
+                    'dosage_form'   => $med['dosage_form'] ?? $med['form'] ?? 'Tablet',
+                    'frequency'     => $med['frequency'] ?? 'OD',
+                    'duration_days' => isset($med['duration_days']) ? (int) $med['duration_days'] : (isset($med['duration']) ? (int) filter_var($med['duration'], FILTER_SANITIZE_NUMBER_INT) : 5),
+                    'timing'        => $med['instructions'] ?? $med['timing'] ?? null,
+                    'instructions'  => $med['instructions'] ?? null,
+                ];
+            }, $request->input('medicines'));
+            $request->merge(['items' => $items]);
+        }
+
+        // 4. Normalize diagnoses from diagnosis_codes array alias if provided
+        if (!$request->has('diagnoses') && $request->has('diagnosis_codes') && is_array($request->input('diagnosis_codes'))) {
+            $diagnoses = array_map(function ($diag) {
+                return [
+                    'icd_code'       => $diag['code'] ?? $diag['icd_code'] ?? null,
+                    'diagnosis_name' => $diag['name'] ?? $diag['diagnosis_name'] ?? ($diag['code'] ?? 'Diagnosis'),
+                    'diagnosis_type' => $diag['type'] ?? 'provisional',
+                ];
+            }, $request->input('diagnosis_codes'));
+            $request->merge(['diagnoses' => $diagnoses]);
+        }
+
         $validated = $request->validate([
             'patient_id'         => 'required|integer|exists:patients,id',
             'doctor_id'          => 'nullable|integer|exists:doctors,id',
@@ -143,6 +215,11 @@ class PrescriptionController extends Controller
             'diet_advice'        => 'nullable|string',
             'general_advice'     => 'nullable|string',
             'follow_up_date'     => 'nullable|date',
+            'disposition'        => 'nullable|string|in:home,day_care,admit_ipd',
+            'disposition_notes'  => 'nullable|string',
+            'admit_priority'     => 'nullable|string|in:routine,urgent,emergency',
+            'recommended_ward'   => 'nullable|string|max:100',
+            'status'             => 'nullable|string|in:draft,active',
 
             'items'                 => 'nullable|array',
             'items.*.medicine_id'   => 'nullable|integer|exists:medicines_master,id',
@@ -161,21 +238,184 @@ class PrescriptionController extends Controller
             'diagnoses.*.diagnosis_name' => 'required_with:diagnoses|string|max:500',
             'diagnoses.*.diagnosis_type' => 'nullable|string|in:provisional,confirmed,differential',
             'diagnoses.*.notes'          => 'nullable|string',
+
+            'investigations'                       => 'nullable|array',
+            'investigations.*.test_name'           => 'required_with:investigations|string|max:255',
+            'investigations.*.name'                => 'nullable|string|max:255',
+            'investigations.*.test_code'           => 'nullable|string|max:100',
+            'investigations.*.code'                => 'nullable|string|max:100',
+            'investigations.*.category'            => 'nullable|string|max:100',
+            'investigations.*.urgency'             => 'nullable|string|in:routine,urgent,stat,Routine,Urgent,STAT',
+            'investigations.*.standard_rate'       => 'nullable|numeric|min:0',
+            'investigations.*.clinical_indication' => 'nullable|string|max:500',
         ]);
 
         $hospitalId = $this->getHospitalId($request);
 
-        // Resolve doctor_id: from request or from auth user's doctor profile
+        // Resolve doctor_id reliably:
         $doctorId = $validated['doctor_id'] ?? null;
+
+        // 1. If not provided or invalid, resolve from the assigned OPD visit
+        if (!$doctorId && !empty($validated['opd_visit_id'])) {
+            $visit = \App\Models\OpdVisit::where('hospital_id', $hospitalId)->find($validated['opd_visit_id']);
+            if ($visit && !empty($visit->doctor_id)) {
+                $doctorId = $visit->doctor_id;
+            }
+        }
+
+        // 2. If not provided, resolve from the IPD admission
+        if (!$doctorId && !empty($validated['ipd_admission_id'])) {
+            $admission = \App\Models\IpdAdmission::where('hospital_id', $hospitalId)->find($validated['ipd_admission_id']);
+            if ($admission && !empty($admission->doctor_id)) {
+                $doctorId = $admission->doctor_id;
+            }
+        }
+
+        // 3. If authenticated user is a doctor, use their profile
         if (!$doctorId) {
             $user = $request->user();
             $doc = \App\Models\Doctor::where('hospital_id', $hospitalId)->where('user_id', $user->id)->first();
-            $doctorId = $doc?->id ?? 1; // Fallback to doctor 1 if admin
+            if ($doc) {
+                $doctorId = $doc->id;
+            }
+        }
+
+        // 4. Verify that doctorId actually exists for this hospital
+        if ($doctorId && !\App\Models\Doctor::where('hospital_id', $hospitalId)->where('id', $doctorId)->exists()) {
+            $doctorId = null;
+        }
+
+        // 5. Fallback: find any active doctor belonging to this hospital
+        if (!$doctorId) {
+            $doctorId = \App\Models\Doctor::where('hospital_id', $hospitalId)->where('is_active', true)->value('id')
+                     ?? \App\Models\Doctor::where('hospital_id', $hospitalId)->value('id');
+        }
+
+        // 6. Extreme fallback: if hospital has 0 doctors registered, auto-create a default doctor
+        if (!$doctorId) {
+            $user = $request->user();
+            $defaultDept = \App\Models\Department::firstOrCreate(
+                ['hospital_id' => $hospitalId, 'name' => 'General Medicine'],
+                ['code' => 'GEN-MED', 'is_active' => true]
+            );
+            $defaultDoc = \App\Models\Doctor::create([
+                'hospital_id'   => $hospitalId,
+                'user_id'       => $user->id,
+                'department_id' => $defaultDept->id,
+                'name'          => $user->name ?: 'Duty Medical Officer',
+                'qualification' => 'MBBS',
+                'is_active'     => true,
+            ]);
+            $doctorId = $defaultDoc->id;
         }
 
         $prescription = $this->prescriptionService->createPrescription($hospitalId, $doctorId, $validated);
 
         return $this->createdResponse($prescription, 'E-Prescription created successfully');
+    }
+
+    #[OA\Put(
+        path: "/api/v1/prescriptions/{id}",
+        summary: "Update existing E-Prescription (Draft or Signed)",
+        description: "Updates prescription medicines, diagnoses, complaints, and advice. Allows saving drafts or updating finalized prescriptions.",
+        security: [["bearerAuth" => []]],
+        tags: ["13. E-Prescription & Master Catalogs"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Prescription updated successfully")]
+    public function update(Request $request, $id)
+    {
+        // 1. Normalize chief_complaints
+        if ($request->has('chief_complaints')) {
+            $cc = $request->input('chief_complaints');
+            if (is_string($cc)) {
+                $raw = trim($cc);
+                if ($raw === '') {
+                    $request->merge(['chief_complaints' => []]);
+                } else {
+                    $split = preg_split('/[\r\n,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY);
+                    $request->merge(['chief_complaints' => array_values(array_map('trim', $split ?: [$raw]))]);
+                }
+            } elseif ($cc === null) {
+                $request->merge(['chief_complaints' => []]);
+            }
+        }
+
+        // 2. Normalize items from medicines
+        if (!$request->has('items') && $request->has('medicines') && is_array($request->input('medicines'))) {
+            $items = array_map(function ($med) {
+                return [
+                    'medicine_id'   => $med['medicine_id'] ?? null,
+                    'medicine_name' => $med['medicine_name'] ?? $med['name'] ?? '',
+                    'dosage'        => $med['dosage'] ?? null,
+                    'dosage_form'   => $med['dosage_form'] ?? $med['form'] ?? 'Tablet',
+                    'frequency'     => $med['frequency'] ?? 'OD',
+                    'duration_days' => isset($med['duration_days']) ? (int) $med['duration_days'] : (isset($med['duration']) ? (int) filter_var($med['duration'], FILTER_SANITIZE_NUMBER_INT) : 5),
+                    'timing'        => $med['instructions'] ?? $med['timing'] ?? null,
+                    'instructions'  => $med['instructions'] ?? null,
+                ];
+            }, $request->input('medicines'));
+            $request->merge(['items' => $items]);
+        }
+
+        // 3. Normalize diagnoses from diagnosis_codes
+        if (!$request->has('diagnoses') && $request->has('diagnosis_codes') && is_array($request->input('diagnosis_codes'))) {
+            $diagnoses = array_map(function ($diag) {
+                return [
+                    'icd_code'       => $diag['code'] ?? $diag['icd_code'] ?? null,
+                    'diagnosis_name' => $diag['name'] ?? $diag['diagnosis_name'] ?? ($diag['code'] ?? 'Diagnosis'),
+                    'diagnosis_type' => $diag['type'] ?? 'provisional',
+                ];
+            }, $request->input('diagnosis_codes'));
+            $request->merge(['diagnoses' => $diagnoses]);
+        }
+
+        $validated = $request->validate([
+            'chief_complaints'   => 'nullable|array',
+            'chief_complaints.*' => 'string',
+            'clinical_notes'     => 'nullable|string',
+            'diet_advice'        => 'nullable|string',
+            'general_advice'     => 'nullable|string',
+            'follow_up_date'     => 'nullable|date',
+            'disposition'        => 'nullable|string|in:home,day_care,admit_ipd',
+            'disposition_notes'  => 'nullable|string',
+            'admit_priority'     => 'nullable|string|in:routine,urgent,emergency',
+            'recommended_ward'   => 'nullable|string|max:100',
+            'status'             => 'nullable|string|in:draft,active',
+
+            'items'                 => 'nullable|array',
+            'items.*.medicine_id'   => 'nullable|integer|exists:medicines_master,id',
+            'items.*.medicine_name' => 'required_with:items|string|max:255',
+            'items.*.generic_name'  => 'nullable|string|max:255',
+            'items.*.dosage_form'   => 'nullable|string|max:100',
+            'items.*.dosage'        => 'nullable|string|max:100',
+            'items.*.frequency'     => 'nullable|string|max:50',
+            'items.*.duration_days' => 'nullable|integer|min:1',
+            'items.*.timing'        => 'nullable|string|max:100',
+            'items.*.instructions'  => 'nullable|string|max:255',
+
+            'diagnoses'                  => 'nullable|array',
+            'diagnoses.*.icd10_id'       => 'nullable|integer|exists:icd10_codes,id',
+            'diagnoses.*.icd_code'       => 'nullable|string|max:20',
+            'diagnoses.*.diagnosis_name' => 'required_with:diagnoses|string|max:500',
+            'diagnoses.*.diagnosis_type' => 'nullable|string|in:provisional,confirmed,differential',
+            'diagnoses.*.notes'          => 'nullable|string',
+
+            'investigations'                       => 'nullable|array',
+            'investigations.*.test_name'           => 'required_with:investigations|string|max:255',
+            'investigations.*.name'                => 'nullable|string|max:255',
+            'investigations.*.test_code'           => 'nullable|string|max:100',
+            'investigations.*.code'                => 'nullable|string|max:100',
+            'investigations.*.category'            => 'nullable|string|max:100',
+            'investigations.*.urgency'             => 'nullable|string|in:routine,urgent,stat,Routine,Urgent,STAT',
+            'investigations.*.standard_rate'       => 'nullable|numeric|min:0',
+            'investigations.*.clinical_indication' => 'nullable|string|max:500',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $prescription = $this->prescriptionService->updatePrescription($hospitalId, (int) $id, $validated);
+
+        return $this->successResponse($prescription, 'E-Prescription updated successfully');
     }
 
     #[OA\Post(

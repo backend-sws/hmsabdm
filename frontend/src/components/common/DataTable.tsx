@@ -2,8 +2,9 @@ import React from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/EmptyState"
-import { LoadingSpinner } from "@/components/common/LoadingSpinner"
+import { TableSkeleton } from "@/components/ui/skeleton-loaders"
 import { Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { useTheme } from "@/context/ThemeContext"
 
 export interface Column<T> {
   key?: string
@@ -55,6 +56,7 @@ export function DataTable<T>({
   onPageChange,
   handlePageSizeChange,
 }: DataTableProps<T>) {
+  const { colorConfig } = useTheme()
   const [internalSearch, setInternalSearch] = React.useState("")
   const currentSearch = searchValue !== undefined ? searchValue : internalSearch
 
@@ -64,17 +66,30 @@ export function DataTable<T>({
     if (onSearchChange) onSearchChange(val)
   }
 
+  // Defensively normalize incoming data into guaranteed Array
+  const rawList: T[] = React.useMemo(() => {
+    if (Array.isArray(data)) return data
+    if (data && typeof data === "object" && Array.isArray((data as any).data)) {
+      return (data as any).data
+    }
+    return []
+  }, [data])
+
   const filteredData = React.useMemo(() => {
-    if (onSearchChange || !currentSearch) return data
+    if (!Array.isArray(rawList)) return []
+    if (onSearchChange || !currentSearch) return rawList
     const term = currentSearch.toLowerCase()
-    return data.filter((item) =>
+    return rawList.filter((item) =>
       Object.values(item as Record<string, unknown>).some((val) =>
         String(val ?? "").toLowerCase().includes(term)
       )
     )
-  }, [data, currentSearch, onSearchChange])
+  }, [rawList, currentSearch, onSearchChange])
 
-  const total = totalRecords !== undefined ? totalRecords : filteredData.length
+  const total =
+    totalRecords !== undefined
+      ? totalRecords
+      : ((data as any)?.meta?.total ?? filteredData.length)
   const page = currentPage !== undefined ? currentPage : 1
   const limit = pageSize !== undefined ? pageSize : 10
   const maxPage = lastPage !== undefined ? lastPage : Math.max(1, Math.ceil(total / limit))
@@ -124,7 +139,25 @@ export function DataTable<T>({
 
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
         {isLoading ? (
-          <LoadingSpinner label="Fetching records..." />
+          <div className="relative w-full overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border/70 bg-muted/40 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+                <tr>
+                  {columns.map((col, idx) => (
+                    <th
+                      key={col.key || (col.accessorKey as string) || col.header || idx}
+                      className={`px-4 py-3.5 ${col.className || ""}`}
+                    >
+                      {col.header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60 bg-card">
+                <TableSkeleton rows={limit || 5} cols={columns.length} />
+              </tbody>
+            </table>
+          </div>
         ) : filteredData.length === 0 ? (
           <div className="p-6">
             <EmptyState title={emptyTitle} description={emptyDescription} />
@@ -196,9 +229,10 @@ export function DataTable<T>({
               <select
                 value={limit}
                 onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                className="h-8 rounded-lg border border-border bg-background px-2 py-1 text-xs font-semibold text-foreground focus:outline-none"
+                className="h-8 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer hover:border-primary/50 transition-colors"
               >
                 <option value={10}>10 per page</option>
+                <option value={15}>15 per page</option>
                 <option value={25}>25 per page</option>
                 <option value={50}>50 per page</option>
               </select>
@@ -208,7 +242,7 @@ export function DataTable<T>({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1 rounded-lg px-2.5 text-xs"
+                className="h-8 gap-1 rounded-lg px-2.5 text-xs font-semibold hover:border-primary/40 hover:text-foreground transition-colors"
                 disabled={page <= 1}
                 onClick={() => onPageChange?.(page - 1)}
               >
@@ -223,10 +257,10 @@ export function DataTable<T>({
                       size="sm"
                       variant={p === page ? "default" : "ghost"}
                       onClick={() => onPageChange(p)}
-                      className={`h-8 w-8 rounded-lg p-0 text-xs font-bold ${
+                      className={`h-8 w-8 rounded-lg p-0 text-xs font-bold transition-all ${
                         p === page
-                          ? "bg-blue-600 text-white"
-                          : "text-muted-foreground"
+                          ? `bg-gradient-to-r ${colorConfig.gradient} text-white shadow-xs ${colorConfig.shadow}`
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
                     >
                       {p}
@@ -234,7 +268,7 @@ export function DataTable<T>({
                   ) : (
                     <span
                       key={`ellipsis-${idx}`}
-                      className="px-1 text-muted-foreground"
+                      className="px-1 text-muted-foreground font-mono"
                     >
                       ...
                     </span>
@@ -244,7 +278,7 @@ export function DataTable<T>({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1 rounded-lg px-2.5 text-xs"
+                className="h-8 gap-1 rounded-lg px-2.5 text-xs font-semibold hover:border-primary/40 hover:text-foreground transition-colors"
                 disabled={page >= maxPage}
                 onClick={() => onPageChange?.(page + 1)}
               >

@@ -778,7 +778,80 @@ sequenceDiagram
 ### Step 5.4: Inpatient 360° Comprehensive Chart
 * **Kab Call Karein:** Head Doctor ya Inpatient Floor Manager patient ki complete file open kare.
 * **HTTP Method & URL:** `GET /api/v1/ipd/admissions/10/chart`
-* **Contains:** Admission info, all SOAP rounds history, all nursing procedures, vitals trend line, active prescriptions, and live ledger balance.
+* **Contains:** Admission info, all SOAP rounds history, all bedside nursing procedures, vitals trend line, **fluid balance net summary**, **active MAR drug chart administrations**, **shift handover history**, active prescriptions, and live ledger balance.
+
+### Step 5.5: Hourly Intake / Output (I/O) Fluid Balance Register
+* **Kab Call Karein:** ICU / Ward nurse patient ka fluid intake (IV fluid, oral, RT feed, blood) ya fluid output (urine, RT aspirate, drain, vomitus, stool) log kare.
+* **Log Fluid Intake / Output:** `POST /api/v1/ipd/admissions/{id}/intake-output`
+  ```json
+  {
+    "entry_type": "intake",
+    "category": "iv_fluid",
+    "item_name": "Normal Saline 0.9% (500ml)",
+    "quantity_ml": 500.0,
+    "route": "iv",
+    "recorded_by_name": "Nurse Sunita Verma",
+    "remarks": "Infused over 4 hours at 125 ml/hr"
+  }
+  ```
+* **Fetch 24-Hour / Shift Fluid Balance Summary:** `GET /api/v1/ipd/admissions/{id}/intake-output?date=2026-09-30`
+  ```json
+  {
+    "success": true,
+    "data": {
+      "summary": {
+        "total_intake_ml": 700.0,
+        "total_output_ml": 450.0,
+        "net_balance_ml": 250.0,
+        "balance_status": "positive"
+      },
+      "breakdown": {
+        "intake_by_category": { "iv_fluid": 500.0, "oral": 200.0 },
+        "output_by_category": { "urine": 400.0, "surgical_drain": 50.0 }
+      },
+      "entries": [ ... ]
+    }
+  }
+  ```
+
+### Step 5.6: Medication Administration Record (MAR / Drug Chart)
+* **Kab Call Karein:** Doctor dwara prescribe ki gayi dawa ka waqt aane par nurse bedside par status mark kare (`given`, `omitted`, `refused`, `held`, `vomited`).
+* **Record Drug Administration:** `POST /api/v1/ipd/admissions/{id}/mar`
+  ```json
+  {
+    "prescription_item_id": 42,
+    "medicine_name": "Inj. Meropenem 1g",
+    "dosage": "1g",
+    "route": "iv",
+    "status": "given",
+    "batch_number": "MRP-2026-X88",
+    "administered_by_name": "Nurse Sunita Verma",
+    "notes": "Administered IV infusion over 30 minutes, tolerated well"
+  }
+  ```
+  > **Note:** Agar hospital stock/pharmacy se dawa lag rahi hai aur running ledger me charge judna hai, toh `"charge_amount": 1500.00` bhejte hi ledger me `pharmacy` category ke under automatic unbilled entry jud jati hai.
+* **Fetch Active MAR Drug Chart:** `GET /api/v1/ipd/admissions/{id}/mar`
+
+### Step 5.7: Nursing Shift Handover Register
+* **Kab Call Karein:** Morning (08:00-14:00), Evening (14:00-20:00), aur Night (20:00-08:00) shifts ke change hone par bed-by-bed handover note likhne aur sign karne ke liye.
+* **Record Handover:** `POST /api/v1/ipd/admissions/{id}/shift-handover`
+  ```json
+  {
+    "shift_name": "morning",
+    "shift_date": "2026-09-30",
+    "outgoing_nurse_name": "Nurse Sunita Verma",
+    "patient_condition": "critical",
+    "handover_notes": "Patient on 2L O2 support via nasal prongs. Blood pressure maintained on low-dose noradrenaline.",
+    "critical_alerts": "Strict NPO after midnight for scheduled CT Abdomen with contrast.",
+    "pending_tasks": "Send evening arterial blood gas (ABG) at 6 PM."
+  }
+  ```
+* **Incoming Nurse Acknowledges Handover:** `PUT /api/v1/ipd/shift-handover/{id}/acknowledge`
+  ```json
+  {
+    "incoming_nurse_name": "Nurse Priya Nair (Evening Charge Nurse)"
+  }
+  ```
 
 ---
 
@@ -880,6 +953,65 @@ flowchart TD
 }
 ```
 
+### Step 6.4: Inpatient Final Discharge Billing, Tax Invoice & Security Gate Pass
+Discharge ke time patient ka complete ledger consolidate hota hai, advance deposit deduct hota hai, TPA/insurance cashless split settle hota hai, bed free hoti hai aur Security Gate Pass issue hota hai:
+
+#### A. Pre-Discharge Bill Estimate Preview
+* **Kab Call Karein:** Discharge initiate karne se pehle counter par estimated bill dekhna ho.
+* **HTTP Method & URL:** `GET /api/v1/ipd/admissions/{id}/discharge-estimate`
+* **Response Payload:**
+```json
+{
+  "success": true,
+  "data": {
+    "admission_id": 10,
+    "ipd_number": "IPD-2026-00010",
+    "financials": {
+      "gross_amount": 24500.00,
+      "tax_amount": 0.00,
+      "advance_deposit_paid": 10000.00,
+      "estimated_balance_due": 14500.00
+    },
+    "category_breakdown": [
+      { "category": "bed_charges", "total_amount": 13000.00 },
+      { "category": "doctor_visit", "total_amount": 2000.00 },
+      { "category": "nursing_care", "total_amount": 4500.00 },
+      { "category": "pharmacy", "total_amount": 5000.00 }
+    ],
+    "unbilled_items_count": 8
+  }
+}
+```
+
+#### B. 1-Click Final Settlement, Discharge & Security Gate Pass
+* **Kab Call Karein:** Cashier payment accept karta hai aur patient ko formally discharge karta hai.
+* **HTTP Method & URL:** `POST /api/v1/ipd/admissions/{id}/settle-discharge`
+* **Request Payload (Cash/UPI or TPA Insurance Cashless Split):**
+```json
+{
+  "discharge_type": "normal",
+  "discharge_summary": "Patient recovered smoothly post laparoscopic cholecystectomy. Surgical wound clean. Tolerating normal diet.",
+  "discharge_advice": "Rest for 7 days. High protein diet. Tablet Cefixime 200mg BD for 5 days.",
+  "final_diagnosis": "Acute Cholecystitis post Laparoscopic Cholecystectomy (K80.0)",
+  "discount_amount": 500.00,
+  "discount_reason": "Senior citizen courtesy waiver",
+  "insurance_approved_amount": 0.00,
+  "amount_paid": 14000.00,
+  "payment_method": "upi",
+  "notes": "Settled at Central Cashier Desk 1 via UPI"
+}
+```
+* **Auto-Execution Logic:**
+  1. **Final Tax Invoice (`INV-YYYY-XXXXX`)** banti hai aur status `paid` mark hota hai.
+  2. Saare unbilled ledger items **`status = 'billed'`** mark hokar invoice se lock ho jaate hain.
+  3. Patient record me **`status = 'discharged'`** aur discharge summary save ho jati hai.
+  4. Hospital bed turant **`status = 'available'`** mark ho jata hai aur `current_admission_id` null ho jata hai.
+  5. Security Gate Pass **`GP-YYYY-XXXXX`** auto-generate ho jata hai!
+
+#### C. Printable Tax Invoice & Security Gate Pass
+* **Print Tax Invoice:** `GET /api/v1/invoices/{id}`
+* **Print Security Gate Pass:** `GET /api/v1/ipd/admissions/{id}/gate-pass`
+
 ---
 
 ## Frontend Screen-by-Screen Integration Guide
@@ -965,7 +1097,19 @@ Backend standardized JSON format me response bhejta hai:
 | **IPD** | `GET` | `/api/v1/ipd/bed-matrix` | **Live 2D Visual Bed Matrix** (🟢 Available, 🔴 Occupied, 🟡 Maint) |
 | **IPD** | `POST` | `/api/v1/ipd/admissions/{id}/rounds` | **Doctor Daily SOAP Round** + Auto Doctor Visit Fee Trigger |
 | **IPD** | `POST` | `/api/v1/ipd/admissions/{id}/procedures` | **Bedside Nursing Procedure** + Auto Charge Trigger |
-| **IPD** | `GET` | `/api/v1/ipd/admissions/{id}/chart` | **Inpatient 360° Master Chart** (Rounds, Vitals, Meds, Ledger) |
+| **IPD Nursing** | `POST` | `/api/v1/ipd/admissions/{id}/intake-output` | **Log Fluid Intake / Output (ml)** |
+| **IPD Nursing** | `GET` | `/api/v1/ipd/admissions/{id}/intake-output` | **24-Hour / Shift Net Fluid Balance Summary** |
+| **IPD Nursing** | `POST` | `/api/v1/ipd/admissions/{id}/mar` | **MAR Drug Administration (Given / Omitted / Refused)** + Auto-Billing |
+| **IPD Nursing** | `GET` | `/api/v1/ipd/admissions/{id}/mar` | **Patient Active MAR Drug Chart** |
+| **IPD Nursing** | `POST` | `/api/v1/ipd/admissions/{id}/shift-handover` | **Record Nurse Shift Handover Note** |
+| **IPD Nursing** | `GET` | `/api/v1/ipd/admissions/{id}/shift-handover` | **Shift Handovers History** |
+| **IPD Nursing** | `PUT` | `/api/v1/ipd/shift-handover/{id}/acknowledge` | **Acknowledge Shift Handover by Incoming Nurse** |
+| **IPD** | `GET` | `/api/v1/ipd/admissions/{id}/chart` | **Inpatient 360° Master Chart** (Rounds, Vitals, I/O, MAR, Handovers, Ledger) |
+| **IPD Billing** | `GET` | `/api/v1/ipd/admissions/{id}/discharge-estimate` | **Pre-Discharge Bill Estimate (Unbilled + Advance)** |
+| **IPD Billing** | `POST` | `/api/v1/ipd/admissions/{id}/settle-discharge` | **1-Click Final Settlement, Free Bed & Gate Pass** |
+| **IPD Billing** | `GET` | `/api/v1/ipd/admissions/{id}/gate-pass` | **Print Official Hospital Security Gate Pass** |
+| **Invoices** | `GET` | `/api/v1/invoices/{id}` | **Formatted Itemized Tax Invoice Data** |
+| **Invoices** | `GET` | `/api/v1/invoices/patient/{patientId}` | **List Invoices for Patient** |
 | **Billing** | `GET/POST`| `/api/v1/billing/charges` | Hospital Tariffs Catalog Master |
 | **Billing** | `POST` | `/api/v1/billing/charges/apply-bed-charges` | Daily Bed Rent & Nursing Calculation Engine Trigger |
 | **Billing** | `GET` | `/api/v1/billing/ledger/patient/{patientId}` | Patient Running Financial Ledger Summary |

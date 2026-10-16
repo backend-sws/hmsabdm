@@ -39,11 +39,32 @@ class OpdController extends Controller
     public function todayQueue(Request $request)
     {
         $request->validate([
-            'doctor_id' => 'required|integer|exists:doctors,id',
+            'doctor_id'     => 'nullable|integer|exists:doctors,id',
+            'department_id' => 'nullable|integer|exists:departments,id',
+            'status'        => 'nullable|string',
+            'search'        => 'nullable|string',
+            'date'          => 'nullable|date',
+            'start_date'    => 'nullable|date',
+            'end_date'      => 'nullable|date',
+            'all_dates'     => 'nullable',
         ]);
 
+        $user = $request->user();
         $hospitalId = $this->getHospitalId($request);
-        $queue = $this->opdService->getTodayQueue($hospitalId, $request->doctor_id, $request);
+
+        // Check if user is a doctor
+        $doctor = $user ? \App\Models\Doctor::where('user_id', $user->id)->first() : null;
+        $isDoctor = ($doctor !== null) || ($user && ($user->hasRole('Doctor') || $user->hasRole('DOCTOR')));
+
+        if ($isDoctor && $doctor) {
+            // STRICT ISOLATION: A doctor can ONLY see their own patients
+            $doctorId = $doctor->id;
+        } else {
+            // Hospital Admin / Receptionist can view all or filter by doctor
+            $doctorId = $request->filled('doctor_id') ? (int) $request->input('doctor_id') : null;
+        }
+
+        $queue = $this->opdService->getTodayQueue($hospitalId, $doctorId, $request);
         
         return $this->paginatedOrSuccessResponse($queue, 'Today\'s OPD Queue');
     }
@@ -57,7 +78,7 @@ class OpdController extends Controller
     )]
     #[OA\Parameter(name: "visitId", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\RequestBody(
-        required: true,
+        required: false,
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "doctor_id", type: "integer", example: 1)
@@ -68,13 +89,26 @@ class OpdController extends Controller
     public function callPatient(Request $request, $visitId)
     {
         $request->validate([
-            'doctor_id' => 'required|integer|exists:doctors,id'
+            'doctor_id' => 'nullable|integer|exists:doctors,id'
         ]);
 
         $hospitalId = $this->getHospitalId($request);
+        $user = $request->user();
+        $doctor = $user ? \App\Models\Doctor::where('user_id', $user->id)->first() : null;
+
+        $doctorId = $request->input('doctor_id') ?? ($doctor ? $doctor->id : null);
+
+        if (!$doctorId) {
+            $visit = \App\Models\OpdVisit::where('hospital_id', $hospitalId)->find($visitId);
+            $doctorId = $visit ? $visit->doctor_id : null;
+        }
+
+        if (!$doctorId) {
+            return $this->errorResponse('Doctor identifier could not be determined.', null, 422);
+        }
         
         try {
-            $visit = $this->opdService->callPatient($hospitalId, $request->doctor_id, $visitId);
+            $visit = $this->opdService->callPatient($hospitalId, (int)$doctorId, (int)$visitId);
             return $this->successResponse($visit, 'Patient called successfully');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), null, 400);
@@ -90,7 +124,7 @@ class OpdController extends Controller
     )]
     #[OA\Parameter(name: "visitId", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\RequestBody(
-        required: true,
+        required: false,
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "doctor_id", type: "integer", example: 1),
@@ -102,16 +136,29 @@ class OpdController extends Controller
     #[OA\Response(response: 200, description: "Consultation completed")]
     public function completeConsultation(Request $request, $visitId)
     {
-        $validated = $request->validate([
-            'doctor_id' => 'required|integer|exists:doctors,id',
+        $request->validate([
+            'doctor_id' => 'nullable|integer|exists:doctors,id',
             'diagnosis' => 'nullable|string',
-            'notes' => 'nullable|string',
+            'notes'     => 'nullable|string',
         ]);
 
-        $hospitalId = $request->user()->hospital_id;
+        $hospitalId = $this->getHospitalId($request);
+        $user = $request->user();
+        $doctor = $user ? \App\Models\Doctor::where('user_id', $user->id)->first() : null;
+
+        $doctorId = $request->input('doctor_id') ?? ($doctor ? $doctor->id : null);
+
+        if (!$doctorId) {
+            $visit = \App\Models\OpdVisit::where('hospital_id', $hospitalId)->find($visitId);
+            $doctorId = $visit ? $visit->doctor_id : null;
+        }
+
+        if (!$doctorId) {
+            return $this->errorResponse('Doctor identifier could not be determined.', null, 422);
+        }
 
         try {
-            $visit = $this->opdService->completeConsultation($hospitalId, $request->doctor_id, $visitId, $validated);
+            $visit = $this->opdService->completeConsultation($hospitalId, (int)$doctorId, (int)$visitId, $request->all());
             return $this->successResponse($visit, 'Consultation completed successfully');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), null, 400);

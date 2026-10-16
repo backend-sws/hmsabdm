@@ -7,6 +7,8 @@ use App\Models\VitalFieldConfig;
 use App\Http\Traits\CanFilterAndPaginate;
 use Illuminate\Support\Collection;
 
+use App\Models\OpdVisit;
+
 class VitalService implements VitalServiceInterface
 {
     use CanFilterAndPaginate;
@@ -35,9 +37,22 @@ class VitalService implements VitalServiceInterface
         }
 
         $vital = Vital::create($data);
+
+        // Update OPD visit chief_complaint if nurse entered symptoms
+        if (!empty($data['opd_visit_id']) && !empty($data['custom_vitals']['symptoms'])) {
+            $symptomsText = is_array($data['custom_vitals']['symptoms'])
+                ? implode('; ', $data['custom_vitals']['symptoms'])
+                : (string)$data['custom_vitals']['symptoms'];
+            if (!empty($symptomsText)) {
+                OpdVisit::where('id', $data['opd_visit_id'])
+                    ->where('hospital_id', $hospitalId)
+                    ->update(['chief_complaint' => $symptomsText]);
+            }
+        }
         
         return $vital->load([
-            'recordedByUser:id,name,username',
+            'recordedByUser:id,name,username,email',
+            'recordedByUser.roles:id,name',
             'patient:id,name,mobile,dob,gender',
             'opdVisit:id,queue_token,status',
             'ipdAdmission'
@@ -80,9 +95,9 @@ class VitalService implements VitalServiceInterface
         if ($req && $req->filled('search')) {
             $search = $req->query('search');
             $query->whereHas('patient', function ($pq) use ($search) {
-                $pq->where('name', 'like', "%{$search}%")
-                   ->orWhere('mobile', 'like', "%{$search}%")
-                   ->orWhere('abha_number', 'like', "%{$search}%");
+                $pq->where('name', 'ilike', "%{$search}%")
+                   ->orWhere('mobile', 'ilike', "%{$search}%")
+                   ->orWhere('abha_number', 'ilike', "%{$search}%");
             });
         }
 
@@ -106,7 +121,8 @@ class VitalService implements VitalServiceInterface
         return Vital::where('hospital_id', $hospitalId)
             ->where('patient_id', $patientId)
             ->with([
-                'recordedByUser:id,name,username',
+                'recordedByUser:id,name,username,email',
+                'recordedByUser.roles:id,name',
                 'opdVisit:id,queue_token,status',
                 'ipdAdmission'
             ])
@@ -119,7 +135,8 @@ class VitalService implements VitalServiceInterface
         return Vital::where('hospital_id', $hospitalId)
             ->where('opd_visit_id', $visitId)
             ->with([
-                'recordedByUser:id,name,username',
+                'recordedByUser:id,name,username,email',
+                'recordedByUser.roles:id,name',
                 'patient:id,name,mobile,dob,gender'
             ])
             ->orderBy('recorded_at', 'desc')
@@ -131,7 +148,8 @@ class VitalService implements VitalServiceInterface
         return Vital::where('hospital_id', $hospitalId)
             ->where('ipd_admission_id', $ipdAdmissionId)
             ->with([
-                'recordedByUser:id,name,username',
+                'recordedByUser:id,name,username,email',
+                'recordedByUser.roles:id,name',
                 'patient:id,name,mobile,dob,gender'
             ])
             ->orderBy('recorded_at', 'asc') // Chronological rounding chart
@@ -142,6 +160,61 @@ class VitalService implements VitalServiceInterface
     {
         $vital = Vital::where('hospital_id', $hospitalId)->findOrFail($id);
         return $vital->delete();
+    }
+
+    public function updateVital(int $hospitalId, int $userId, int $id, array $data): Vital
+    {
+        $vital = Vital::where('hospital_id', $hospitalId)->findOrFail($id);
+
+        if (!empty($data['weight']) && !empty($data['height']) && $data['height'] > 0) {
+            $heightInMeters = $data['height'] / 100;
+            $data['bmi'] = round($data['weight'] / ($heightInMeters * $heightInMeters), 2);
+        }
+
+        // Maintain audit trail inside custom_vitals
+        $custom = $vital->custom_vitals ?? [];
+        $auditTrail = $custom['_audit_trail'] ?? [];
+        $auditTrail[] = [
+            'updated_by' => $userId,
+            'updated_at' => now()->toIso8601String(),
+            'previous_snapshot' => [
+                'bp_sys' => $vital->blood_pressure_sys,
+                'bp_dia' => $vital->blood_pressure_dia,
+                'pulse' => $vital->pulse_rate,
+                'temp' => $vital->temperature,
+                'spo2' => $vital->oxygen_saturation,
+                'weight' => $vital->weight,
+                'height' => $vital->height,
+            ]
+        ];
+
+        if (isset($data['custom_vitals']) && is_array($data['custom_vitals'])) {
+            $data['custom_vitals']['_audit_trail'] = $auditTrail;
+        } else {
+            $data['custom_vitals'] = array_merge($custom, ['_audit_trail' => $auditTrail]);
+        }
+
+        $vital->update($data);
+
+        // Update OPD visit chief_complaint if updated symptoms
+        if (!empty($vital->opd_visit_id) && !empty($data['custom_vitals']['symptoms'])) {
+            $symptomsText = is_array($data['custom_vitals']['symptoms'])
+                ? implode('; ', $data['custom_vitals']['symptoms'])
+                : (string)$data['custom_vitals']['symptoms'];
+            if (!empty($symptomsText)) {
+                OpdVisit::where('id', $vital->opd_visit_id)
+                    ->where('hospital_id', $hospitalId)
+                    ->update(['chief_complaint' => $symptomsText]);
+            }
+        }
+
+        return $vital->load([
+            'recordedByUser:id,name,username,email',
+            'recordedByUser.roles:id,name',
+            'patient:id,name,mobile,dob,gender',
+            'opdVisit:id,queue_token,status',
+            'ipdAdmission'
+        ]);
     }
 
     public function getFieldConfigs(int $hospitalId, bool $activeOnly = true): Collection
@@ -165,6 +238,10 @@ class VitalService implements VitalServiceInterface
         $data['hospital_id'] = $hospitalId;
         $data['field_key'] = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $data['field_key']));
 
+        if (isset($data['options']) && is_string($data['options'])) {
+            $data['options'] = array_values(array_filter(array_map('trim', explode(',', $data['options']))));
+        }
+
         return VitalFieldConfig::create($data);
     }
 
@@ -174,6 +251,10 @@ class VitalService implements VitalServiceInterface
 
         if (isset($data['field_key'])) {
             $data['field_key'] = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $data['field_key']));
+        }
+
+        if (isset($data['options']) && is_string($data['options'])) {
+            $data['options'] = array_values(array_filter(array_map('trim', explode(',', $data['options']))));
         }
 
         $config->update($data);

@@ -19,29 +19,64 @@ class PatientService implements PatientServiceInterface
         $req = $request ?? request();
 
         $hospitalId = $req->user()?->hospital_id ?? $req->query('hospital_id');
-        $patientQuery = Patient::query();
+        $patientQuery = Patient::query()->with([
+            'latestOpdVisit.department',
+            'latestOpdVisit.doctor',
+            'latestIpdAdmission',
+        ]);
+
         if ($hospitalId) {
             $patientQuery->where('hospital_id', $hospitalId);
         }
 
+        $like = $this->likeOperator();
+
         $query = QueryBuilder::for($patientQuery)
             ->allowedFilters(
-                'uhid', 'name', 'mobile', 'email', 'abha_number', 'abha_address', 'gender',
-                AllowedFilter::partial('search', 'name')
+                AllowedFilter::callback('uhid', fn($q, $v) => $q->where('uhid', $like, "%{$v}%")),
+                AllowedFilter::callback('name', fn($q, $v) => $q->where('name', $like, "%{$v}%")),
+                AllowedFilter::callback('mobile', fn($q, $v) => $q->where('mobile', $like, "%{$v}%")),
+                AllowedFilter::callback('email', fn($q, $v) => $q->where('email', $like, "%{$v}%")),
+                AllowedFilter::callback('abha_number', fn($q, $v) => $q->where('abha_number', $like, "%{$v}%")),
+                AllowedFilter::callback('abha_address', fn($q, $v) => $q->where('abha_address', $like, "%{$v}%")),
+                'gender',
+                AllowedFilter::callback('search', fn($q, $v) => $q->where(function ($sq) use ($v, $like) {
+                    $sq->where('name', $like, "%{$v}%")
+                       ->orWhere('uhid', $like, "%{$v}%")
+                       ->orWhere('mobile', $like, "%{$v}%")
+                       ->orWhere('email', $like, "%{$v}%")
+                       ->orWhere('abha_number', $like, "%{$v}%")
+                       ->orWhere('abha_address', $like, "%{$v}%");
+                }))
             )
             ->allowedSorts('name', 'created_at', 'dob')
             ->defaultSort('-created_at');
 
         if ($req && $req->filled('search')) {
             $search = $req->query('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('uhid', 'like', "%{$search}%")
-                  ->orWhere('name', 'like', "%{$search}%")
-                  ->orWhere('mobile', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('abha_number', 'like', "%{$search}%")
-                  ->orWhere('abha_address', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search, $like) {
+                $q->where('uhid', $like, "%{$search}%")
+                  ->orWhere('name', $like, "%{$search}%")
+                  ->orWhere('mobile', $like, "%{$search}%")
+                  ->orWhere('email', $like, "%{$search}%")
+                  ->orWhere('abha_number', $like, "%{$search}%")
+                  ->orWhere('abha_address', $like, "%{$search}%");
             });
+        }
+
+        if ($req && $req->filled('gender')) {
+            $query->where('gender', $req->query('gender'));
+        }
+
+        if ($req && $req->filled('abha_status')) {
+            $status = $req->query('abha_status');
+            if ($status === 'linked') {
+                $query->where(function ($q) {
+                    $q->whereNotNull('abha_number')->orWhereNotNull('abha_address');
+                });
+            } elseif ($status === 'not_linked') {
+                $query->whereNull('abha_number')->whereNull('abha_address');
+            }
         }
 
         return $this->applyPaginationOrAll($query, $req);
@@ -125,7 +160,63 @@ class PatientService implements PatientServiceInterface
     public function updatePatient(int $id, array $data): Patient
     {
         $patient = Patient::findOrFail($id);
+
+        // NHA Guideline: After ABHA verification, Name, DOB, and Gender are non-editable
+        if (!empty($patient->abha_number) || !empty($patient->kyc_verified)) {
+            unset($data['name'], $data['dob'], $data['gender']);
+        }
+
         $patient->update($data);
+        return $patient->fresh();
+    }
+
+    /**
+     * Link an existing hospital patient with an ABHA number and profile under ABDM.
+     * Enforces TAGGING_UNIQUEPATIENTID_UNIQUEABHANUMBER rule.
+     */
+    public function linkAbha(int $id, array $data): Patient
+    {
+        $patient = Patient::findOrFail($id);
+
+        $abhaNumber = $data['abha_number'] ?? null;
+        if (empty($abhaNumber)) {
+            throw new \InvalidArgumentException('ABHA Number is required for linking.');
+        }
+
+        // Strict NHA Rule: Check if another patient in the hospital already uses this ABHA number
+        $conflict = Patient::where('hospital_id', $patient->hospital_id)
+            ->where('id', '!=', $patient->id)
+            ->where('abha_number', $abhaNumber)
+            ->first();
+
+        if ($conflict) {
+            throw new \InvalidArgumentException("This ABHA number ({$abhaNumber}) is already linked to another patient: {$conflict->name} (UHID: {$conflict->uhid}). Duplicate ABHA linking is prohibited by ABDM guidelines.");
+        }
+
+        $updates = [
+            'abha_number'  => $abhaNumber,
+            'kyc_verified' => true,
+        ];
+
+        if (!empty($data['abha_address'])) {
+            $updates['abha_address'] = $data['abha_address'];
+        }
+
+        if (!empty($data['abha_card_pdf']) || !empty($data['abha_card_base64'])) {
+            $card = $data['abha_card_pdf'] ?? $data['abha_card_base64'];
+            $updates['abha_card_pdf'] = $card;
+        }
+
+        // Fill in missing demographics without overwriting existing data if present
+        foreach (['address', 'city', 'district', 'state', 'pincode', 'photo'] as $field) {
+            if (!empty($data[$field]) && empty($patient->{$field})) {
+                $updates[$field] = $data[$field];
+            }
+        }
+
+        $patient->update($updates);
+        \Illuminate\Support\Facades\Log::info("Patient {$patient->id} ({$patient->uhid}) successfully linked to ABHA {$abhaNumber}");
+
         return $patient->fresh();
     }
 
@@ -148,7 +239,16 @@ class PatientService implements PatientServiceInterface
         $patient = $query->with([
             'latestVital',
             'opdVisits' => function ($q) {
-                $q->with(['doctor', 'department', 'vitals', 'latestVital'])
+                $q->with([
+                    'doctor',
+                    'department',
+                    'vitals',
+                    'latestVital',
+                    'prescription.doctor',
+                    'prescription.items',
+                    'prescription.diagnoses',
+                    'prescription.investigations',
+                ])
                   ->orderByDesc('visit_date')
                   ->orderByDesc('id');
             },
@@ -158,7 +258,7 @@ class PatientService implements PatientServiceInterface
                   ->orderByDesc('id');
             },
             'prescriptions' => function ($q) {
-                $q->with(['doctor', 'items', 'diagnoses'])
+                $q->with(['doctor', 'items', 'diagnoses', 'investigations'])
                   ->orderByDesc('id');
             },
             'vitals' => function ($q) {
@@ -388,5 +488,41 @@ class PatientService implements PatientServiceInterface
             'vitals'         => $vitals,
         ];
     }
+
+    /**
+     * Get aggregate statistics of registered patients (Total, Male, Female, Other, ABHA Linked).
+     */
+    public function getPatientStats($request = null): array
+    {
+        $req = $request ?? request();
+        $hospitalId = $req->user()?->hospital_id ?? $req->query('hospital_id');
+
+        $query = Patient::query();
+        if ($hospitalId) {
+            $query->where('hospital_id', $hospitalId);
+        }
+
+        $total = (clone $query)->count();
+        $maleCount = (clone $query)->whereIn('gender', ['M', 'Male', 'm', 'male'])->count();
+        $femaleCount = (clone $query)->whereIn('gender', ['F', 'Female', 'f', 'female'])->count();
+        $otherCount = (clone $query)->whereNotIn('gender', ['M', 'Male', 'm', 'male', 'F', 'Female', 'f', 'female'])->count();
+        $abhaLinked = (clone $query)->where(function ($q) {
+            $q->where(function ($sub) {
+                $sub->whereNotNull('abha_number')->where('abha_number', '!=', '');
+            })->orWhere(function ($sub) {
+                $sub->whereNotNull('abha_address')->where('abha_address', '!=', '');
+            });
+        })->count();
+
+        return [
+            'total'         => $total,
+            'male'          => $maleCount,
+            'female'        => $femaleCount,
+            'other'         => $otherCount,
+            'abha_linked'   => $abhaLinked,
+            'abha_unlinked' => max(0, $total - $abhaLinked),
+        ];
+    }
 }
+
 

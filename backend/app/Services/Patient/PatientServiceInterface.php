@@ -35,5 +35,15 @@ interface PatientServiceInterface
      * Get 360-degree comprehensive medical history and chronological timeline for a patient.
      */
     public function getPatientHistory(int $id, ?int $hospitalId = null): array;
+
+    /**
+     * Link an existing hospital patient with an ABHA number and profile.
+     */
+    public function linkAbha(int $id, array $data): Patient;
+
+    /**
+     * Get aggregate statistics of registered patients (Total, Male, Female, Other, ABHA Linked).
+     */
+    public function getPatientStats($request = null): array;
 }
 

@@ -1,0 +1,80 @@
+<?php
+
+// Additional Biochemistry Tests - Electrolytes, ABG, Cardiac, Iron Studies, Special Chemistry
+return [
+    [
+        'test_code' => 'ICALC',
+        'name' => 'Ionized Calcium',
+        'category' => 'Biochemistry',
+        'description' => 'Measures biologically active (free) calcium in blood. More accurate than total calcium in critically ill patients.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">Ionized Calcium Interpretation</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>Level</th><th>Clinical Significance</th></tr></thead><tbody><tr><td><strong>&lt; 1.0 mmol/L</strong></td><td>Critical Low — Tetany, Seizures, Cardiac arrhythmias. Urgent correction needed.</td></tr><tr><td><strong>1.0 - 1.15 mmol/L</strong></td><td>Low — Hypoparathyroidism, Vitamin D deficiency, Pancreatitis, Massive transfusion (citrate)</td></tr><tr><td><strong>1.15 - 1.30 mmol/L</strong></td><td>Normal range</td></tr><tr><td><strong>&gt; 1.30 mmol/L</strong></td><td>High — Primary Hyperparathyroidism, Malignancy, Granulomatous disease</td></tr></tbody></table><div class="mt-2 p-2 bg-soft-info border rounded-3 fs-11"><i class="feather-info me-2"></i><strong>Note:</strong> Ionized calcium is pH-dependent. Alkalosis decreases and acidosis increases ionized calcium levels.</div></div>',
+        'suggested_price' => 350,
+        'method' => 'ISE (Ion Selective Electrode)',
+        'sample_type' => 'Heparinized Blood',
+        'tat_hours' => 2,
+        'default_parameters' => [
+            ['name' => 'Ionized Calcium', 'unit' => 'mmol/L', 'short_code' => 'ICA', 'input_type' => 'numeric', 'method' => 'ISE (Ion Selective Electrode)', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '1.15', 'max_val' => '1.30', 'display_range' => '1.15 - 1.30']]],
+        ],
+    ],
+    [
+        'test_code' => 'ABG',
+        'name' => 'Arterial Blood Gas (ABG) Analysis',
+        'category' => 'Biochemistry',
+        'description' => 'Measures blood pH, partial pressures of O2 and CO2, and bicarbonate. Essential for acid-base and oxygenation assessment.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">ABG Interpretation Guide</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>Disorder</th><th>pH</th><th>pCO2</th><th>HCO3</th><th>Causes</th></tr></thead><tbody><tr><td><strong>Metabolic Acidosis</strong></td><td>Low</td><td>Low (comp)</td><td>Low</td><td>DKA, Lactic acidosis, Renal failure, Diarrhea</td></tr><tr><td><strong>Metabolic Alkalosis</strong></td><td>High</td><td>High (comp)</td><td>High</td><td>Vomiting, Diuretics, Cushing syndrome</td></tr><tr><td><strong>Respiratory Acidosis</strong></td><td>Low</td><td>High</td><td>High (comp)</td><td>COPD, Pneumonia, Sedative overdose</td></tr><tr><td><strong>Respiratory Alkalosis</strong></td><td>High</td><td>Low</td><td>Low (comp)</td><td>Hyperventilation, Anxiety, PE, Sepsis</td></tr></tbody></table><div class="mt-2 p-2 bg-soft-warning border rounded-3 fs-11"><i class="feather-alert-triangle me-2"></i><strong>Important:</strong> Always correlate with clinical context. Calculate Anion Gap for metabolic acidosis classification.</div></div>',
+        'suggested_price' => 600,
+        'method' => 'Blood Gas Analyzer (ISE + Amperometry)',
+        'sample_type' => 'Arterial Blood (Heparinized)',
+        'tat_hours' => 1,
+        'default_parameters' => [
+            ['name' => 'pH', 'unit' => '', 'short_code' => 'BPH', 'input_type' => 'numeric', 'method' => 'ISE (Potentiometric)', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '7.35', 'max_val' => '7.45', 'display_range' => '7.35 - 7.45']]],
+            ['name' => 'pCO2', 'unit' => 'mmHg', 'short_code' => 'PCO2', 'input_type' => 'numeric', 'method' => 'Severinghaus Electrode', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '35', 'max_val' => '45', 'display_range' => '35 - 45']]],
+            ['name' => 'pO2', 'unit' => 'mmHg', 'short_code' => 'PO2', 'input_type' => 'numeric', 'method' => 'Clark Electrode (Amperometric)', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '80', 'max_val' => '100', 'display_range' => '80 - 100']]],
+            ['name' => 'HCO3 (Actual)', 'unit' => 'mEq/L', 'short_code' => 'AHCO3', 'input_type' => 'numeric', 'method' => 'Calculated', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '22', 'max_val' => '26', 'display_range' => '22 - 26']]],
+            ['name' => 'Base Excess', 'unit' => 'mEq/L', 'short_code' => 'BE', 'input_type' => 'numeric', 'method' => 'Calculated', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '-2', 'max_val' => '2', 'display_range' => '-2 to +2']]],
+            ['name' => 'SpO2', 'unit' => '%', 'short_code' => 'SPO2', 'input_type' => 'numeric', 'method' => 'Co-oximetry', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '95', 'max_val' => '100', 'display_range' => '95 - 100']]],
+        ],
+    ],
+    [
+        'test_code' => 'HSCRP',
+        'name' => 'hs-CRP (High Sensitivity C-Reactive Protein)',
+        'category' => 'Biochemistry',
+        'description' => 'Ultra-sensitive measurement of CRP for cardiovascular risk stratification. Detects low-grade inflammation.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">hs-CRP Cardiovascular Risk</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>hs-CRP (mg/L)</th><th>Risk Category</th></tr></thead><tbody><tr><td><strong>&lt; 1.0</strong></td><td>Low cardiovascular risk</td></tr><tr><td><strong>1.0 - 3.0</strong></td><td>Moderate cardiovascular risk</td></tr><tr><td><strong>&gt; 3.0</strong></td><td>High cardiovascular risk</td></tr><tr><td><strong>&gt; 10.0</strong></td><td>Acute inflammation — Not valid for CV risk assessment. Repeat after 2 weeks.</td></tr></tbody></table><div class="mt-2 p-2 bg-soft-info border rounded-3 fs-11"><i class="feather-info me-2"></i><strong>Note:</strong> Two measurements 2 weeks apart recommended for CV risk. hs-CRP adds prognostic value beyond traditional risk factors (Framingham score).</div></div>',
+        'suggested_price' => 700,
+        'method' => 'Immunoturbidimetry (Enhanced Sensitivity)',
+        'sample_type' => 'Clotted Blood',
+        'tat_hours' => 6,
+        'default_parameters' => [
+            ['name' => 'hs-CRP', 'unit' => 'mg/L', 'short_code' => 'HSCRP', 'input_type' => 'numeric', 'method' => 'Immunoturbidimetry (Enhanced)', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0', 'max_val' => '1.0', 'display_range' => '< 1.0 (Low Risk)']]],
+        ],
+    ],
+    [
+        'test_code' => 'AMMONIA',
+        'name' => 'Serum Ammonia',
+        'category' => 'Biochemistry',
+        'description' => 'Measures blood ammonia levels. Elevated in hepatic encephalopathy and urea cycle disorders.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">Serum Ammonia Interpretation</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>Level</th><th>Clinical Significance</th></tr></thead><tbody><tr><td><strong>15 - 45 µg/dL</strong></td><td>Normal range</td></tr><tr><td><strong>45 - 80 µg/dL</strong></td><td>Mildly Elevated — Early hepatic encephalopathy, Portal hypertension</td></tr><tr><td><strong>&gt; 80 µg/dL</strong></td><td>Significantly Elevated — Hepatic encephalopathy, Urea cycle defects, Reye syndrome, Valproate toxicity</td></tr><tr><td><strong>&gt; 200 µg/dL</strong></td><td>Critical — Severe encephalopathy, Neonatal urea cycle defect. Risk of cerebral edema.</td></tr></tbody></table><div class="mt-2 p-2 bg-soft-warning border rounded-3 fs-11"><i class="feather-alert-triangle me-2"></i><strong>Important:</strong> Sample must be transported on ice and analyzed within 30 minutes. Hemolysis and delayed processing cause falsely elevated results.</div></div>',
+        'suggested_price' => 500,
+        'method' => 'Enzymatic (Glutamate Dehydrogenase)',
+        'sample_type' => 'EDTA Plasma (on ice)',
+        'tat_hours' => 2,
+        'default_parameters' => [
+            ['name' => 'Serum Ammonia', 'unit' => 'µg/dL', 'short_code' => 'NH3', 'input_type' => 'numeric', 'method' => 'Enzymatic (GLDH)', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '15', 'max_val' => '45', 'display_range' => '15 - 45']]],
+        ],
+    ],
+    [
+        'test_code' => 'LACTATE',
+        'name' => 'Serum Lactate',
+        'category' => 'Biochemistry',
+        'description' => 'Measures blood lactic acid. Marker of tissue hypoxia and sepsis severity.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">Serum Lactate Interpretation</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>Level (mmol/L)</th><th>Clinical Significance</th></tr></thead><tbody><tr><td><strong>&lt; 1.0</strong></td><td>Normal</td></tr><tr><td><strong>1.0 - 2.0</strong></td><td>Upper normal — Monitor in ICU patients</td></tr><tr><td><strong>2.0 - 4.0</strong></td><td>Elevated — Tissue hypoperfusion, Early sepsis, Liver dysfunction</td></tr><tr><td><strong>&gt; 4.0</strong></td><td>Severe — Septic shock, Cardiogenic shock, Mesenteric ischemia. Associated with high mortality.</td></tr></tbody></table><div class="mt-2 p-2 bg-soft-info border rounded-3 fs-11"><i class="feather-info me-2"></i><strong>Note:</strong> Serial lactate measurements and lactate clearance are better prognostic indicators than single values. Target &gt;10% clearance per hour.</div></div>',
+        'suggested_price' => 400,
+        'method' => 'Enzymatic (Lactate Oxidase)',
+        'sample_type' => 'Fluoride Plasma',
+        'tat_hours' => 2,
+        'default_parameters' => [
+            ['name' => 'Serum Lactate', 'unit' => 'mmol/L', 'short_code' => 'LAC', 'input_type' => 'numeric', 'method' => 'Lactate Oxidase (Enzymatic)', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0.5', 'max_val' => '2.0', 'display_range' => '0.5 - 2.0']]],
+        ],
+    ],
+];

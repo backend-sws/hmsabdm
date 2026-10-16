@@ -50,7 +50,7 @@ When a patient arrives at the hospital, there are **3 ways** to verify/register 
 
 ## 🎟️ Phase 3: OPD Slip Generation (Creating Appointment Visit)
 
-OPD Slip in dono mein se **kisi ek API** se banti hai:
+OPD Slips can be generated using either of the following two methods:
 
 ### Method 1: Standard OPD Visit (For Option A, B, and C)
 Once the patient is registered and you have `patient_id`:
@@ -111,8 +111,8 @@ EOT
 
 // ---- Tag ordering defines display order in Swagger UI ----
 #[OA\Tag(name: "1. Auth", description: "Step 0 — Login & Logout")]
-#[OA\Tag(name: "2. ABHA — Mobile Login", description: "Flow A — मरीज़ के पास ABHA पहले से है (Mobile OTP से verify)")]
-#[OA\Tag(name: "3. ABHA — Aadhaar Enrolment", description: "Flow B — नया ABHA बनाना (Aadhaar OTP से enrolment)")]
+#[OA\Tag(name: "2. ABHA — Mobile Login", description: "Flow A — Patient has existing ABHA (Verify via Mobile OTP)")]
+#[OA\Tag(name: "3. ABHA — Aadhaar Enrolment", description: "Flow B — Create New ABHA (Enrolment via Aadhaar OTP)")]
 #[OA\Tag(name: "4. Reception", description: "Flow C & D — Walk-in Registration, Departments, OPD Visit, Scan & Share Queue")]
 #[OA\Tag(name: "5. Triage & Vitals (Nurse)", description: "Nurse Station — Recording and managing patient vitals before doctor consultation")]
 #[OA\Tag(name: "6. OPD (Doctor)", description: "Doctor Panel — Today's OPD Queue Management & Consultation")]
@@ -122,6 +122,13 @@ EOT
 #[OA\Tag(name: "9. Patients", description: "Patient Records Management")]
 #[OA\Tag(name: "11. ABDM Webhooks", description: "Incoming Webhooks from ABDM (Scan & Share)")]
 #[OA\Tag(name: "12. Storage", description: "File Upload/Download via R2/S3")]
+#[OA\Tag(name: "13. Lab — Orders & Billing", description: "Laboratory Worklist, Direct Walk-In Booking & Invoicing")]
+#[OA\Tag(name: "14. Lab — Phlebotomy & Queue", description: "Sample Collection, Accessioning Barcodes, Booth Calling & Rejection")]
+#[OA\Tag(name: "15. Lab — Results & Pathology", description: "Result Entry, Delta Checks, Approvals & Authorization")]
+#[OA\Tag(name: "16. Lab — Test Catalog Master", description: "281+ Pathology Tests Master, Parameters & Reference Intervals")]
+#[OA\Tag(name: "17. Lab — Diagnostic Reports", description: "Printable Diagnostic Reports & Public QR Verification")]
+#[OA\Tag(name: "18. Inpatient Department (IPD) & Wards", description: "Wards, Beds, Admissions, Transfers & Nursing Station")]
+#[OA\Tag(name: "19. Hospital Billing & Tariff", description: "Charge Masters, Ledger & Billing Operations")]
 
 abstract class Controller
 {

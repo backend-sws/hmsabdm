@@ -1,11 +1,15 @@
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
+import { useNavigate } from "react-router"
 import {
   Eye,
+  Pencil,
   Plus,
   Users,
   ShieldCheck,
   Activity,
   CalendarDays,
+  RotateCcw,
+  FileText,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
@@ -19,13 +23,21 @@ import { useDisclosure } from "@/hooks/useDisclosure"
 import { useSearchFilter } from "@/hooks/useSearchFilter"
 import { patientService } from "@/services/patientService"
 import { queryKeys } from "@/constants/queryKeys"
-import { INITIAL_FILTERS } from "@/constants/patient.constants"
+import {
+  INITIAL_FILTERS,
+  ABHA_STATUS_OPTIONS,
+  GENDER_OPTIONS,
+} from "@/constants/patient.constants"
+import { PatientAvatar, AbhaCardModal, LinkAbhaModal } from "@/components/common"
 import PatientEdit from "@/components/modals/patientEdit"
 import type { Patient } from "@/types/patient"
 
 export const PatientsPage: React.FC = () => {
+  const navigate = useNavigate()
   const { filter, handleFilter } = useSearchFilter(INITIAL_FILTERS)
   const patientDisclosure = useDisclosure<Patient & { viewMode?: boolean }>()
+  const [selectedAbhaPatient, setSelectedAbhaPatient] = useState<Patient | null>(null)
+  const [patientToLink, setPatientToLink] = useState<Patient | null>(null)
 
   // Fetch patients list
   const { data, isLoading } = useQuery({
@@ -34,30 +46,60 @@ export const PatientsPage: React.FC = () => {
   })
 
   const { patientsList, meta } = useMemo(() => {
+    if (Array.isArray(data)) {
+      return {
+        patientsList: data,
+        meta: {
+          current_page: filter.page || 1,
+          last_page: 1,
+          per_page: filter.limit || 10,
+          total: data.length,
+        },
+      }
+    }
+
+    const list = Array.isArray(data?.data) ? data.data : []
+    const m = (data as any)?.meta || {}
+
     return {
-      patientsList: data?.data || [],
-      meta: data?.meta || {
-        current_page: 1,
-        last_page: 1,
-        per_page: 10,
-        total: 0,
+      patientsList: list,
+      meta: {
+        current_page: Number(m.current_page || filter.page || 1),
+        last_page: Number(m.last_page || 1),
+        per_page: Number(m.per_page || filter.limit || 10),
+        total: Number(m.total || list.length || 0),
       },
     }
-  }, [data])
+  }, [data, filter.page, filter.limit])
 
   const handleFilterChange = useCallback(
     (updates: Record<string, unknown>) => handleFilter({ ...updates, page: 1 }),
     [handleFilter]
   )
 
-  // Calculate stats based on fetched roster
+  const handlePageChange = useCallback(
+    (page: number) => handleFilter({ page }),
+    [handleFilter]
+  )
+
+  const handlePageSizeChange = useCallback(
+    (limit: number) => handleFilter({ limit, page: 1 }),
+    [handleFilter]
+  )
+
+  // Fetch hospital-wide patient stats
+  const { data: statsData } = useQuery({
+    queryKey: ["patients", "stats"],
+    queryFn: patientService.getStats,
+    refetchInterval: 30_000,
+  })
+
+  // Calculate stats based on accurate hospital-wide counts
   const stats: StatItem[] = useMemo(() => {
-    const total = meta.total || patientsList.length || 0
-    const maleCount = patientsList.filter((p) => p.gender === "M").length
-    const femaleCount = patientsList.filter((p) => p.gender === "F").length
-    const abhaLinked = patientsList.filter(
-      (p) => !!p.abha_number || !!p.abha_address
-    ).length
+    const total = statsData?.total ?? meta.total ?? patientsList.length ?? 0
+    const maleCount = statsData?.male ?? 0
+    const femaleCount = statsData?.female ?? 0
+    const abhaLinked = statsData?.abha_linked ?? 0
 
     return [
       {
@@ -75,7 +117,7 @@ export const PatientsPage: React.FC = () => {
             ? `${Math.round((maleCount / total) * 100)}% of total`
             : "0%",
         icon: <CalendarDays className="h-6 w-6" />,
-        colorScheme: "indigo",
+        colorScheme: "cyan",
       },
       {
         title: "Female Patients",
@@ -98,7 +140,7 @@ export const PatientsPage: React.FC = () => {
         colorScheme: "emerald",
       },
     ]
-  }, [meta, patientsList])
+  }, [statsData, meta.total, patientsList.length])
 
   // Helper age calculator
   const calculateAge = (dobString?: string) => {
@@ -133,12 +175,32 @@ export const PatientsPage: React.FC = () => {
         key: "name",
         header: "Patient Details",
         render: (row) => (
-          <div>
-            <p className="font-bold text-foreground">{row.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {row.mobile ? `Mobile: ${row.mobile}` : "No Mobile"}
-              {row.email ? ` • ${row.email}` : ""}
-            </p>
+          <div className="flex items-center gap-3">
+            <PatientAvatar
+              photo={row.photo}
+              name={row.name}
+              uhid={row.uhid}
+              size="md"
+              shape="circle"
+              allowPreview={true}
+              kyc_verified={row.kyc_verified}
+              subtitle={
+                row.mobile
+                  ? `📱 +91 ${row.mobile}`
+                  : [row.address, row.city, row.state].filter(Boolean).join(", ")
+              }
+            />
+            <div className="min-w-0">
+              <p className="font-bold text-foreground text-sm truncate">{row.name}</p>
+              <p className="text-xs text-muted-foreground font-mono">
+                {row.mobile ? `📱 +91 ${row.mobile}` : "No Mobile"}
+              </p>
+              {(row.address || row.district || row.city) && (
+                <p className="text-[11px] text-muted-foreground truncate max-w-[220px]" title={[row.address, row.district || row.city, row.state, row.pincode].filter(Boolean).join(", ")}>
+                  📍 {[row.address, row.district || row.city, row.state].filter(Boolean).join(", ")}
+                </p>
+              )}
+            </div>
           </div>
         ),
       },
@@ -190,79 +252,169 @@ export const PatientsPage: React.FC = () => {
         },
       },
       {
-        key: "actions",
-        header: "Actions",
-        className: "text-right",
+        key: "last_visit_date",
+        header: "Last Visit",
         render: (row) => (
-          <div className="flex items-center justify-end">
-            <Button
-              variant="outline"
-              size="xs"
-              className="transition-all hover:bg-blue-50 hover:text-blue-600 active:scale-[0.98]"
-              onClick={() =>
-                patientDisclosure.onOpen({ ...row, viewMode: true })
-              }
-            >
-              <Eye className="mr-1 h-3.5 w-3.5" /> View Profile
-            </Button>
+          <div>
+            <p className="text-xs font-semibold text-foreground">
+              {row.last_visit_date
+                ? new Date(row.last_visit_date).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "No visits yet"}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {row.last_department ? (
+                <span className="font-medium text-primary">
+                  {row.last_visit_type}: {row.last_department}
+                </span>
+              ) : row.last_visit_type ? (
+                <span>{row.last_visit_type}</span>
+              ) : (
+                "New Registration"
+              )}
+            </p>
           </div>
         ),
       },
+      {
+        key: "actions",
+        header: "Actions",
+        className: "text-right",
+        render: (row) => {
+          const hasAbha = Boolean(row.abha_number || row.abha_address)
+          return (
+            <div className="flex items-center justify-end gap-1.5">
+              {hasAbha ? (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="transition-all border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 active:scale-[0.98] text-[11px] gap-1 font-semibold"
+                  onClick={() => setSelectedAbhaPatient(row)}
+                  title="View & Download Official ABHA Card"
+                >
+                  <FileText className="h-3 w-3" /> ABHA Card
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="transition-all border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 active:scale-[0.98] text-[11px] gap-1 font-semibold"
+                  onClick={() => setPatientToLink(row)}
+                  title="Link Existing Patient with ABHA"
+                >
+                  <ShieldCheck className="h-3 w-3" /> Link ABHA
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="xs"
+                className="transition-all border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 active:scale-[0.98] text-[11px] gap-1 font-semibold"
+                onClick={() => navigate(`/reception?tab=revisit&uhid=${encodeURIComponent(row.uhid)}`)}
+                title="Issue Revisit OPD Slip"
+              >
+                <RotateCcw className="h-3 w-3" /> Revisit Slip
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                className="transition-all border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-[0.98] text-[11px] gap-1 font-semibold"
+                onClick={() =>
+                  patientDisclosure.onOpen({ ...row, viewMode: false })
+                }
+                title="Edit Patient Details"
+              >
+                <Pencil className="h-3 w-3" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                className="transition-all hover:bg-blue-50 hover:text-blue-600 active:scale-[0.98] text-[11px]"
+                onClick={() =>
+                  patientDisclosure.onOpen({ ...row, viewMode: true })
+                }
+              >
+                <Eye className="mr-1 h-3.5 w-3.5" /> View
+              </Button>
+            </div>
+          )
+        },
+      },
     ],
-    [patientDisclosure]
+    [navigate, patientDisclosure, setSelectedAbhaPatient, setPatientToLink]
   )
+
+  const isFiltered = Boolean(filter.search || filter.abha_status || filter.gender)
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Patient Registration"
-        subtitle="Manage patient registration records, generate UHIDs, and access digital health identities."
+        subtitle="Manage hospital patient records, search UHIDs, and access ABDM digital health profiles."
         badgeText="Active Registry"
         badgeVariant="default"
-        // actions={
-
-        // }
+        icon={Users}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/reception")}
+              className="gap-1.5"
+            >
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              ABDM Reception Desk
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => patientDisclosure.onOpen()}
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              Register Patient
+            </Button>
+          </div>
+        }
       />
-      <div className="flex w-full justify-around">
-        <Button
-          variant="default"
-          size="lg"
-          onClick={() => patientDisclosure.onOpen()}
-          className="bg-blue-600 font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
-        >
-          Register via ABHA
-        </Button>{" "}
-        <Button
-          variant="default"
-          size="lg"
-          onClick={() => patientDisclosure.onOpen()}
-          className="bg-blue-600 font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
-        >
-          <Plus className="mr-1.5 h-4 w-4" /> Register via Mobile
-        </Button>
-        <Button
-          variant="default"
-          size="lg"
-          onClick={() => patientDisclosure.onOpen()}
-          className="bg-blue-600 font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
-        >
-          <Plus className="mr-1.5 h-4 w-4" /> Register via Mobile
-        </Button>
-      </div>
+
       {/* Stats Cards Row */}
-      <StatCardsRow items={stats} />
+      <StatCardsRow stats={stats} />
 
       {/* Search and Filters Table section */}
       <SectionCard
         title="Master Patient Directory"
         description="Filter and search registered patients by UHID, Name, Mobile, Email, or ABHA address."
       >
-        <FilterBar values={filter} onChange={handleFilterChange}>
+        <FilterBar values={filter} onChange={handleFilterChange} className="w-full flex-wrap gap-3">
           <FilterBar.Search
             name="search"
-            placeholder="Search ticket #, PNR, passenger name, or email..."
-            className="w-72"
+            placeholder="Search by UHID, patient name, mobile, ABHA number..."
+            className="flex-1 min-w-[280px]"
           />
+          <FilterBar.Select
+            name="abha_status"
+            placeholder="All ABHA Status"
+            options={ABHA_STATUS_OPTIONS}
+            className="w-48"
+          />
+          <FilterBar.Select
+            name="gender"
+            placeholder="All Genders"
+            options={GENDER_OPTIONS}
+            className="w-36"
+          />
+          {isFiltered && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleFilter({ search: "", abha_status: "", gender: "", page: 1 })}
+              className="text-xs text-muted-foreground hover:text-foreground h-9 gap-1"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Reset
+            </Button>
+          )}
         </FilterBar>
 
         <div className="mt-4">
@@ -271,14 +423,12 @@ export const PatientsPage: React.FC = () => {
             data={patientsList}
             isLoading={isLoading}
             keyExtractor={(item) => String(item.id)}
-            currentPage={Number(meta.current_page || 1)}
-            pageSize={Number(meta.per_page || 10)}
-            totalRecords={Number(meta.total || 0)}
-            lastPage={Number(meta.last_page || 1)}
-            onPageChange={(page) => handleFilterChange({ page })}
-            handlePageSizeChange={(limit) =>
-              handleFilterChange({ limit, page: 1 })
-            }
+            currentPage={meta.current_page}
+            pageSize={meta.per_page}
+            totalRecords={meta.total}
+            lastPage={meta.last_page}
+            onPageChange={handlePageChange}
+            handlePageSizeChange={handlePageSizeChange}
           />
         </div>
       </SectionCard>
@@ -288,6 +438,20 @@ export const PatientsPage: React.FC = () => {
         open={patientDisclosure.isOpen}
         onClose={patientDisclosure.onClose}
         patient={patientDisclosure.data}
+      />
+
+      {/* Official ABHA Card Modal */}
+      <AbhaCardModal
+        open={Boolean(selectedAbhaPatient)}
+        onClose={() => setSelectedAbhaPatient(null)}
+        patient={selectedAbhaPatient}
+      />
+
+      {/* Link ABHA to Existing Patient Modal */}
+      <LinkAbhaModal
+        open={Boolean(patientToLink)}
+        onClose={() => setPatientToLink(null)}
+        patient={patientToLink}
       />
     </div>
   )

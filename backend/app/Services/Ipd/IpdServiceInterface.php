@@ -70,5 +70,55 @@ interface IpdServiceInterface
      * Get complete 360-degree inpatient chart (admission, rounds, vitals, drug chart, procedures, financial ledger).
      */
     public function getInpatientChart(int $hospitalId, int $admissionId): array;
+
+    /**
+     * Record fluid intake or output entry for an inpatient admission.
+     */
+    public function recordIntakeOutput(int $hospitalId, int $admissionId, array $data, ?int $userId = null): array;
+
+    /**
+     * Get 24-hour / date-specific fluid balance summary and chronological logs.
+     */
+    public function getIntakeOutputSummary(int $hospitalId, int $admissionId, ?string $date = null): array;
+
+    /**
+     * Record medication administration (Given, Omitted, Refused) against prescription item or SOS.
+     */
+    public function recordMarAdministration(int $hospitalId, int $admissionId, array $data, ?int $userId = null): array;
+
+    /**
+     * Get active MAR drug chart and administration events for an inpatient admission.
+     */
+    public function getMarDrugChart(int $hospitalId, int $admissionId, ?string $date = null): array;
+
+    /**
+     * Record nurse shift handover note.
+     */
+    public function recordShiftHandover(int $hospitalId, int $admissionId, array $data): array;
+
+    /**
+     * Get shift handovers history for an admission.
+     */
+    public function getShiftHandovers(int $hospitalId, int $admissionId): array;
+
+    /**
+     * Acknowledge shift handover by incoming nurse.
+     */
+    public function acknowledgeShiftHandover(int $hospitalId, int $handoverId, string $incomingNurseName): array;
+
+    /**
+     * Get or prefill clinical discharge summary for an inpatient admission.
+     */
+    public function getDischargeSummary(int $hospitalId, int $admissionId): array;
+
+    /**
+     * Create or update clinical discharge summary (Draft or Finalized).
+     */
+    public function saveDischargeSummary(int $hospitalId, int $admissionId, array $data, int $userId): array;
+
+    /**
+     * Get complete printable NABH clinical discharge card payload.
+     */
+    public function getDischargePrintData(int $hospitalId, int $admissionId): array;
 }
 

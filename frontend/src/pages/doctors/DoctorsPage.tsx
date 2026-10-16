@@ -9,6 +9,7 @@ import {
   ShieldAlert,
   Activity,
   Clock,
+  UserCheck,
 } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -18,7 +19,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { FilterBar } from "@/components/filter-bar"
 import SectionCard from "@/components/SectionCard"
 import StatCardsRow, { type StatItem } from "@/components/common/stat-cards-row"
-import PageHeaderBanner from "@/components/common/PageHeaderBanner"
+import { PageHeader } from "@/components/common/PageHeader"
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/confirmDialog"
 import { useDisclosure } from "@/hooks/useDisclosure"
@@ -242,11 +243,19 @@ export function DoctorsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeaderBanner
+      <PageHeader
         title="Doctors Directory & OPD Roster"
         subtitle="Manage physician profiles, credentials, and weekly OPD consultation rosters."
-        imageSrc="/hospital.png"
-        imageAlt="Doctors Directory Header"
+        icon={UserCheck}
+        actions={
+          <Button
+            onClick={() => editDisclosure.onOpen()}
+            className="bg-primary font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] h-9 gap-1.5 text-xs sm:text-sm shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            Register Doctor
+          </Button>
+        }
       />
 
       <StatCardsRow stats={stats} isLoading={isLoading} />

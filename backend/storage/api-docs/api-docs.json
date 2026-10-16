@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "HMS ABDM Integration API",
-        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from Hospital Admin setup to Reception OPD Slip generation and Doctor consultation.\n\n---\n\n## 🏥 Phase 1: Onboarding & Setup (Hospital Admin)\n\n1. **`POST /api/v1/login`**: Login using Admin credentials (e.g., `admin@hms.com`). Note the `access_token` and pass `Authorization: Bearer <token>` in subsequent requests.\n2. **`POST /api/v1/departments`**: Create medical departments (e.g., General Medicine, Cardiology, Orthopedics).\n3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.\n4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup working schedule and patient limits for doctors.\n\n---\n\n## 📋 Phase 2: Patient Registration (Reception / Front Desk)\n\nWhen a patient arrives at the hospital, there are **3 ways** to verify/register them:\n\n### Option A: Standard Walk-in (No ABHA / Normal Patient)\n* **`POST /api/v1/reception/register`**: Register patient manually with Name, Mobile, DOB, and Gender. Returns `patient.id`.\n\n### Option B: Patient Already Has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/search`**: (Optional) Search ABHA records by mobile number.\n2. **`POST /api/v1/abha/generate-otp`**: Send OTP to patient's mobile (`{ \"mobile\": \"7049711475\" }`). Returns `txnId`.\n3. **`POST /api/v1/abha/verify-otp`**: Verify OTP (`{ \"txnId\": \"...\", \"otp\": \"...\" }`).\n   * **Note:** The response contains full verified KYC details (Name, DOB, Gender, ABHA Number, Photo) in the `accounts` array.\n4. **`POST /api/v1/reception/register`**: Auto-fill and save patient to hospital DB with the returned `abha_number` & `abha_address`. Returns `patient.id`.\n\n### Option C: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send OTP to Aadhaar-linked mobile. Returns `txnId`.\n2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP. Returns `token` (X-Token) & `hasExistingAbha`.\n3. *(If Aadhaar mobile is different)*: **`enrol/mobile-otp`** → **`enrol/verify-mobile`**\n4. *(If fresh enrolment)*: **`GET enrol/suggest-address`** → **`POST enrol/create-address`**\n5. **`GET /api/v1/abha/profile`**: Fetch full Aadhaar profile using `token`.\n6. **`GET /api/v1/abha/card`**: (Optional) Download official Govt ABHA Card (PDF/Image).\n7. **`POST /api/v1/reception/register`**: Save patient to hospital DB. Returns `patient.id`.\n\n---\n\n## 🎟️ Phase 3: OPD Slip Generation (Creating Appointment Visit)\n\nOPD Slip in dono mein se **kisi ek API** se banti hai:\n\n### Method 1: Standard OPD Visit (For Option A, B, and C)\nOnce the patient is registered and you have `patient_id`:\n1. **`GET /api/v1/reception/departments`**: Fetch active departments and available doctors.\n2. **`POST /api/v1/reception/visit`**: **Generate OPD Slip!**\n   * Body: `{ \"patient_id\": 1, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Assigns Queue Token (e.g. `OPD-042`), creates Visit in Doctor's queue, and generates printable OPD Slip.\n\n### Method 2: Scan & Share (ABDM QR Code Fast-Track)\nWhen a patient scans the Hospital Counter QR code using their ABHA App:\n1. ABDM Webhook (**`POST /api/webhook/abdm/v1/scan-and-share`**) automatically receives demographic data and queues the token (valid for 30 min).\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views waiting scanned patients.\n3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Look up specific 3-digit token (e.g. `TK-482`).\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: **Generate OPD Slip!**\n   * Body: `{ \"queue_id\": 5, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Confirms the queue, links doctor/department, and generates printable OPD Slip.\n\n---\n\n## 🩺 Phase 4: Triage & Nurse Station (Vitals Recording)\n\nOnce the OPD token slip is generated, the Nurse / Triage Station notes the patient's vitals before doctor consultation:\n1. **`POST /api/v1/vitals`**: **Record Patient Vitals** (BP, Pulse, Temperature, SpO2, Height, Weight, Blood Glucose).\n   * Body: `{ \"patient_id\": 1, \"opd_visit_id\": 1, \"temperature\": 98.6, \"blood_pressure_sys\": 120, \"blood_pressure_dia\": 80, \"pulse_rate\": 72, \"weight\": 68.5, \"height\": 172.0 }`\n   * **Result:** Saves vitals, auto-calculates BMI ($23.15$), and links to visit/patient.\n2. **`GET /api/v1/vitals/visit/{visitId}`**: View vitals recorded for this specific visit.\n3. **`GET /api/v1/patients/{patientId}/vitals`**: View entire vitals history for a patient.\n\n---\n\n## 👨‍⚕️ Phase 5: Doctor's Panel (Consultation)\n\n1. **`GET /api/v1/opd/queue`**: Doctor views their live OPD queue for today (includes patient details & latest recorded vitals).\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient into the consultation room.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes consultation, adding diagnosis, notes, and prescription.",
+        "description": "# HMS & ABDM Integration Guide\n\nWelcome to the API Documentation! This guide provides a complete end-to-end lifecycle of the system, starting from Hospital Admin setup to Reception OPD Slip generation and Doctor consultation.\n\n---\n\n## 🏥 Phase 1: Onboarding & Setup (Hospital Admin)\n\n1. **`POST /api/v1/login`**: Login using Admin credentials (e.g., `admin@hms.com`). Note the `access_token` and pass `Authorization: Bearer <token>` in subsequent requests.\n2. **`POST /api/v1/departments`**: Create medical departments (e.g., General Medicine, Cardiology, Orthopedics).\n3. **`POST /api/v1/doctors`**: Register doctors and assign them to departments.\n4. **`PUT /api/v1/doctors/{id}/schedule`**: Setup working schedule and patient limits for doctors.\n\n---\n\n## 📋 Phase 2: Patient Registration (Reception / Front Desk)\n\nWhen a patient arrives at the hospital, there are **3 ways** to verify/register them:\n\n### Option A: Standard Walk-in (No ABHA / Normal Patient)\n* **`POST /api/v1/reception/register`**: Register patient manually with Name, Mobile, DOB, and Gender. Returns `patient.id`.\n\n### Option B: Patient Already Has ABHA (Mobile OTP Login)\n1. **`POST /api/v1/abha/search`**: (Optional) Search ABHA records by mobile number.\n2. **`POST /api/v1/abha/generate-otp`**: Send OTP to patient's mobile (`{ \"mobile\": \"7049711475\" }`). Returns `txnId`.\n3. **`POST /api/v1/abha/verify-otp`**: Verify OTP (`{ \"txnId\": \"...\", \"otp\": \"...\" }`).\n   * **Note:** The response contains full verified KYC details (Name, DOB, Gender, ABHA Number, Photo) in the `accounts` array.\n4. **`POST /api/v1/reception/register`**: Auto-fill and save patient to hospital DB with the returned `abha_number` & `abha_address`. Returns `patient.id`.\n\n### Option C: Create New ABHA (Aadhaar Enrolment)\n1. **`POST /api/v1/abha/enrol/aadhaar-otp`**: Send OTP to Aadhaar-linked mobile. Returns `txnId`.\n2. **`POST /api/v1/abha/enrol/verify-aadhaar`**: Verify Aadhaar OTP. Returns `token` (X-Token) & `hasExistingAbha`.\n3. *(If Aadhaar mobile is different)*: **`enrol/mobile-otp`** → **`enrol/verify-mobile`**\n4. *(If fresh enrolment)*: **`GET enrol/suggest-address`** → **`POST enrol/create-address`**\n5. **`GET /api/v1/abha/profile`**: Fetch full Aadhaar profile using `token`.\n6. **`GET /api/v1/abha/card`**: (Optional) Download official Govt ABHA Card (PDF/Image).\n7. **`POST /api/v1/reception/register`**: Save patient to hospital DB. Returns `patient.id`.\n\n---\n\n## 🎟️ Phase 3: OPD Slip Generation (Creating Appointment Visit)\n\nOPD Slips can be generated using either of the following two methods:\n\n### Method 1: Standard OPD Visit (For Option A, B, and C)\nOnce the patient is registered and you have `patient_id`:\n1. **`GET /api/v1/reception/departments`**: Fetch active departments and available doctors.\n2. **`POST /api/v1/reception/visit`**: **Generate OPD Slip!**\n   * Body: `{ \"patient_id\": 1, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Assigns Queue Token (e.g. `OPD-042`), creates Visit in Doctor's queue, and generates printable OPD Slip.\n\n### Method 2: Scan & Share (ABDM QR Code Fast-Track)\nWhen a patient scans the Hospital Counter QR code using their ABHA App:\n1. ABDM Webhook (**`POST /api/webhook/abdm/v1/scan-and-share`**) automatically receives demographic data and queues the token (valid for 30 min).\n2. **`GET /api/v1/reception/scan-and-share/queues`**: Receptionist views waiting scanned patients.\n3. **`POST /api/v1/reception/scan-and-share/token`**: (Optional) Look up specific 3-digit token (e.g. `TK-482`).\n4. **`POST /api/v1/reception/scan-and-share/confirm`**: **Generate OPD Slip!**\n   * Body: `{ \"queue_id\": 5, \"doctor_id\": 2, \"department_id\": 1 }`\n   * **Result:** Confirms the queue, links doctor/department, and generates printable OPD Slip.\n\n---\n\n## 🩺 Phase 4: Triage & Nurse Station (Vitals Recording)\n\nOnce the OPD token slip is generated, the Nurse / Triage Station notes the patient's vitals before doctor consultation:\n1. **`POST /api/v1/vitals`**: **Record Patient Vitals** (BP, Pulse, Temperature, SpO2, Height, Weight, Blood Glucose).\n   * Body: `{ \"patient_id\": 1, \"opd_visit_id\": 1, \"temperature\": 98.6, \"blood_pressure_sys\": 120, \"blood_pressure_dia\": 80, \"pulse_rate\": 72, \"weight\": 68.5, \"height\": 172.0 }`\n   * **Result:** Saves vitals, auto-calculates BMI ($23.15$), and links to visit/patient.\n2. **`GET /api/v1/vitals/visit/{visitId}`**: View vitals recorded for this specific visit.\n3. **`GET /api/v1/patients/{patientId}/vitals`**: View entire vitals history for a patient.\n\n---\n\n## 👨‍⚕️ Phase 5: Doctor's Panel (Consultation)\n\n1. **`GET /api/v1/opd/queue`**: Doctor views their live OPD queue for today (includes patient details & latest recorded vitals).\n2. **`POST /api/v1/opd/visit/{visitId}/call`**: Doctor calls the next patient into the consultation room.\n3. **`POST /api/v1/opd/visit/{visitId}/complete`**: Doctor finishes consultation, adding diagnosis, notes, and prescription.",
         "version": "1.0.0"
     },
     "servers": [
@@ -25,7 +25,7 @@
                 "tags": [
                     "2. ABHA — Mobile Login"
                 ],
-                "summary": "Step A1 — Mobile OTP भेजो",
+                "summary": "Step A1 — Send Mobile OTP",
                 "description": "Initiates the ABHA login flow. Sends a 6-digit OTP to the user's mobile number registered with ABHA.",
                 "operationId": "f814722f547bc9fafd8301d4791ecf51",
                 "requestBody": {
@@ -61,7 +61,7 @@
                 "tags": [
                     "2. ABHA — Mobile Login"
                 ],
-                "summary": "Step A2 — Mobile OTP Verify करो",
+                "summary": "Step A2 — Verify Mobile OTP",
                 "description": "Verifies the OTP received by the user. Requires the txnId returned in Step A1.",
                 "operationId": "1d574fd61265e9d0c55d5097a56622a5",
                 "requestBody": {
@@ -95,12 +95,32 @@
                 ]
             }
         },
+        "/api/v1/abha/verify-user": {
+            "post": {
+                "tags": [
+                    "3. ABHA — Mobile Login"
+                ],
+                "summary": "Exchange Transfer token for Account token by selecting ABHA number",
+                "description": "Exchanges Transfer token (from mobile login) for Account token and fetches the official ABHA card.",
+                "operationId": "10d41bb6b752ed0e90e24dc6f26e04d0",
+                "responses": {
+                    "200": {
+                        "description": "Account token exchanged successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/abha/enrol/aadhaar-otp": {
             "post": {
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B1 — Aadhaar OTP भेजो",
+                "summary": "Step B1 — Send Aadhaar OTP",
                 "description": "Initiates the ABHA Enrolment flow by sending an OTP to the mobile linked with Aadhaar.",
                 "operationId": "d90323c551a40268320a6d99200875bf",
                 "requestBody": {
@@ -136,7 +156,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B2 — Aadhaar OTP Verify करो",
+                "summary": "Step B2 — Verify Aadhaar OTP",
                 "description": "Verifies Aadhaar OTP. Pass the txnId from Step B1. If verified, ABDM links the provided mobile number.",
                 "operationId": "d95c22ee14350e9c974b7b076ca23964",
                 "requestBody": {
@@ -179,7 +199,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B3 — Mobile OTP भेजो (Linking)",
+                "summary": "Step B3 — Send Mobile OTP (Linking)",
                 "description": "Sends a secondary OTP to verify the mobile number for linking with the newly created ABHA.",
                 "operationId": "51f9b37b0ca194543f6c390f43761b18",
                 "requestBody": {
@@ -218,7 +238,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B4 — Mobile OTP Verify करो (Linking)",
+                "summary": "Step B4 — Verify Mobile OTP (Linking)",
                 "description": "Verifies the Mobile OTP from Step B3 to finalize linking.",
                 "operationId": "eed76056a12de78a1293189864b69d37",
                 "requestBody": {
@@ -257,7 +277,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B5 — ABHA Address Suggestions लो",
+                "summary": "Step B5 — Get ABHA Address Suggestions",
                 "description": "Fetches a list of available ABHA addresses (usernames) based on user's Aadhaar data.",
                 "operationId": "83747ec87f37dc1fde3d80aa642edd5c",
                 "parameters": [
@@ -296,7 +316,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B6 — ABHA Address Choose करो",
+                "summary": "Step B6 — Select ABHA Address",
                 "description": "Finalizes the ABHA enrolment by selecting one of the suggested ABHA addresses.",
                 "operationId": "4f452a4ba3840c8836257c0595c3ea4c",
                 "requestBody": {
@@ -339,7 +359,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B7 — Aadhaar Profile details Fetch karo",
+                "summary": "Step B7 — Fetch Aadhaar Profile Details",
                 "description": "Fetches full ABHA profile details (name, gender, dob, photo, address) using the X-Token from Aadhaar Enrolment verify step (Step B2).",
                 "operationId": "2f90c338f171c159c0a2da35a08df89c",
                 "parameters": [
@@ -370,7 +390,7 @@
                 "tags": [
                     "2. ABHA — Mobile Login"
                 ],
-                "summary": "Step A0 — Mobile से ABHA खोजो",
+                "summary": "Step A0 — Search ABHA by Mobile",
                 "description": "Searches for ABHA records linked to a specific mobile number before sending login OTP.",
                 "operationId": "68bcef4eda81b64001a262aeab22b648",
                 "requestBody": {
@@ -406,8 +426,8 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B8 — ABHA Card (PDF/Image) Download karo",
-                "description": "Downloads the official ABHA card base64 image/PDF using the X-Token from Step B2.",
+                "summary": "Step B8 — Download ABHA Card (PDF/Image)",
+                "description": "Downloads the official ABHA card base64 image/PDF using the X-Token from Step B2. Optionally pass patient_id or abha_number to auto-save the card to DB.",
                 "operationId": "f7b0871ac2119a2d7832f516d77718d3",
                 "parameters": [
                     {
@@ -415,6 +435,24 @@
                         "in": "query",
                         "description": "X-Token from Step B2 (verify-aadhaar)",
                         "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "description": "Optional: Hospital patient ID to auto-save card to DB",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "abha_number",
+                        "in": "query",
+                        "description": "Optional: ABHA number to auto-save card to DB",
+                        "required": false,
                         "schema": {
                             "type": "string"
                         }
@@ -437,7 +475,7 @@
                 "tags": [
                     "3. ABHA — Aadhaar Enrolment"
                 ],
-                "summary": "Step B9 — ABHA QR Code Download karo",
+                "summary": "Step B9 — Download ABHA QR Code",
                 "description": "Downloads the ABHA QR Code image using the X-Token from Step B2.",
                 "operationId": "dfaa64c5b9b31833887b4a13b539bb14",
                 "parameters": [
@@ -541,6 +579,104 @@
                 "responses": {
                     "200": {
                         "description": "User profile retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/beds": {
+            "get": {
+                "tags": [
+                    "18. Inpatient Department (IPD) & Wards"
+                ],
+                "summary": "List hospital beds with optional ward and status filter",
+                "description": "Retrieves hospital beds filtered by ward ID, occupancy status, or bed number.",
+                "operationId": "767e865d3cfab1e66c1826d687150bf3",
+                "parameters": [
+                    {
+                        "name": "ward_id",
+                        "in": "query",
+                        "description": "Filter by ward ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status (available, occupied, maintenance)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by bed number",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Beds retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "18. Inpatient Department (IPD) & Wards"
+                ],
+                "summary": "Add a single bed to a ward with pricing",
+                "description": "Creates an individual bed within a designated ward with custom or inherited daily rate.",
+                "operationId": "1d90b5baaf2c3061b3fab5bc05bc19af",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "ward_id",
+                                    "bed_number"
+                                ],
+                                "properties": {
+                                    "ward_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "bed_number": {
+                                        "type": "string",
+                                        "example": "ICU-01"
+                                    },
+                                    "daily_charge": {
+                                        "type": "number",
+                                        "example": 2500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Bed added successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 },
                 "security": [
@@ -2788,6 +2924,156 @@
                 ]
             }
         },
+        "/api/v1/ipd/admissions/{id}/discharge-estimate": {
+            "get": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Pre-Discharge Billing Estimate Preview",
+                "description": "Returns unbilled ledger charges, advance deposits paid, and estimated net balance due before discharge.",
+                "operationId": "ed7ef43c416962386d4feab22cfc6ed8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pre-discharge estimate calculated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/settle-discharge": {
+            "post": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Final Settlement, Tax Invoice Generation & Patient Discharge",
+                "description": "1-Click final discharge: settles running ledger, factors in advance deposit, hospital discount, and insurance cashless claim, generates final Tax Invoice (INV-YYYY-XXXXX), frees the bed, and issues official Security Gate Pass (GP-YYYY-XXXXX).",
+                "operationId": "d3db066d7b5ab9f63421facbc87c1605",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bill settled, patient discharged, bed freed, gate pass issued"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/{id}": {
+            "get": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Get Formatted Itemized Tax Invoice",
+                "description": "Retrieves complete invoice data ready for printing / PDF export.",
+                "operationId": "8e26839ec5797200db20667a31142ea0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tax invoice data retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/gate-pass": {
+            "get": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Get Printable Hospital Security Gate Pass",
+                "description": "Returns official security clearance gate pass with patient, ward, bed, and financial clearance stamp.",
+                "operationId": "909d74721e52201215daa3d60e61d8be",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Security Gate Pass slip data"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/patient/{patientId}": {
+            "get": {
+                "tags": [
+                    "12. Billing & Invoices"
+                ],
+                "summary": "Get Invoices for Patient",
+                "operationId": "34f9aba38f9492339dd9202af09c588e",
+                "parameters": [
+                    {
+                        "name": "patientId",
+                        "in": "path",
+                        "description": "Patient ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient Invoices"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/ipd/wards": {
             "get": {
                 "tags": [
@@ -3193,6 +3479,1631 @@
                 ]
             }
         },
+        "/api/v1/ipd/bed-matrix": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Live Visual Bed Matrix (All Wards & Beds)",
+                "description": "Returns a visual 2D matrix of all hospital wards, their beds (Available, Occupied, Maintenance), patient demographics, attending doctor, elapsed admission time, and live running bills.",
+                "operationId": "6c2c7ab7fa1cc3b37995ca3c7c1a20e5",
+                "responses": {
+                    "200": {
+                        "description": "Bed matrix retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/rounds": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Doctor Daily Rounds History",
+                "operationId": "fc53f44c39594b7b3285cabc1d418999",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Doctor rounds history retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Doctor Inpatient Daily Round (SOAP Note)",
+                "description": "Records attending doctor's bedside clinical round with Subjective, Objective, Assessment, and Plan (SOAP) notes. Automatically triggers and posts doctor round consultation fee to the patient's running bill ledger.",
+                "operationId": "1eb996f1476042a736be41e9582a2177",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "round_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-15"
+                                    },
+                                    "round_type": {
+                                        "type": "string",
+                                        "example": "routine",
+                                        "enum": [
+                                            "routine",
+                                            "specialist_call",
+                                            "emergency",
+                                            "night_round"
+                                        ]
+                                    },
+                                    "subjective": {
+                                        "type": "string",
+                                        "example": "Patient feeling better, mild abdominal discomfort after meal"
+                                    },
+                                    "objective": {
+                                        "type": "string",
+                                        "example": "Abdomen soft, non-tender. Bowel sounds present. Surgical dressing dry."
+                                    },
+                                    "assessment": {
+                                        "type": "string",
+                                        "example": "Post-op Day 2 status post Lap Appendectomy, recovery satisfactory"
+                                    },
+                                    "plan": {
+                                        "type": "string",
+                                        "example": "Step down IV antibiotics to oral, start soft diet, ambulate"
+                                    },
+                                    "diet_advice": {
+                                        "type": "string",
+                                        "example": "soft"
+                                    },
+                                    "clinical_condition": {
+                                        "type": "string",
+                                        "example": "improving",
+                                        "enum": [
+                                            "improving",
+                                            "stable",
+                                            "deteriorating",
+                                            "critical"
+                                        ]
+                                    },
+                                    "is_discharge_planned": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "planned_discharge_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-17"
+                                    },
+                                    "fee_charged": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Doctor round recorded and fee posted"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/procedures": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Bedside Nursing Procedures Log",
+                "operationId": "a39b5e557ff94de4e8d8710c733618ea",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nursing procedures list retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Bedside Nursing Procedure & Charge",
+                "description": "Nurse logs a bedside procedure (e.g. Dressing, Nebulization, Catheterization, IV Cannulation, ECG). Automatically posts the procedure charge to patient running ledger.",
+                "operationId": "f95683879632567ff309dfabf035602b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "procedure_name"
+                                ],
+                                "properties": {
+                                    "procedure_name": {
+                                        "type": "string",
+                                        "example": "Wound Dressing (Minor)"
+                                    },
+                                    "procedure_code": {
+                                        "type": "string",
+                                        "example": "NURS-DRESS-MIN"
+                                    },
+                                    "performed_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-09-15 11:30:00"
+                                    },
+                                    "performed_by_name": {
+                                        "type": "string",
+                                        "example": "Nurse Sunita"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Surgical wound cleaned with betadine, sterile gauze dressing applied"
+                                    },
+                                    "charge_amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 200
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Bedside procedure recorded and charge posted"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/chart": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Inpatient 360 Comprehensive Medical & Financial Chart",
+                "description": "Retrieves complete inpatient clinical profile: admission info, doctor SOAP rounds, vital charts, fluid balance summary, MAR drug chart, bedside procedures, shift handovers, and live running financial bill summary.",
+                "operationId": "fd4946f752e7e2511ef8bb4145aaef8a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inpatient 360 chart retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/intake-output": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Fluid Balance Summary & I/O Logs",
+                "description": "Returns total intake, total output, net fluid balance, category breakdowns, and chronological logs.",
+                "operationId": "5cb6d8175f24dba32468d123949263ef",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-09-30"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fluid balance summary retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Fluid Intake or Output Entry",
+                "description": "Logs fluid intake (IV fluid, oral, RT feed, blood) or output (urine, RT aspirate, drain, vomitus, stool) in ml.",
+                "operationId": "5cdc400fad06382a21aede1114cb3801",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Fluid balance entry recorded"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/mar": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get MAR Drug Chart & Administration Progress",
+                "description": "Returns prescribed medications alongside nurse administration events.",
+                "operationId": "19fb7e55d6583ca94802e759ca166f20",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "MAR drug chart retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Medication Administration Record (MAR / Drug Chart)",
+                "description": "Logs drug administration status (given, omitted, refused, held, vomited) with nurse signature and optional auto-billing.",
+                "operationId": "28db83fd183990fcb3923603be437af3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "MAR administration recorded"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/shift-handover": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get Nursing Shift Handovers History",
+                "operationId": "c0bae5bf8e8528d22f06a858067bc0a5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Shift handovers list retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Record Nursing Shift Handover Note",
+                "description": "Creates a bed-by-bed shift transition note with patient condition, critical alerts, and pending tasks.",
+                "operationId": "f25fa80043f9c59fc3dbf8f2030eaa18",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Shift handover note created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/shift-handover/{id}/acknowledge": {
+            "put": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Acknowledge Shift Handover by Incoming Nurse",
+                "operationId": "5e15f2d54882c3500f5d80484c0b0407",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Shift handover acknowledged"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/opd-referrals": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get pending OPD doctor admission referrals",
+                "description": "Returns patients where the OPD Doctor set disposition to 'admit_ipd' who are not yet admitted.",
+                "operationId": "b9cebd74cf2d4770e7318dd5bb1b4d3d",
+                "responses": {
+                    "200": {
+                        "description": "OPD admission referrals retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders": {
+            "get": {
+                "tags": [
+                    "13. Lab — Orders & Billing"
+                ],
+                "summary": "Get live list of laboratory worklist orders",
+                "description": "Retrieves laboratory orders filtered by status, urgency, date, or search term.",
+                "operationId": "1333e4ac0c8825774281749bdca0517e",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by order status (pending_sample, sample_collected, in_progress, completed, authorized)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "urgency",
+                        "in": "query",
+                        "description": "Filter by priority (Routine, Urgent, STAT)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Filter by order date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by patient name, UHID, order number or accession number",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Laboratory orders retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}": {
+            "get": {
+                "tags": [
+                    "13. Lab — Orders & Billing"
+                ],
+                "summary": "Get single lab order with complete test items and parameters",
+                "description": "Retrieves complete order details including patient demographics, doctor, test panels, parameters, reference ranges, and results.",
+                "operationId": "49cb7f351ac3bd8ca7a8a3f8cd17f61f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Laboratory order details retrieved successfully"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/direct-booking": {
+            "post": {
+                "tags": [
+                    "13. Lab — Orders & Billing"
+                ],
+                "summary": "Direct walk-in lab booking with instant billing",
+                "description": "Books a walk-in laboratory test order, registers walk-in patient if new, generates invoice and phlebotomy token.",
+                "operationId": "4d5b36c557e41648dc90a41b9be7d36d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "tests"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "integer",
+                                        "example": 10
+                                    },
+                                    "patient_name": {
+                                        "type": "string",
+                                        "example": "Rahul Sharma"
+                                    },
+                                    "patient_gender": {
+                                        "type": "string",
+                                        "example": "Male"
+                                    },
+                                    "patient_age": {
+                                        "type": "number",
+                                        "example": 32
+                                    },
+                                    "patient_phone": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "referral_doctor": {
+                                        "type": "string",
+                                        "example": "Dr. A. Verma"
+                                    },
+                                    "urgency": {
+                                        "type": "string",
+                                        "example": "Routine"
+                                    },
+                                    "paid_amount": {
+                                        "type": "number",
+                                        "example": 500
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "cash"
+                                    },
+                                    "tests": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "test_template_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "test_name": {
+                                                    "type": "string",
+                                                    "example": "Complete Blood Count (CBC)"
+                                                },
+                                                "rate": {
+                                                    "type": "number",
+                                                    "example": 350
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Walk-in lab order booked successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/direct-booking": {
+            "put": {
+                "tags": [
+                    "13. Lab — Orders & Billing"
+                ],
+                "summary": "Update existing direct lab booking & invoice",
+                "description": "Updates patient, tests, discount, or payment details of an existing walk-in lab booking.",
+                "operationId": "4b600c1c6d9d86d57ffbbe6b6c549916",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lab booking & invoice updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/collect-payment": {
+            "post": {
+                "tags": [
+                    "13. Lab — Orders & Billing"
+                ],
+                "summary": "Collect payment / settle balance on lab invoice",
+                "description": "Records payment against due balance on a lab order invoice.",
+                "operationId": "a29d504466810b4cff8d2bbbb9330372",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount",
+                                    "payment_method"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 250
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "upi"
+                                    },
+                                    "transaction_ref": {
+                                        "type": "string",
+                                        "example": "UPI/20261012/1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Payment collected and receipt updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/sync-billed": {
+            "post": {
+                "tags": [
+                    "13. Lab — Orders & Billing"
+                ],
+                "summary": "Auto-sync billed prescription investigations into lab worklist",
+                "description": "Scans paid investigations from OPD/Billing and automatically creates lab worklist orders.",
+                "operationId": "07748f004e20cd03b69932bd24c787e2",
+                "responses": {
+                    "200": {
+                        "description": "Synced billed lab orders successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/invoices": {
+            "get": {
+                "tags": [
+                    "13. Lab — Orders & Billing"
+                ],
+                "summary": "List lab invoices & billing history",
+                "description": "Retrieves list of all invoices generated from laboratory orders.",
+                "operationId": "b9f02ebb4df676e07ad56bc353bfeec5",
+                "responses": {
+                    "200": {
+                        "description": "Lab billing & invoices history retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/collect-sample": {
+            "post": {
+                "tags": [
+                    "14. Lab — Phlebotomy & Queue"
+                ],
+                "summary": "Phlebotomy: Mark sample collected & generate barcode accession number",
+                "description": "Updates order status to sample_collected, assigns unique date-prefixed accession barcode number.",
+                "operationId": "ee63aaafbd4bd65dc6724c7f3d900356",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "sample_type": {
+                                        "type": "string",
+                                        "example": "Blood / Serum"
+                                    },
+                                    "container_color": {
+                                        "type": "string",
+                                        "example": "Lavender / EDTA Tube"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Fasting blood sample collected from left arm"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sample collected successfully. Accession number generated."
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/call-token": {
+            "post": {
+                "tags": [
+                    "14. Lab — Phlebotomy & Queue"
+                ],
+                "summary": "Call next phlebotomy token for sample collection booth",
+                "description": "Updates token state to 'calling' for announcement on waiting room TV screens.",
+                "operationId": "83245d215d2aa4150e0ab38a211e4591",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "booth_number": {
+                                        "type": "string",
+                                        "example": "Booth 1"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Token called successfully for booth"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/queue/display": {
+            "get": {
+                "tags": [
+                    "14. Lab — Phlebotomy & Queue"
+                ],
+                "summary": "Live token queue for waiting room TV kiosk display",
+                "description": "Returns currently called tokens, serving booths, and waiting queue counts.",
+                "operationId": "a0e692cefeb8dcccb2654c2d61a3d0b9",
+                "responses": {
+                    "200": {
+                        "description": "Phlebotomy active queue retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/reject-sample": {
+            "post": {
+                "tags": [
+                    "14. Lab — Phlebotomy & Queue"
+                ],
+                "summary": "Reject collected specimen due to pre-analytical error",
+                "description": "Rejects specimen with clinical rationale (e.g., Hemolyzed, Clotted, QNS, Wrong Tube) and logs to audit trail.",
+                "operationId": "e5bd1281611fcb939875e214661cb427",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Sample severely hemolyzed during transit."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sample marked as rejected"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/recollect-sample": {
+            "post": {
+                "tags": [
+                    "14. Lab — Phlebotomy & Queue"
+                ],
+                "summary": "Request urgent STAT recollection for rejected sample",
+                "description": "Generates a STAT priority recollection token for phlebotomist.",
+                "operationId": "facd3407b1980bcb4bd64c5ab79e3821",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Recollection token raised with STAT priority"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/report": {
+            "get": {
+                "tags": [
+                    "17. Lab — Diagnostic Reports"
+                ],
+                "summary": "Get formatted printable diagnostic report payload",
+                "description": "Assembles complete clinical report data including hospital header, patient demographics, selective test panels, dilution matrices, CLSI antibiograms, and digital signatures.",
+                "operationId": "bad6502050fdd38b787bb2e5c4ff101e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "tests",
+                        "in": "query",
+                        "description": "Comma-separated list of order item IDs to selectively print (e.g. 1,3)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Diagnostic report payload generated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/public/lab/report/{id}": {
+            "get": {
+                "tags": [
+                    "17. Lab — Diagnostic Reports"
+                ],
+                "summary": "Public digital diagnostic report verification (for QR-code scanning)",
+                "description": "Public unauthenticated endpoint to allow patient and external doctors to scan QR code on print paper and verify genuine lab results online.",
+                "operationId": "3bcea42c8e64fef634eee4ed500de119",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "tests",
+                        "in": "query",
+                        "description": "Optional comma-separated list of test item IDs",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Public diagnostic report retrieved successfully"
+                    },
+                    "404": {
+                        "description": "Lab order not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/lab/orders/{id}/results": {
+            "post": {
+                "tags": [
+                    "15. Lab — Results & Pathology"
+                ],
+                "summary": "Record laboratory test results with live formula evaluations & flags",
+                "description": "Saves parameter observed results, computes flags against biological reference intervals, evaluates dynamic formulas, and updates per-test clinical interpretations.",
+                "operationId": "078d0e022b7d3ff7e87491aa1112f5d9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "results"
+                                ],
+                                "properties": {
+                                    "results": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "order_item_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "parameter_id": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "parameter_name": {
+                                                    "type": "string",
+                                                    "example": "Hemoglobin"
+                                                },
+                                                "short_code": {
+                                                    "type": "string",
+                                                    "example": "HB"
+                                                },
+                                                "unit": {
+                                                    "type": "string",
+                                                    "example": "g/dL"
+                                                },
+                                                "observed_value": {
+                                                    "type": "string",
+                                                    "example": "14.5"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "technician_remarks": {
+                                        "type": "string",
+                                        "example": "Sample processed on automated hematology analyzer Sysmex XN-550"
+                                    },
+                                    "clinical_notes": {
+                                        "type": "string",
+                                        "example": "Normocytic normochromic blood picture"
+                                    },
+                                    "action": {
+                                        "type": "string",
+                                        "example": "draft"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Test results recorded and verified against reference ranges"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/patients/{patientId}/delta-history": {
+            "get": {
+                "tags": [
+                    "15. Lab — Results & Pathology"
+                ],
+                "summary": "Fetch patient previous authorized test results for Delta Check",
+                "description": "Retrieves past verified readings of matching parameters for the patient to calculate historical percentage change.",
+                "operationId": "da6a9a50bf00ba04cc0a146ffe34f7cc",
+                "parameters": [
+                    {
+                        "name": "patientId",
+                        "in": "path",
+                        "description": "Patient ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient previous lab test results retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/authorize": {
+            "post": {
+                "tags": [
+                    "15. Lab — Results & Pathology"
+                ],
+                "summary": "Pathologist authorization & sign-off release for complete report",
+                "description": "Official sign-off by pathologist. Seals all verified results and marks order as authorized.",
+                "operationId": "c19a06954b8ee27b47e6e33415158f8c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Diagnostic report successfully authorized and released"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/approve-items": {
+            "post": {
+                "tags": [
+                    "15. Lab — Results & Pathology"
+                ],
+                "summary": "Independent panel approval for ready test items",
+                "description": "Allows pathologist to release completed test panels (e.g. CBC) while longer cultures remain in progress.",
+                "operationId": "3adc479321c50b9b43d8caebfa8b773e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Selected test panels approved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/items/{itemId}/revoke": {
+            "post": {
+                "tags": [
+                    "15. Lab — Results & Pathology"
+                ],
+                "summary": "Revoke approval for a specific test item",
+                "description": "Re-opens an independently approved test panel back to completed for re-examination.",
+                "operationId": "23f861f4b997dac28cf796f192c28345",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "itemId",
+                        "in": "path",
+                        "description": "Order Item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Test panel approval revoked for re-examination"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/revoke-authorization": {
+            "post": {
+                "tags": [
+                    "15. Lab — Results & Pathology"
+                ],
+                "summary": "Revoke full order authorization to allow corrections",
+                "description": "Re-opens an authorized report to in_progress or partially_authorized with audit trail logging.",
+                "operationId": "5b0bc0a440ec4f1cbd8b5f0c19a53a13",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Authorization revoked. Report re-opened for modification."
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/orders/{id}/audit-logs": {
+            "get": {
+                "tags": [
+                    "15. Lab — Results & Pathology"
+                ],
+                "summary": "Get complete audit trail of result entries, edits, and approvals",
+                "description": "Retrieves complete chronological record of parameter modifications, previous vs new values, user IDs, and timestamps.",
+                "operationId": "27255608249fa019f349bd6e80d2a12e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Lab Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order audit logs retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/templates": {
+            "get": {
+                "tags": [
+                    "16. Lab — Test Catalog Master"
+                ],
+                "summary": "List / search test templates from Master Catalog (281+ tests)",
+                "description": "Retrieves pathology test catalog filtered by category, department, or search query with parameters and biological reference intervals.",
+                "operationId": "a3d6cf2790fd24b2df6b72c0afa3071b",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by test name or test code",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "description": "Filter by category (Hematology, Biochemistry, etc.)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "department_id",
+                        "in": "query",
+                        "description": "Filter by department ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page (default: 300)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Test templates catalog retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "16. Lab — Test Catalog Master"
+                ],
+                "summary": "Create new custom test template with parameters & reference ranges",
+                "description": "Creates a new test template in the hospital master catalog with customizable parameters, formulas, and age/gender reference ranges.",
+                "operationId": "45b34c9d7d65c42ee2889b5ca3eb73b9",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "test_name",
+                                    "test_code"
+                                ],
+                                "properties": {
+                                    "test_name": {
+                                        "type": "string",
+                                        "example": "Cardiac Troponin I (High Sensitive)"
+                                    },
+                                    "test_code": {
+                                        "type": "string",
+                                        "example": "TROP-I"
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "Biochemistry & Immunochemistry"
+                                    },
+                                    "sample_type": {
+                                        "type": "string",
+                                        "example": "Serum / Heparinized Plasma"
+                                    },
+                                    "container_color": {
+                                        "type": "string",
+                                        "example": "Yellow / SST Gel Tube"
+                                    },
+                                    "method": {
+                                        "type": "string",
+                                        "example": "CMIA"
+                                    },
+                                    "standard_price": {
+                                        "type": "number",
+                                        "example": 850
+                                    },
+                                    "tat_hours": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Test template created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/templates/{id}": {
+            "get": {
+                "tags": [
+                    "16. Lab — Test Catalog Master"
+                ],
+                "summary": "Get single test template details with parameters & reference ranges",
+                "description": "Retrieves complete test template configuration, specimen requirements, container color, methodology, and parameters.",
+                "operationId": "387252e612c0219875f0ff94a7d8738b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Test Template ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Test template details retrieved"
+                    },
+                    "404": {
+                        "description": "Test template not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "16. Lab — Test Catalog Master"
+                ],
+                "summary": "Update existing test template, parameters, or biological reference ranges",
+                "description": "Updates test template configuration, prices, specimen tubes, methodology, parameters, and age/gender biological reference ranges.",
+                "operationId": "1c944c3297b0d73aad92bba72ab90d45",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Test Template ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Test template updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "16. Lab — Test Catalog Master"
+                ],
+                "summary": "Deactivate / soft-delete test template from catalog",
+                "description": "Deactivates a test template from hospital active catalog.",
+                "operationId": "a322065cbe14580653bcc295a3953650",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Test Template ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Test template deactivated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/opd/queue": {
             "get": {
                 "tags": [
@@ -3293,7 +5204,7 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
@@ -3339,7 +5250,7 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
@@ -3562,6 +5473,26 @@
                     },
                     "422": {
                         "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/patients/stats": {
+            "get": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Get aggregate patient statistics",
+                "description": "Retrieves aggregate counts for total registered, male, female, other, and ABHA linked patients across the hospital.",
+                "operationId": "3f409b676128a50fd199eca6c821e097",
+                "responses": {
+                    "200": {
+                        "description": "Patient statistics retrieved successfully"
                     }
                 },
                 "security": [
@@ -3796,6 +5727,133 @@
                 "responses": {
                     "200": {
                         "description": "Patient 360 history retrieved successfully"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/patients/{id}/abha-card": {
+            "get": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Get Official ABHA Card PDF for Patient from Database",
+                "description": "Returns the stored official NHA ABHA Card PDF for this patient directly from PostgreSQL DB. Card is only stored when downloaded from ABDM API.",
+                "operationId": "c406c74bbc41e94aa867072c830317dd",
+                "responses": {
+                    "200": {
+                        "description": "Official ABHA card retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Store Official ABHA Card PDF in PostgreSQL DB",
+                "description": "Saves official Base64 PDF card for patient directly into database column.",
+                "operationId": "80b3f267964682cf8e14ea0b7372f2e4",
+                "responses": {
+                    "200": {
+                        "description": "Official ABHA card saved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/patients/{id}/link-abha": {
+            "post": {
+                "tags": [
+                    "9. Patients"
+                ],
+                "summary": "Link existing patient with ABHA account",
+                "description": "Links an existing hospital patient to their official ABHA Number / Address, downloads their authentic card if token is passed, and marks kyc_verified.",
+                "operationId": "1ac57926b17bb9499d5263d71c239de0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "abha_number"
+                                ],
+                                "properties": {
+                                    "abha_number": {
+                                        "type": "string",
+                                        "example": "91-1234-5678-9012"
+                                    },
+                                    "abha_address": {
+                                        "type": "string",
+                                        "example": "ramesh@sbx"
+                                    },
+                                    "token": {
+                                        "description": "Optional: ABDM transaction token to auto-fetch card",
+                                        "type": "string"
+                                    },
+                                    "txnId": {
+                                        "description": "Optional: ABDM txnId",
+                                        "type": "string"
+                                    },
+                                    "abha_card_base64": {
+                                        "description": "Optional: Pre-fetched base64 card",
+                                        "type": "string"
+                                    },
+                                    "photo": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "city": {
+                                        "type": "string"
+                                    },
+                                    "district": {
+                                        "type": "string"
+                                    },
+                                    "state": {
+                                        "type": "string"
+                                    },
+                                    "pincode": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient linked to ABHA successfully"
+                    },
+                    "422": {
+                        "description": "Validation error or ABHA conflict"
                     },
                     "404": {
                         "description": "Patient not found"
@@ -4118,6 +6176,58 @@
                 ]
             }
         },
+        "/api/v1/investigations/search": {
+            "get": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Search Diagnostic Investigations (Lab, Radiology & Cardiology)",
+                "description": "Autocomplete search across hospital charges master and clinical diagnostic catalog.",
+                "operationId": "36db096203c003d7aa22b416985165f2",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search query (e.g. CBC, X-Ray, ECG, USG)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "CBC"
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "description": "Optional filter: Pathology, Radiology, Cardiology",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Pathology"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Max results (default: 25)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 25
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of matching diagnostic investigations"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/prescriptions": {
             "post": {
                 "tags": [
@@ -4287,36 +6397,6 @@
                 ]
             }
         },
-        "/api/v1/opd/visit/{visitId}/prescribe": {
-            "post": {
-                "tags": [
-                    "13. E-Prescription & Master Catalogs"
-                ],
-                "summary": "Prescribe medicines and complete OPD visit in 1-click",
-                "description": "Convenience endpoint for Doctor OPD Panel to submit prescription directly on the visit, auto-marking the visit as 'done'.",
-                "operationId": "de932c3880d3f4ede7837ef70557da31",
-                "parameters": [
-                    {
-                        "name": "visitId",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Visit prescribed and completed"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
         "/api/v1/prescriptions/{id}": {
             "get": {
                 "tags": [
@@ -4338,6 +6418,64 @@
                 "responses": {
                     "200": {
                         "description": "Complete printable prescription"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Update existing E-Prescription (Draft or Signed)",
+                "description": "Updates prescription medicines, diagnoses, complaints, and advice. Allows saving drafts or updating finalized prescriptions.",
+                "operationId": "2ce24217fc53ef73027f2f6d7eaacdef",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Prescription updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/opd/visit/{visitId}/prescribe": {
+            "post": {
+                "tags": [
+                    "13. E-Prescription & Master Catalogs"
+                ],
+                "summary": "Prescribe medicines and complete OPD visit in 1-click",
+                "description": "Convenience endpoint for Doctor OPD Panel to submit prescription directly on the visit, auto-marking the visit as 'done'.",
+                "operationId": "de932c3880d3f4ede7837ef70557da31",
+                "parameters": [
+                    {
+                        "name": "visitId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Visit prescribed and completed"
                     }
                 },
                 "security": [
@@ -4963,6 +7101,313 @@
                 ]
             }
         },
+        "/api/v1/reception/revisit/check": {
+            "get": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Check if an existing patient is eligible for free follow-up (15-day timeline)",
+                "description": "Checks whether a patient has visited this doctor/department within the hospital follow-up policy (default 15 days), returning previous visit history and fee waiver suggestion.",
+                "operationId": "53f666029d2071fcceb872f8dd2c9b60",
+                "parameters": [
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "description": "Patient Database ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "uhid",
+                        "in": "query",
+                        "description": "Patient UHID",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "mobile",
+                        "in": "query",
+                        "description": "Patient 10-digit mobile number",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "doctor_id",
+                        "in": "query",
+                        "description": "Selected Doctor ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "department_id",
+                        "in": "query",
+                        "description": "Selected Department ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Revisit follow-up eligibility data"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/quick-revisit": {
+            "post": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Issue Re-visit OPD token for existing patient with 15-day free follow-up policy",
+                "description": "Direct 1-click OPD token generation for an existing registered patient using UHID or Mobile. Automatically checks 15-day follow-up policy and sets fee to ₹0 (waived) if within timeline.",
+                "operationId": "b5adb5fba5b7961a752d2d955004e003",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "doctor_id"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "integer",
+                                        "example": 10,
+                                        "nullable": true
+                                    },
+                                    "uhid": {
+                                        "type": "string",
+                                        "example": "HOSP-2026-01070",
+                                        "nullable": true
+                                    },
+                                    "mobile": {
+                                        "type": "string",
+                                        "example": "9876543210",
+                                        "nullable": true
+                                    },
+                                    "doctor_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "department_id": {
+                                        "type": "integer",
+                                        "example": 2,
+                                        "nullable": true
+                                    },
+                                    "appointment_type_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "chief_complaint": {
+                                        "type": "string",
+                                        "example": "Routine Follow-up",
+                                        "nullable": true
+                                    },
+                                    "fee_charged": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "nullable": true
+                                    },
+                                    "discount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "nullable": true
+                                    },
+                                    "amount_paid": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "nullable": true
+                                    },
+                                    "payment_status": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "pending",
+                                            "paid",
+                                            "partial",
+                                            "waived"
+                                        ]
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "cash",
+                                            "card",
+                                            "upi",
+                                            "insurance",
+                                            "split",
+                                            "cheque",
+                                            "other"
+                                        ]
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Re-visit OPD slip issued"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/visits": {
+            "get": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Get issued OPD tokens & visits history for reception desk",
+                "description": "Fetches list of OPD visits and issued tokens at reception, filterable by date, doctor, department, status, or search query.",
+                "operationId": "822703148c2cebf50d8e6077cabab968",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Filter by date (YYYY-MM-DD or 'all', default today)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-10-03"
+                        }
+                    },
+                    {
+                        "name": "doctor_id",
+                        "in": "query",
+                        "description": "Filter by doctor ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "department_id",
+                        "in": "query",
+                        "description": "Filter by department ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status: waiting, called, in_consultation, done, cancelled, or all",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "all"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by token, OPD number, patient name, UHID, or mobile",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "all",
+                        "in": "query",
+                        "description": "Set to true to fetch all records without pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": false
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page (default: 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of issued OPD visits"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reception/visits/stats": {
+            "get": {
+                "tags": [
+                    "4. Reception"
+                ],
+                "summary": "Get summary statistics for issued OPD visits",
+                "description": "Returns summary counts (total issued, waiting, in consultation, completed, fees collected) for a specific date (defaults to today).",
+                "operationId": "10c6791035fe65694691cd27398eb9b6",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Date for stats (YYYY-MM-DD, defaults to today)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Visit summary statistics"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/storage/upload-url": {
             "post": {
                 "tags": [
@@ -5314,6 +7759,23 @@
                 "responses": {
                     "200": {
                         "description": "Vital details"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "5. Triage & Vitals (Nurse)"
+                ],
+                "summary": "Update an existing vital record",
+                "operationId": "75a1b14acb30b66bad739650500d5962",
+                "responses": {
+                    "200": {
+                        "description": "Vital record updated successfully"
                     }
                 },
                 "security": [
@@ -5683,6 +8145,91 @@
                     }
                 ]
             }
+        },
+        "/api/v1/wards": {
+            "get": {
+                "tags": [
+                    "18. Inpatient Department (IPD) & Wards"
+                ],
+                "summary": "Get all wards for the hospital with bed statistics and room pricing",
+                "description": "Retrieves all hospital wards with bed occupancy counts and daily charges.",
+                "operationId": "7c04b409ff75f14761812027459dc381",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by ward name, code, or floor",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Wards retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "18. Inpatient Department (IPD) & Wards"
+                ],
+                "summary": "Create a new Ward with room pricing and optional initial beds",
+                "description": "Creates a new clinical ward/unit with capacity and pricing configuration.",
+                "operationId": "f7aab68e15aad8892e997c97d2ea848e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "code",
+                                    "daily_charge"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Intensive Care Unit (ICU)"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "example": "ICU"
+                                    },
+                                    "floor": {
+                                        "type": "string",
+                                        "example": "2nd Floor"
+                                    },
+                                    "daily_charge": {
+                                        "type": "number",
+                                        "example": 2500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Ward created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -5701,11 +8248,11 @@
     "tags": [
         {
             "name": "2. ABHA — Mobile Login",
-            "description": "Flow A — मरीज़ के पास ABHA पहले से है (Mobile OTP से verify)"
+            "description": "Flow A — Patient has existing ABHA (Verify via Mobile OTP)"
         },
         {
             "name": "3. ABHA — Aadhaar Enrolment",
-            "description": "Flow B — नया ABHA बनाना (Aadhaar OTP से enrolment)"
+            "description": "Flow B — Create New ABHA (Enrolment via Aadhaar OTP)"
         },
         {
             "name": "4. Reception",
@@ -5740,6 +8287,30 @@
             "description": "File Upload/Download via R2/S3"
         },
         {
+            "name": "13. Lab — Orders & Billing",
+            "description": "Laboratory Worklist, Direct Walk-In Booking & Invoicing"
+        },
+        {
+            "name": "14. Lab — Phlebotomy & Queue",
+            "description": "Sample Collection, Accessioning Barcodes, Booth Calling & Rejection"
+        },
+        {
+            "name": "15. Lab — Results & Pathology",
+            "description": "Result Entry, Delta Checks, Approvals & Authorization"
+        },
+        {
+            "name": "16. Lab — Test Catalog Master",
+            "description": "281+ Pathology Tests Master, Parameters & Reference Intervals"
+        },
+        {
+            "name": "17. Lab — Diagnostic Reports",
+            "description": "Printable Diagnostic Reports & Public QR Verification"
+        },
+        {
+            "name": "18. Inpatient Department (IPD) & Wards",
+            "description": "Wards, Beds, Admissions, Transfers & Nursing Station"
+        },
+        {
             "name": "12. Hospital Charges & Billing Ledger",
             "description": "Tariff Master Catalog, Real-Time Inpatient Running Ledger, and Customizable Bed Billing Rules"
         },
@@ -5756,8 +8327,16 @@
             "description": "Doctor E-Prescriptions with WHO ICD-10 Diagnosis Codes and 200,000 Indian Medicines Autocomplete"
         },
         {
+            "name": "3. ABHA — Mobile Login",
+            "description": "3. ABHA — Mobile Login"
+        },
+        {
             "name": "Authentication",
             "description": "Authentication"
+        },
+        {
+            "name": "12. Billing & Invoices",
+            "description": "12. Billing & Invoices"
         }
     ]
 }

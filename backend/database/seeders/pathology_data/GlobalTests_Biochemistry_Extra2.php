@@ -1,0 +1,82 @@
+<?php
+
+// Additional Biochemistry Tests - Part 2: Microalbumin, Protein Electrophoresis, Ceruloplasmin, C-Peptide, Fructosamine
+return [
+    [
+        'test_code' => 'MALB',
+        'name' => 'Urine Microalbumin',
+        'category' => 'Biochemistry',
+        'description' => 'Detects early kidney damage in diabetes and hypertension. Spot urine or 24-hour collection.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">Microalbumin Interpretation</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>Spot Urine (mg/L)</th><th>Category</th><th>Significance</th></tr></thead><tbody><tr><td><strong>&lt; 20</strong></td><td>Normal</td><td>No evidence of nephropathy</td></tr><tr><td><strong>20 - 200</strong></td><td>Microalbuminuria</td><td>Early diabetic nephropathy, CV risk marker</td></tr><tr><td><strong>&gt; 200</strong></td><td>Macroalbuminuria</td><td>Overt nephropathy, Progressive renal disease</td></tr></tbody></table><div class="mt-2 p-2 bg-soft-info border rounded-3 fs-11"><i class="feather-info me-2"></i><strong>Note:</strong> Confirm with Albumin-Creatinine Ratio (ACR). Transient causes: exercise, fever, UTI, heart failure.</div></div>',
+        'suggested_price' => 500,
+        'method' => 'Immunoturbidimetry',
+        'sample_type' => 'Spot Urine / 24hr Urine',
+        'tat_hours' => 6,
+        'default_parameters' => [
+            ['name' => 'Microalbumin (Urine)', 'unit' => 'mg/L', 'short_code' => 'MALB', 'input_type' => 'numeric', 'method' => 'Immunoturbidimetry', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0', 'max_val' => '20', 'display_range' => '< 20']]],
+            ['name' => 'Urine Creatinine', 'unit' => 'mg/dL', 'short_code' => 'UCR', 'input_type' => 'numeric', 'method' => 'Modified Jaffe', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '20', 'max_val' => '300', 'display_range' => '20 - 300']]],
+            ['name' => 'ACR (Albumin-Creatinine Ratio)', 'unit' => 'mg/g', 'short_code' => 'ACR', 'input_type' => 'calculated', 'method' => 'Calculated', 'range_type' => 'flexible', 'formula' => '({MALB} * 100) / {UCR}', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0', 'max_val' => '30', 'display_range' => '< 30']]],
+        ],
+    ],
+    [
+        'test_code' => 'SPE',
+        'name' => 'Serum Protein Electrophoresis (SPE)',
+        'category' => 'Biochemistry',
+        'description' => 'Separates serum proteins into fractions. Essential for Multiple Myeloma screening and chronic liver disease evaluation.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">Protein Electrophoresis Patterns</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>Pattern</th><th>Finding</th><th>Clinical Association</th></tr></thead><tbody><tr><td><strong>M-Spike (Monoclonal)</strong></td><td>Sharp band in gamma region</td><td>Multiple Myeloma, MGUS, Waldenstrom macroglobulinemia</td></tr><tr><td><strong>Polyclonal Gammopathy</strong></td><td>Broad-based gamma elevation</td><td>Chronic infections, Autoimmune diseases, Liver cirrhosis</td></tr><tr><td><strong>Hypogammaglobulinemia</strong></td><td>Decreased gamma</td><td>Immunodeficiency, Nephrotic syndrome</td></tr><tr><td><strong>Acute Phase Pattern</strong></td><td>↑Alpha-1, Alpha-2; ↓Albumin</td><td>Acute infection, Inflammation, Surgery</td></tr></tbody></table><div class="mt-2 p-2 bg-soft-warning border rounded-3 fs-11"><i class="feather-alert-triangle me-2"></i><strong>Important:</strong> Any M-spike requires immunofixation electrophoresis (IFE) for characterization and serum free light chains.</div></div>',
+        'suggested_price' => 1500,
+        'method' => 'Capillary Zone Electrophoresis',
+        'sample_type' => 'Clotted Blood',
+        'tat_hours' => 48,
+        'default_parameters' => [
+            ['name' => 'Albumin', 'unit' => 'g/dL', 'short_code' => 'SPEA', 'input_type' => 'numeric', 'method' => 'Electrophoresis', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '3.5', 'max_val' => '5.0', 'display_range' => '3.5 - 5.0']]],
+            ['name' => 'Alpha-1 Globulin', 'unit' => 'g/dL', 'short_code' => 'A1G', 'input_type' => 'numeric', 'method' => 'Electrophoresis', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0.1', 'max_val' => '0.3', 'display_range' => '0.1 - 0.3']]],
+            ['name' => 'Alpha-2 Globulin', 'unit' => 'g/dL', 'short_code' => 'A2G', 'input_type' => 'numeric', 'method' => 'Electrophoresis', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0.6', 'max_val' => '1.0', 'display_range' => '0.6 - 1.0']]],
+            ['name' => 'Beta Globulin', 'unit' => 'g/dL', 'short_code' => 'BG1', 'input_type' => 'numeric', 'method' => 'Electrophoresis', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0.7', 'max_val' => '1.2', 'display_range' => '0.7 - 1.2']]],
+            ['name' => 'Gamma Globulin', 'unit' => 'g/dL', 'short_code' => 'GAMG', 'input_type' => 'numeric', 'method' => 'Electrophoresis', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0.7', 'max_val' => '1.6', 'display_range' => '0.7 - 1.6']]],
+            ['name' => 'M-Band', 'unit' => '', 'short_code' => 'MBAND', 'input_type' => 'text', 'method' => 'Electrophoresis', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'normal_value' => 'Not Detected', 'display_range' => 'Not Detected']]],
+        ],
+    ],
+    [
+        'test_code' => 'CERULO',
+        'name' => 'Serum Ceruloplasmin',
+        'category' => 'Biochemistry',
+        'description' => 'Copper-carrying protein. Essential for Wilson disease diagnosis.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">Ceruloplasmin Interpretation</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>Level (mg/dL)</th><th>Clinical Significance</th></tr></thead><tbody><tr><td><strong>&lt; 10</strong></td><td>Strongly suggestive of Wilson disease (with Kayser-Fleischer rings, low serum copper, high urine copper)</td></tr><tr><td><strong>10 - 20</strong></td><td>Borderline — May be seen in Wilson disease carriers, Menkes disease, Severe liver failure</td></tr><tr><td><strong>20 - 60</strong></td><td>Normal range</td></tr><tr><td><strong>&gt; 60</strong></td><td>Elevated — Acute phase response, Pregnancy, Oral contraceptives, Estrogen therapy</td></tr></tbody></table></div>',
+        'suggested_price' => 800,
+        'method' => 'Immunoturbidimetry',
+        'sample_type' => 'Clotted Blood',
+        'tat_hours' => 24,
+        'default_parameters' => [
+            ['name' => 'Ceruloplasmin', 'unit' => 'mg/dL', 'short_code' => 'CERU', 'input_type' => 'numeric', 'method' => 'Immunoturbidimetry', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '20', 'max_val' => '60', 'display_range' => '20 - 60']]],
+        ],
+    ],
+    [
+        'test_code' => 'CPEPTIDE',
+        'name' => 'C-Peptide',
+        'category' => 'Biochemistry',
+        'description' => 'Byproduct of insulin production. Differentiates Type 1 from Type 2 diabetes and evaluates endogenous insulin secretion.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">C-Peptide Interpretation</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>Level (ng/mL)</th><th>Clinical Significance</th></tr></thead><tbody><tr><td><strong>&lt; 0.6</strong></td><td>Low — Type 1 DM, Late Type 2 DM (beta-cell failure), Exogenous insulin use</td></tr><tr><td><strong>0.6 - 2.0</strong></td><td>Normal fasting level</td></tr><tr><td><strong>&gt; 2.0</strong></td><td>Elevated — Insulin resistance, Type 2 DM (early), Insulinoma, Renal failure</td></tr></tbody></table><div class="mt-2 p-2 bg-soft-info border rounded-3 fs-11"><i class="feather-info me-2"></i><strong>Note:</strong> C-Peptide is not affected by exogenous insulin. Useful for differentiating factitious hypoglycemia (high insulin, low C-peptide).</div></div>',
+        'suggested_price' => 900,
+        'method' => 'CLIA (Chemiluminescence Immunoassay)',
+        'sample_type' => 'Clotted Blood (Fasting)',
+        'tat_hours' => 24,
+        'default_parameters' => [
+            ['name' => 'C-Peptide (Fasting)', 'unit' => 'ng/mL', 'short_code' => 'CPEP', 'input_type' => 'numeric', 'method' => 'CLIA (Chemiluminescence)', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0.6', 'max_val' => '2.0', 'display_range' => '0.6 - 2.0']]],
+        ],
+    ],
+    [
+        'test_code' => 'TROP-T',
+        'name' => 'Troponin T (High Sensitivity)',
+        'category' => 'Biochemistry',
+        'description' => 'High-sensitivity cardiac troponin T. Detects myocardial injury with superior sensitivity compared to conventional assays.',
+        'interpretation' => '<div class="detailed-interpretation"><h6 class="fw-bold text-primary mb-3">hs-Troponin T Interpretation</h6><table class="table table-bordered table-sm fs-12"><thead class="bg-light"><tr><th>Level (ng/L)</th><th>Clinical Significance</th></tr></thead><tbody><tr><td><strong>&lt; 14</strong></td><td>Normal — 99th percentile URL. MI unlikely.</td></tr><tr><td><strong>14 - 52</strong></td><td>Elevated — Possible myocardial injury. Repeat in 3-6 hours for delta change.</td></tr><tr><td><strong>&gt; 52</strong></td><td>Significantly Elevated — Acute MI likely (with rising/falling pattern), Myocarditis, PE, Renal failure</td></tr></tbody></table><div class="mt-2 p-2 bg-soft-warning border rounded-3 fs-11"><i class="feather-alert-triangle me-2"></i><strong>Important:</strong> A rise/fall pattern (&gt;20% delta) over 3-6 hours is diagnostic of acute MI. Chronic stable elevation seen in CKD, heart failure.</div></div>',
+        'suggested_price' => 1200,
+        'method' => 'ECLIA (Electrochemiluminescence)',
+        'sample_type' => 'Clotted Blood',
+        'tat_hours' => 2,
+        'default_parameters' => [
+            ['name' => 'hs-Troponin T', 'unit' => 'ng/L', 'short_code' => 'HSTT', 'input_type' => 'numeric', 'method' => 'ECLIA (Electrochemiluminescence)', 'range_type' => 'flexible', 'formula' => '', 'ranges' => [['gender' => 'Both', 'age_min' => 0, 'age_max' => 120, 'age_unit' => 'Years', 'min_val' => '0', 'max_val' => '14', 'display_range' => '< 14 (99th percentile)']]],
+        ],
+    ],
+];

@@ -40,6 +40,21 @@ class PatientController extends Controller
         return $this->successResponse($resource, 'Patients retrieved successfully');
     }
 
+    #[OA\Get(
+        path: "/api/v1/patients/stats",
+        summary: "Get aggregate patient statistics",
+        description: "Retrieves aggregate counts for total registered, male, female, other, and ABHA linked patients across the hospital.",
+        tags: ["9. Patients"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(response: 200, description: "Patient statistics retrieved successfully")]
+    public function stats(Request $request)
+    {
+        $stats = $this->patientService->getPatientStats($request);
+        return $this->successResponse($stats, 'Patient statistics retrieved successfully');
+    }
+
+
     #[OA\Post(
         path: "/api/v1/patients",
         summary: "Register a new patient",
@@ -106,7 +121,14 @@ class PatientController extends Controller
             'photo'             => 'nullable|string',
             'kyc_verified'      => 'nullable|boolean',
             'custom_fields'     => 'nullable|array',
+            'abha_card_pdf'     => 'nullable|string',
+            'abha_card_base64'  => 'nullable|string',
         ]);
+
+        if (!empty($data['abha_card_base64'])) {
+            $data['abha_card_pdf'] = $data['abha_card_base64'];
+            unset($data['abha_card_base64']);
+        }
 
         $data['hospital_id'] = $this->getHospitalId($request);
 
@@ -198,7 +220,14 @@ class PatientController extends Controller
             'photo'             => 'nullable|string',
             'kyc_verified'      => 'nullable|boolean',
             'custom_fields'     => 'nullable|array',
+            'abha_card_pdf'     => 'nullable|string',
+            'abha_card_base64'  => 'nullable|string',
         ]);
+
+        if (!empty($validated['abha_card_base64'])) {
+            $validated['abha_card_pdf'] = $validated['abha_card_base64'];
+            unset($validated['abha_card_base64']);
+        }
 
         $patient = $this->patientService->updatePatient((int) $id, $validated);
 
@@ -235,6 +264,260 @@ class PatientController extends Controller
         $hospitalId = $this->getHospitalId($request);
         $history = $this->patientService->getPatientHistory((int) $id, $hospitalId);
         return $this->successResponse($history, 'Patient 360 history retrieved successfully');
+    }
+
+    #[OA\Get(
+        path: "/api/v1/patients/{id}/abha-card",
+        summary: "Get Official ABHA Card PDF for Patient from Database",
+        description: "Returns the stored official NHA ABHA Card PDF for this patient directly from PostgreSQL DB. Card is only stored when downloaded from ABDM API.",
+        tags: ["9. Patients"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(response: 200, description: "Official ABHA card retrieved")]
+    public function getAbhaCard(Request $request, $id)
+    {
+        $patient = null;
+        if (!empty($id) && $id !== '0' && $id !== 'lookup') {
+            $patient = \App\Models\Patient::where('id', is_numeric($id) ? (int)$id : 0)
+                ->orWhere('uhid', $id)
+                ->orWhere('abha_number', $id)
+                ->orWhere('mobile', $id)
+                ->first();
+        }
+
+        if (!$patient) {
+            if ($request->filled('abha_number')) {
+                $patient = \App\Models\Patient::where('abha_number', $request->query('abha_number'))->first();
+            } elseif ($request->filled('mobile')) {
+                $patient = \App\Models\Patient::where('mobile', $request->query('mobile'))->first();
+            } elseif ($request->filled('uhid')) {
+                $patient = \App\Models\Patient::where('uhid', $request->query('uhid'))->first();
+            }
+        }
+
+        if (!$patient) {
+            return $this->errorResponse('Patient record not found in database.', null, 404);
+        }
+
+        // 1. Direct from PostgreSQL DB column (only official ABDM-issued card)
+        $base64 = $patient->abha_card_pdf;
+
+        // Discard any stale custom Dompdf output
+        if (!empty($base64)) {
+            $decoded = base64_decode($base64, true);
+            if ($decoded !== false) {
+                $clean = str_replace("\0", "", $decoded);
+                if (stripos($clean, 'dompdf') !== false || stripos($clean, 'CPDF') !== false) {
+                    $patient->update(['abha_card_pdf' => null]);
+                    $base64 = null;
+                }
+            }
+        }
+
+        // 2. If token was passed and DB doesn't have it, try downloading from NHA and saving to DB
+        if (empty($base64) && $request->filled('token')) {
+            try {
+                $token = $request->query('token');
+                $abdmService = app(\App\Services\Abdm\AbdmServiceInterface::class);
+                $rawToken = trim(str_replace('Bearer ', '', $token));
+                $jwtParts = explode('.', $rawToken);
+                if (count($jwtParts) === 3) {
+                    $jwtPayload = json_decode(base64_decode(strtr($jwtParts[1], '-_', '+/')), true);
+                    if (($jwtPayload['typ'] ?? '') === 'Transfer' && $request->filled('txnId') && !empty($patient->abha_number)) {
+                        $verifyRes = $abdmService->verifyUser($rawToken, $request->query('txnId'), $patient->abha_number);
+                        if (!empty($verifyRes['token'])) {
+                            $token = $verifyRes['token'];
+                        }
+                    }
+                }
+                $cardRes = $abdmService->downloadAbhaCard($token);
+                if (!empty($cardRes['data'])) {
+                    $base64 = $cardRes['data'];
+                    $patient->update(['abha_card_pdf' => $base64]);
+                }
+            } catch (\Exception $e) {
+                \Log::warning("Could not fetch NHA card via token for patient {$patient->id}: " . $e->getMessage());
+            }
+        }
+
+        // NOTE: No custom PDF generation — only official ABDM-issued card is served.
+        // If card not in DB, patient must download it from ABDM first via /api/v1/abha/card
+        if (empty($base64)) {
+            return $this->errorResponse(
+                'Official ABHA Card not yet downloaded from ABDM. Please use the Download Card button first.',
+                null,
+                404
+            );
+        }
+
+        // Normalise: unwrap accidental double-encoding
+        $binary = base64_decode($base64);
+        if (str_starts_with($binary, 'JVBER') || str_starts_with($binary, '"JVBER') || str_starts_with($binary, 'iVBOR')) {
+            $binary = base64_decode(trim($binary, '"'));
+            $base64 = base64_encode($binary);
+            $patient->update(['abha_card_pdf' => $base64]);
+        }
+
+        if ($request->query('format') === 'base64' || $request->header('Accept') === 'application/json') {
+            return $this->successResponse(['data' => $base64], 'Official ABHA Card retrieved from database');
+        }
+
+        if (str_starts_with($binary, '%PDF')) {
+            return response($binary, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="official_abha_card.pdf"',
+            ]);
+        }
+
+        // If binary is an authentic government image (PNG/JPEG), convert to 1-page PDF preserving the exact image
+        $mime = str_starts_with($binary, "\x89PNG") ? 'image/png' : 'image/jpeg';
+        $b64Img = base64_encode($binary);
+        $html = '<!DOCTYPE html><html><head><style>@page { margin: 0; size: 500pt 315pt; } body { margin: 0; padding: 0; background: #ffffff; text-align: center; } img { width: 100%; height: auto; display: block; }</style></head><body><img src="data:' . $mime . ';base64,' . $b64Img . '" /></body></html>';
+
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper([0, 0, 500, 315], 'portrait');
+        $dompdf->render();
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="official_abha_card.pdf"',
+        ]);
+    }
+
+    #[OA\Post(
+        path: "/api/v1/patients/{id}/abha-card",
+        summary: "Store Official ABHA Card PDF in PostgreSQL DB",
+        description: "Saves official Base64 PDF card for patient directly into database column.",
+        tags: ["9. Patients"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(response: 200, description: "Official ABHA card saved")]
+    public function saveAbhaCard(Request $request, $id)
+    {
+        $request->validate([
+            'card_base64' => 'required|string',
+        ]);
+
+        $patient = null;
+        if (!empty($id) && $id !== '0') {
+            $patient = \App\Models\Patient::where('id', is_numeric($id) ? (int)$id : 0)
+                ->orWhere('uhid', $id)
+                ->orWhere('abha_number', $id)
+                ->orWhere('mobile', $id)
+                ->first();
+        }
+
+        if (!$patient && $request->filled('abha_number')) {
+            $patient = \App\Models\Patient::where('abha_number', $request->input('abha_number'))->first();
+        }
+        if (!$patient && $request->filled('mobile')) {
+            $patient = \App\Models\Patient::where('mobile', $request->input('mobile'))->first();
+        }
+
+        if (!$patient) {
+            return $this->errorResponse('Patient not found', null, 404);
+        }
+
+        $raw = trim($request->input('card_base64'));
+
+        // Ensure $raw is safe base64 string for PostgreSQL
+        if (!preg_match('~^[a-zA-Z0-9+/=\s]+$~', $raw)) {
+            $raw = base64_encode($raw);
+        }
+
+        $binary = base64_decode($raw, true);
+        if ($binary !== false && (str_starts_with($binary, 'JVBER') || str_starts_with($binary, '"JVBER') || str_starts_with($binary, 'iVBOR'))) {
+            $raw = trim($binary, '"');
+        }
+
+        // Store directly in PostgreSQL DB
+        $patient->update(['abha_card_pdf' => $raw]);
+
+        return $this->successResponse(['stored_in_db' => true], 'Official ABHA Card saved in database');
+    }
+
+    #[OA\Post(
+        path: "/api/v1/patients/{id}/link-abha",
+        summary: "Link existing patient with ABHA account",
+        description: "Links an existing hospital patient to their official ABHA Number / Address, downloads their authentic card if token is passed, and marks kyc_verified.",
+        tags: ["9. Patients"],
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["abha_number"],
+            properties: [
+                new OA\Property(property: "abha_number", type: "string", example: "91-1234-5678-9012"),
+                new OA\Property(property: "abha_address", type: "string", example: "ramesh@sbx"),
+                new OA\Property(property: "token", type: "string", description: "Optional: ABDM transaction token to auto-fetch card"),
+                new OA\Property(property: "txnId", type: "string", description: "Optional: ABDM txnId"),
+                new OA\Property(property: "abha_card_base64", type: "string", description: "Optional: Pre-fetched base64 card"),
+                new OA\Property(property: "photo", type: "string"),
+                new OA\Property(property: "address", type: "string"),
+                new OA\Property(property: "city", type: "string"),
+                new OA\Property(property: "district", type: "string"),
+                new OA\Property(property: "state", type: "string"),
+                new OA\Property(property: "pincode", type: "string")
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: "Patient linked to ABHA successfully")]
+    #[OA\Response(response: 422, description: "Validation error or ABHA conflict")]
+    #[OA\Response(response: 404, description: "Patient not found")]
+    public function linkAbha(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'abha_number'      => 'required|string',
+            'abha_address'     => 'nullable|string',
+            'token'            => 'nullable|string',
+            'txnId'            => 'nullable|string',
+            'abha_card_base64' => 'nullable|string',
+            'photo'            => 'nullable|string',
+            'address'          => 'nullable|string',
+            'city'             => 'nullable|string',
+            'district'         => 'nullable|string',
+            'state'            => 'nullable|string',
+            'pincode'          => 'nullable|string',
+        ]);
+
+        // Auto-fetch authentic card from ABDM if token is provided and card not sent
+        if (empty($validated['abha_card_base64']) && !empty($validated['token'])) {
+            try {
+                $token = $validated['token'];
+                $abdmService = app(\App\Services\Abdm\AbdmServiceInterface::class);
+                $rawToken = trim(str_replace('Bearer ', '', $token));
+                $jwtParts = explode('.', $rawToken);
+                if (count($jwtParts) === 3) {
+                    $jwtPayload = json_decode(base64_decode(strtr($jwtParts[1], '-_', '+/')), true);
+                    if (($jwtPayload['typ'] ?? '') === 'Transfer' && !empty($validated['txnId'])) {
+                        $verifyRes = $abdmService->verifyUser($rawToken, $validated['txnId'], $validated['abha_number']);
+                        if (!empty($verifyRes['token'])) {
+                            $token = $verifyRes['token'];
+                        }
+                    }
+                }
+                $cardRes = $abdmService->downloadAbhaCard($token);
+                if (!empty($cardRes['data'])) {
+                    $validated['abha_card_base64'] = $cardRes['data'];
+                }
+            } catch (\Exception $e) {
+                \Log::warning("linkAbha: auto-card download note: " . $e->getMessage());
+            }
+        }
+
+        try {
+            $patient = $this->patientService->linkAbha((int) $id, $validated);
+            return $this->successResponse(new PatientResource($patient), 'Patient successfully linked to ABHA');
+        } catch (\InvalidArgumentException $e) {
+            return $this->errorResponse($e->getMessage(), null, 422);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 500);
+        }
     }
 }
 

@@ -30,6 +30,8 @@ Route::post('/webhook/abdm/v1/scan-and-share', [AbdmWebhookController::class, 'h
 Route::prefix('v1')->group(function () {
     // Public Routes
     Route::post('/login', [AuthController::class, 'login'])->name('login');
+    Route::post('/webhook/abdm/v1/scan-and-share', [AbdmWebhookController::class, 'handleScanAndShare']);
+    Route::get('/public/lab/report/{id}', [\App\Http\Controllers\Api\V1\LabReportController::class, 'publicDiagnosticReport']);
 
     // Protected Routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -69,8 +71,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [AuthController::class, 'me']);
         
-        // Patients (CRUD & 360 History)
+        // Patients (CRUD, 360 History & Official ABHA Card)
+        Route::get('patients/stats', [PatientController::class, 'stats']);
         Route::get('patients/{id}/history', [PatientController::class, 'history']);
+        Route::get('patients/{id}/abha-card', [PatientController::class, 'getAbhaCard']);
+        Route::post('patients/{id}/abha-card', [PatientController::class, 'saveAbhaCard']);
+        Route::post('patients/{id}/link-abha', [PatientController::class, 'linkAbha']);
         Route::apiResource('patients', PatientController::class);
         
         // Storage (R2 / S3 Presigned URLs)
@@ -88,6 +94,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('abha')->group(function () {
             Route::post('/generate-otp', [AbhaController::class, 'generateOtp']);
             Route::post('/verify-otp', [AbhaController::class, 'verifyOtp']);
+            Route::post('/verify-user', [AbhaController::class, 'verifyUser']);
             
             // Aadhaar Enrollment
             Route::post('/enrol/aadhaar-otp', [AbhaController::class, 'generateAadhaarOtp']);
@@ -113,9 +120,18 @@ Route::prefix('v1')->group(function () {
             Route::post('/register', [ReceptionController::class, 'registerWithoutAbha']);
             Route::post('/visit', [ReceptionController::class, 'createVisit']);
             Route::post('/quick-visit', [ReceptionController::class, 'quickVisit']);
+            Route::post('/quick-revisit', [ReceptionController::class, 'quickRevisit']);
+            Route::get('/revisit/check', [ReceptionController::class, 'checkRevisitEligibility']);
+            Route::get('/visits', [ReceptionController::class, 'getVisits']);
+            Route::get('/visits/stats', [ReceptionController::class, 'getVisitStats']);
             Route::post('/admit-ipd', [\App\Http\Controllers\Api\V1\IpdController::class, 'admit']);
         });
 
+
+        // Wards & Beds Master Setup & Pricing Configuration
+        Route::post('/beds/batch', [\App\Http\Controllers\Api\V1\BedController::class, 'batchStore']);
+        Route::apiResource('wards', \App\Http\Controllers\Api\V1\WardController::class);
+        Route::apiResource('beds', \App\Http\Controllers\Api\V1\BedController::class);
 
         // IPD (Inpatient Admissions, Wards, Beds & Visual Bed Matrix)
         Route::prefix('ipd')->group(function () {
@@ -128,6 +144,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/admissions/{id}/chart', [\App\Http\Controllers\Api\V1\IpdController::class, 'chart']);
             Route::post('/admissions/{id}/transfer-bed', [\App\Http\Controllers\Api\V1\IpdController::class, 'transferBed']);
             Route::post('/admissions/{id}/discharge', [\App\Http\Controllers\Api\V1\IpdController::class, 'discharge']);
+            Route::get('/admissions/{id}/discharge-summary', [\App\Http\Controllers\Api\V1\IpdController::class, 'getDischargeSummary']);
+            Route::post('/admissions/{id}/discharge-summary', [\App\Http\Controllers\Api\V1\IpdController::class, 'saveDischargeSummary']);
+            Route::get('/admissions/{id}/discharge-summary/print', [\App\Http\Controllers\Api\V1\IpdController::class, 'getDischargePrintData']);
 
             // Doctor Inpatient Daily Rounds (SOAP Notes)
             Route::post('/admissions/{id}/rounds', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordRound']);
@@ -136,6 +155,39 @@ Route::prefix('v1')->group(function () {
             // Bedside Nursing Procedures
             Route::post('/admissions/{id}/procedures', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordProcedure']);
             Route::get('/admissions/{id}/procedures', [\App\Http\Controllers\Api\V1\IpdController::class, 'getProcedures']);
+
+            // Nursing Fluid Balance (Intake / Output Register)
+            Route::post('/admissions/{id}/intake-output', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordIntakeOutput']);
+            Route::get('/admissions/{id}/intake-output', [\App\Http\Controllers\Api\V1\IpdController::class, 'getIntakeOutput']);
+
+            // Nursing MAR (Medication Administration Record / Drug Chart)
+            Route::post('/admissions/{id}/mar', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordMar']);
+            Route::get('/admissions/{id}/mar', [\App\Http\Controllers\Api\V1\IpdController::class, 'getMar']);
+
+            // Nursing Shift Handover Register
+            Route::post('/admissions/{id}/shift-handover', [\App\Http\Controllers\Api\V1\IpdController::class, 'recordShiftHandover']);
+            Route::get('/admissions/{id}/shift-handover', [\App\Http\Controllers\Api\V1\IpdController::class, 'getShiftHandovers']);
+            Route::put('/shift-handover/{id}/acknowledge', [\App\Http\Controllers\Api\V1\IpdController::class, 'acknowledgeShiftHandover']);
+
+            // Final Discharge Billing Settlement & Gate Pass
+            Route::get('/admissions/{id}/discharge-estimate', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'getEstimate']);
+            Route::post('/admissions/{id}/settle-discharge', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'settleAndDischarge']);
+            Route::get('/admissions/{id}/gate-pass', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'gatePass']);
+
+            // Pending OPD Admission Referrals
+            Route::get('/opd-referrals', [\App\Http\Controllers\Api\V1\IpdController::class, 'opdReferrals']);
+        });
+
+        // Operation Theatre & Surgeries Management (OT Scheduling & WHO Safety Checklist)
+        Route::prefix('ot')->group(function () {
+            Route::get('/theatres', [\App\Http\Controllers\Api\V1\OtController::class, 'theatres']);
+            Route::get('/schedules', [\App\Http\Controllers\Api\V1\OtController::class, 'schedules']);
+            Route::get('/schedules/{id}', [\App\Http\Controllers\Api\V1\OtController::class, 'show']);
+            Route::post('/schedules', [\App\Http\Controllers\Api\V1\OtController::class, 'store']);
+            Route::put('/schedules/{id}', [\App\Http\Controllers\Api\V1\OtController::class, 'update']);
+            Route::get('/schedules/{id}/checklist', [\App\Http\Controllers\Api\V1\OtController::class, 'getChecklist']);
+            Route::post('/schedules/{id}/checklist', [\App\Http\Controllers\Api\V1\OtController::class, 'saveChecklist']);
+            Route::get('/schedules/{id}/print', [\App\Http\Controllers\Api\V1\OtController::class, 'getPrintData']);
         });
 
 
@@ -151,6 +203,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/', [VitalController::class, 'index']);
             Route::post('/', [VitalController::class, 'store']);
             Route::get('/{id}', [VitalController::class, 'show']);
+            Route::put('/{id}', [VitalController::class, 'update']);
             Route::delete('/{id}', [VitalController::class, 'destroy']);
             Route::get('/patient/{patientId}', [VitalController::class, 'patientVitals']);
             Route::get('/visit/{visitId}', [VitalController::class, 'visitVitals']);
@@ -168,13 +221,15 @@ Route::prefix('v1')->group(function () {
             Route::post('/visit/{visitId}/prescribe', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'prescribeVisit']);
         });
 
-        // Fast Autocomplete Search for Medicines & WHO ICD-10 Diagnoses
+        // Fast Autocomplete Search for Medicines, WHO ICD-10 Diagnoses & Diagnostic Investigations
         Route::get('/medicines/search', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'searchMedicines']);
         Route::get('/diagnosis/search', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'searchDiagnoses']);
+        Route::get('/investigations/search', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'searchInvestigations']);
 
         // Structured E-Prescriptions
         Route::prefix('prescriptions')->group(function () {
             Route::post('/', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'store']);
+            Route::put('/{id}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'update']);
             Route::get('/{id}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'show']);
             Route::get('/patient/{patientId}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'patientPrescriptions']);
             Route::get('/visit/{visitId}', [\App\Http\Controllers\Api\V1\PrescriptionController::class, 'visitPrescription']);
@@ -182,6 +237,10 @@ Route::prefix('v1')->group(function () {
 
         // Hospital Charges Master, Tariff Engine & Patient Running Ledger
         Route::prefix('billing')->group(function () {
+            // OPD Quick Bill Counter
+            Route::get('/opd-pending-orders', [\App\Http\Controllers\Api\V1\OpdBillingController::class, 'getPendingOrders']);
+            Route::post('/opd-bill', [\App\Http\Controllers\Api\V1\OpdBillingController::class, 'createOpdBill']);
+
             Route::get('/charges/categories', [\App\Http\Controllers\Api\V1\ChargeController::class, 'getCategories']);
             Route::post('/charges/categories', [\App\Http\Controllers\Api\V1\ChargeController::class, 'createCategory']);
             Route::get('/charges', [\App\Http\Controllers\Api\V1\ChargeController::class, 'index']);
@@ -203,6 +262,189 @@ Route::prefix('v1')->group(function () {
             Route::put('/triages/{id}/link-patient', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'linkPatient']);
             Route::get('/triages/{id}/mlc-slip', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'mlcSlip']);
             Route::put('/triages/{id}/status', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'updateStatus']);
+        });
+
+        // ── Insurance / TPA / Ayushman Bharat Enterprise Desk ─────────────────
+        Route::prefix('insurance')->group(function () {
+            // Dashboard KPIs
+            Route::get('/dashboard', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'dashboard']);
+
+            // Payers Master (TPA / CGHS / ESIC / PMJAY / Corporate)
+            Route::get('/payers', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPayers']);
+            Route::post('/payers', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createPayer']);
+            Route::put('/payers/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updatePayer']);
+            Route::delete('/payers/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'deletePayer']);
+            Route::get('/payers/{id}/tariffs', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPayerTariffs']);
+            Route::post('/payers/{id}/tariffs', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'saveTariffPackage']);
+            Route::delete('/payers/{id}/tariffs/{tariffId}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'deleteTariffPackage']);
+
+            // Patient Insurance Policies (Dual COB support)
+            Route::get('/patients/{patientId}/policies', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPatientInsurances']);
+            Route::post('/patients/{patientId}/policies', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'addPatientInsurance']);
+            Route::put('/policies/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updatePatientInsurance']);
+            Route::post('/policies/{id}/verify', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'verifyEligibility']);
+
+            // Pre-Authorization Lifecycle
+            Route::get('/preauth', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPreauths']);
+            Route::post('/preauth', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createPreauth']);
+            Route::get('/preauth/expiring', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'expiringPreauths']);
+            Route::get('/preauth/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getPreauth']);
+            Route::put('/preauth/{id}/status', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updatePreauthStatus']);
+            Route::post('/preauth/{id}/respond-query', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'respondToQuery']);
+            Route::post('/preauth/{id}/enhancement', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createEnhancement']);
+            Route::post('/preauth/{id}/followup', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'addPreauthFollowup']);
+
+            // Claims Management (Cashless / Reimbursement / Corporate Billing)
+            Route::get('/claims', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getClaims']);
+            Route::post('/claims', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createClaim']);
+            Route::get('/claims/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getClaim']);
+            Route::put('/claims/{id}/status', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updateClaimStatus']);
+            Route::post('/claims/{id}/settle', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'settleClaim']);
+            Route::post('/claims/{id}/resubmit', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'resubmitClaim']);
+            Route::post('/claims/{id}/grievance', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'raiseGrievance']);
+            Route::get('/claims/{id}/dossier', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getClaimDossier']);
+            Route::post('/claims/{id}/followup', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'addClaimFollowup']);
+
+            // IRDAI Non-Payable Items Master
+            Route::get('/non-payables', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getNonPayableItems']);
+            Route::post('/non-payables', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'saveNonPayableItem']);
+            Route::delete('/non-payables/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'deleteNonPayableItem']);
+            Route::get('/detect-non-payables/{admissionId}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'detectNonPayables']);
+
+            // AR Aging Ledger & Settlement Tracking
+            Route::get('/ar-ledger', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getArLedger']);
+            Route::get('/ar-summary', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getArSummary']);
+
+            // Implant / High-Cost Device Prior Approvals
+            Route::get('/implants', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'getImplantApprovals']);
+            Route::post('/implants', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'createImplantApproval']);
+            Route::put('/implants/{id}', [\App\Http\Controllers\Api\V1\InsuranceController::class, 'updateImplantApproval']);
+        });
+
+        // Final Tax Invoices
+        Route::prefix('invoices')->group(function () {
+            Route::get('/{id}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'show']);
+            Route::get('/patient/{patientId}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'patientInvoices']);
+        });
+
+        // Laboratory Information System (LIS / Pathology Desk)
+        Route::prefix('lab')->group(function () {
+            // 1. Worklist, Orders & Billing (LabOrderController)
+            Route::get('/orders', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'index']);
+            Route::get('/orders/{id}', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'show']);
+            Route::post('/orders/direct-booking', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'directBooking']);
+            Route::post('/orders/ipd-requisition', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'createIpdOrder']);
+            Route::put('/orders/{id}/direct-booking', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'updateDirectBooking']);
+            Route::post('/orders/{id}/collect-payment', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'collectPayment']);
+            Route::post('/orders/sync-billed', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'syncBilled']);
+            Route::get('/invoices', [\App\Http\Controllers\Api\V1\LabOrderController::class, 'invoices']);
+
+            // 2. Phlebotomy & Sample Accessioning (LabPhlebotomyController)
+            Route::post('/orders/{id}/collect-sample', [\App\Http\Controllers\Api\V1\LabPhlebotomyController::class, 'collectSample']);
+            Route::post('/orders/{id}/call-token', [\App\Http\Controllers\Api\V1\LabPhlebotomyController::class, 'callToken']);
+            Route::get('/queue/display', [\App\Http\Controllers\Api\V1\LabPhlebotomyController::class, 'queueDisplay']);
+            Route::post('/orders/{id}/reject-sample', [\App\Http\Controllers\Api\V1\LabPhlebotomyController::class, 'rejectSample']);
+            Route::post('/orders/{id}/recollect-sample', [\App\Http\Controllers\Api\V1\LabPhlebotomyController::class, 'recollectSample']);
+
+            // 3. Results, Delta Check & Pathologist Authorization (LabResultController)
+            Route::post('/orders/{id}/results', [\App\Http\Controllers\Api\V1\LabResultController::class, 'recordResults']);
+            Route::get('/patients/{patientId}/delta-history', [\App\Http\Controllers\Api\V1\LabResultController::class, 'deltaHistory']);
+            Route::post('/orders/{id}/authorize', [\App\Http\Controllers\Api\V1\LabResultController::class, 'authorizeOrder']);
+            Route::post('/orders/{id}/approve-items', [\App\Http\Controllers\Api\V1\LabResultController::class, 'approveItems']);
+            Route::post('/orders/{id}/items/{itemId}/revoke', [\App\Http\Controllers\Api\V1\LabResultController::class, 'revokeItem']);
+            Route::post('/orders/{id}/revoke-authorization', [\App\Http\Controllers\Api\V1\LabResultController::class, 'revokeAuthorization']);
+            Route::get('/orders/{id}/audit-logs', [\App\Http\Controllers\Api\V1\LabResultController::class, 'auditLogs']);
+
+            // 4. Diagnostic Reporting (LabReportController)
+            Route::get('/orders/{id}/report', [\App\Http\Controllers\Api\V1\LabReportController::class, 'diagnosticReport']);
+
+            // 5. Test Catalog Master (281+ Pathology Tests) (LabTestController)
+            Route::get('/templates', [\App\Http\Controllers\Api\V1\LabTestController::class, 'index']);
+            Route::get('/templates/{id}', [\App\Http\Controllers\Api\V1\LabTestController::class, 'show']);
+            Route::post('/templates', [\App\Http\Controllers\Api\V1\LabTestController::class, 'store']);
+            Route::put('/templates/{id}', [\App\Http\Controllers\Api\V1\LabTestController::class, 'update']);
+            Route::delete('/templates/{id}', [\App\Http\Controllers\Api\V1\LabTestController::class, 'destroy']);
+        });
+
+        // Enterprise Hospital Pharmacy & Supply Chain Desk
+        Route::prefix('pharmacy')->group(function () {
+            // Dashboard & Analytics
+            Route::get('/dashboard-stats', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'dashboardStats']);
+
+            // Formulary & National Master Import
+            Route::get('/formulary/search-master', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'searchMaster']);
+            Route::get('/formulary', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'formulary']);
+            Route::post('/formulary/import', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'importFromMaster']);
+            Route::post('/formulary/custom', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'createCustom']);
+            Route::get('/formulary/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showMedicine']);
+            Route::put('/formulary/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'updateMedicine']);
+
+            // Suppliers / Vendors & Credit Ledger
+            Route::get('/suppliers', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'suppliers']);
+            Route::post('/suppliers', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'createSupplier']);
+            Route::put('/suppliers/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'updateSupplier']);
+            Route::get('/suppliers/{id}/ledger', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'supplierLedger']);
+            Route::post('/suppliers/{id}/payments', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'recordSupplierPayment']);
+            Route::get('/supplier-payments', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'supplierPayments']);
+
+            // Purchases & Inward GRN
+            Route::get('/purchases', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'purchases']);
+            Route::post('/purchases', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'createPurchase']);
+            Route::get('/purchases/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showPurchase']);
+
+            // Batch Stock & FEFO Surveillance
+            Route::get('/batches', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'batchStock']);
+            Route::get('/batches/near-expiry', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'nearExpiry']);
+            Route::get('/batches/medicine/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'batchesForMedicine']);
+            Route::post('/batches/{id}/adjust', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'adjustStock']);
+            Route::post('/batches/{id}/quarantine', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'quarantineBatch']);
+            Route::get('/expiry-dashboard', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'expiryDashboard']);
+
+            // Supplier Returns to Vendor (RTV) & Debit Notes
+            Route::get('/supplier-returns', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'supplierReturns']);
+            Route::post('/supplier-returns', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'createSupplierReturn']);
+            Route::get('/supplier-returns/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showSupplierReturn']);
+            Route::patch('/supplier-returns/{id}/status', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'updateSupplierReturnStatus']);
+
+            // Prescription Dispense Queue
+            Route::get('/prescriptions/pending', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'pendingPrescriptions']);
+            Route::get('/prescriptions/{id}/dispense-details', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'prescriptionDispenseDetails']);
+
+            // Omni-Channel Sales & POS
+            Route::get('/substitutes', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'substitutes']);
+            Route::get('/patients/{id}/medication-history', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'patientMedicationHistory']);
+            Route::get('/sales', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'sales']);
+            Route::post('/sales', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'processSale']);
+            Route::get('/sales/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showSale']);
+
+            // Customer Returns & Credit Notes
+            Route::get('/returns', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'returns']);
+            Route::post('/returns', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'processReturn']);
+            Route::get('/returns/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showReturn']);
+
+            // Stock Movement Audit Ledger
+            Route::get('/stock-transactions', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'stockTransactions']);
+
+            // Statutory CDSCO Regulatory Register (Drugs & Cosmetics Rules 1945)
+            Route::get('/regulatory-register', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'cdscoRegister']);
+
+            // Statutory GST Input/Output Ledger & Filing Report (GSTR-3B)
+            Route::get('/gst-report', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'gstReport']);
+
+            // IPD Nursing Ward Drug Indents & Requisitions
+            Route::get('/ward-indents', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'wardIndents']);
+            Route::post('/ward-indents', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'createWardIndent']);
+            Route::get('/ward-indents/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showWardIndent']);
+            Route::post('/ward-indents/{id}/dispense', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'dispenseWardIndent']);
+            Route::post('/ward-indents/{id}/reject', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'rejectWardIndent']);
+            Route::post('/ward-indents/{id}/items/{itemId}/return', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'returnWardIndentItem']);
+
+            // Low Stock Intelligence & Purchase Orders (PO)
+            Route::get('/low-stock-alerts', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'lowStockAlerts']);
+            Route::get('/purchase-orders', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'purchaseOrders']);
+            Route::post('/purchase-orders', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'createPurchaseOrder']);
+            Route::get('/purchase-orders/{id}', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'showPurchaseOrder']);
+            Route::patch('/purchase-orders/{id}/status', [\App\Http\Controllers\Api\V1\PharmacyController::class, 'updatePurchaseOrderStatus']);
         });
     });
 

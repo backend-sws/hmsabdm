@@ -138,4 +138,12 @@ class MockAbdmService implements AbdmServiceInterface
     {
         return ['data' => base64_encode('Mock PNG Data')];
     }
+
+    public function verifyUser(string $transferToken, string $txnId, string $abhaNumber): array
+    {
+        return [
+            'token' => 'mock_account_token_' . md5($abhaNumber),
+            'expiresIn' => 1800,
+        ];
+    }
 }

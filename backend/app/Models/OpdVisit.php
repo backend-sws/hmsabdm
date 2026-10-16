@@ -60,4 +60,102 @@ class OpdVisit extends Model
     {
         return $this->hasOne(Vital::class)->latestOfMany();
     }
+
+    public function prescription()
+    {
+        return $this->hasOne(Prescription::class, 'opd_visit_id');
+    }
+
+    protected $appends = [
+        'visit_id',
+        'token_no',
+        'token_number',
+        'patient_name',
+        'uhid',
+        'age',
+        'gender',
+        'dob',
+        'patient_mobile',
+        'abha_address',
+        'department_name',
+        'doctor_name',
+        'visit_reason',
+        'check_in_time',
+        'has_vitals',
+    ];
+
+    public function getVisitIdAttribute()
+    {
+        return $this->id;
+    }
+
+    public function getTokenNoAttribute()
+    {
+        return $this->queue_token !== null ? (string)$this->queue_token : ($this->opd_number ?? '');
+    }
+
+    public function getTokenNumberAttribute()
+    {
+        return $this->queue_token;
+    }
+
+    public function getPatientNameAttribute()
+    {
+        return $this->patient?->name;
+    }
+
+    public function getUhidAttribute()
+    {
+        return $this->patient?->uhid;
+    }
+
+    public function getAgeAttribute()
+    {
+        return $this->patient?->age;
+    }
+
+    public function getGenderAttribute()
+    {
+        return $this->patient?->gender;
+    }
+
+    public function getDobAttribute()
+    {
+        return $this->patient?->dob?->format('Y-m-d');
+    }
+
+    public function getPatientMobileAttribute()
+    {
+        return $this->patient?->mobile;
+    }
+
+    public function getAbhaAddressAttribute()
+    {
+        return $this->patient?->abha_address;
+    }
+
+    public function getDepartmentNameAttribute()
+    {
+        return $this->department?->name;
+    }
+
+    public function getDoctorNameAttribute()
+    {
+        return $this->doctor?->name;
+    }
+
+    public function getVisitReasonAttribute()
+    {
+        return $this->chief_complaint;
+    }
+
+    public function getCheckInTimeAttribute()
+    {
+        return $this->created_at ? $this->created_at->toISOString() : null;
+    }
+
+    public function getHasVitalsAttribute()
+    {
+        return $this->latestVital !== null;
+    }
 }

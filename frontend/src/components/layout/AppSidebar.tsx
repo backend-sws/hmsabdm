@@ -1,6 +1,8 @@
-import React from "react"
-import { NavLink } from "react-router"
+import React, { useState, useRef } from "react"
+import { createPortal } from "react-dom"
+import { NavLink, useNavigate } from "react-router"
 import { useAuth } from "@/context/AuthContext"
+import { useTheme } from "@/context/ThemeContext"
 import {
   LayoutDashboard,
   Users,
@@ -9,11 +11,74 @@ import {
   Building2,
   Building,
   QrCode,
-  Activity,
   Sparkles,
-  ChevronRight,
   ShieldCheck,
+  Bed,
+  Siren,
+  Receipt,
+  FlaskConical,
+  Pill,
+  Scissors,
+  LogOut,
 } from "lucide-react"
+
+interface PortalTooltipProps {
+  text: string
+  children: React.ReactElement<any>
+  visible?: boolean
+}
+
+function PortalTooltip({ text, children, visible }: PortalTooltipProps) {
+  const [show, setShow] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const ref = useRef<HTMLElement>(null)
+  const { colorConfig } = useTheme()
+
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      setPos({
+        top: rect.top + rect.height / 2,
+        left: rect.right + 12,
+      })
+      setShow(true)
+    }
+    if ((children.props as any).onMouseEnter) {
+      ;(children.props as any).onMouseEnter(e)
+    }
+  }
+
+  const handleMouseLeave = (e: React.MouseEvent) => {
+    setShow(false)
+    if ((children.props as any).onMouseLeave) {
+      ;(children.props as any).onMouseLeave(e)
+    }
+  }
+
+  const child = React.cloneElement(children, {
+    ref,
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
+  })
+
+  return (
+    <>
+      {child}
+      {show &&
+        visible &&
+        createPortal(
+          <div
+            className={`fixed z-[99999] px-3.5 py-1.5 bg-gradient-to-r ${colorConfig.gradient} text-white text-[11px] font-black uppercase tracking-widest rounded-md -translate-y-1/2 shadow-xl ${colorConfig.glow} flex items-center whitespace-nowrap border border-white/20 animate-in fade-in zoom-in-95 duration-150 pointer-events-none`}
+            style={{ top: pos.top, left: pos.left }}
+          >
+            <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-purple-600 rotate-45 rounded-xs border-l border-b border-white/20" />
+            {text}
+          </div>,
+          document.body
+        )}
+    </>
+  )
+}
 
 interface AppSidebarProps {
   sidebarOpen: boolean
@@ -26,250 +91,425 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   setSidebarOpen,
   isCollapsed,
 }) => {
-  const { user } = useAuth()
-  const userRole = user?.role || "SUPER_ADMIN"
+  const { user, logout } = useAuth()
+  const { theme, colorConfig } = useTheme()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    setSidebarOpen(false)
+    await logout()
+    navigate("/login")
+  }
+
+  const superAdminNavItems = [
+    {
+      title: "PLATFORM OVERVIEW",
+      path: "/",
+      icon: LayoutDashboard,
+      roles: ["SUPER_ADMIN"],
+    },
+    {
+      title: "HOSPITAL FACILITIES",
+      path: "/hospitals",
+      icon: Building,
+      roles: ["SUPER_ADMIN"],
+    },
+  ]
 
   const clinicalNavItems = [
     {
-      title: "Dashboard",
+      title: "DASHBOARD",
       path: "/",
       icon: LayoutDashboard,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
     {
-      title: "Hospitals",
-      path: "/hospitals",
-      icon: Building,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
-      // badge: "Scan & Share",
-    },
-    {
-      title: "Reception & Walk-in",
+      title: "RECEPTION & WALK-IN",
       path: "/reception",
       icon: QrCode,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "RECEPTIONIST"],
-      // badge: "Scan & Share",
+      roles: ["HOSPITAL_ADMIN", "RECEPTIONIST"],
     },
     {
-      title: "Patient Registration",
+      title: "PATIENT REGISTRATION",
       path: "/patients",
       icon: Users,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
     {
-      title: "OPD Doctor Desk",
+      title: "OPD CLINICAL DESK",
       path: "/opd",
       icon: Stethoscope,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN", "DOCTOR"],
-      // badge: "Live Queue",
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"],
+    },
+    {
+      title: "IPD INPATIENT DESK",
+      path: "/ipd",
+      icon: Bed,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
+    },
+    {
+      title: "OT & SURGERIES",
+      path: "/ot",
+      icon: Scissors,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"],
+    },
+    {
+      title: "EMERGENCY & CASUALTY",
+      path: "/emergency",
+      icon: Siren,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"],
+    },
+    {
+      title: "LABORATORY DESK",
+      path: "/lab",
+      icon: FlaskConical,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "LAB_TECHNICIAN", "PATHOLOGIST", "RECEPTIONIST"],
+    },
+    {
+      title: "PHARMACY & POS",
+      path: "/pharmacy",
+      icon: Pill,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "PHARMACIST", "RECEPTIONIST"],
+    },
+    {
+      title: "BILLING & FINANCE",
+      path: "/billing",
+      icon: Receipt,
+      roles: ["HOSPITAL_ADMIN", "RECEPTIONIST"],
+    },
+    {
+      title: "INSURANCE & TPA",
+      path: "/insurance",
+      icon: ShieldCheck,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
   ]
 
   const managementNavItems = [
     {
-      title: "Doctors & Schedules",
+      title: "DOCTORS & SCHEDULES",
       path: "/doctors",
       icon: UserCheck,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
+      roles: ["HOSPITAL_ADMIN"],
     },
     {
-      title: "Departments",
+      title: "DEPARTMENTS",
       path: "/departments",
       icon: Building2,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
-    },
-
-    {
-      title: "Reports & Analytics",
-      path: "/reports",
-      icon: Activity,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
+      roles: ["HOSPITAL_ADMIN"],
     },
     {
-      title: "System Settings",
+      title: "HOSPITAL SETTINGS",
       path: "/settings",
       icon: Sparkles,
-      roles: ["SUPER_ADMIN", "HOSPITAL_ADMIN"],
+      roles: ["HOSPITAL_ADMIN"],
     },
   ]
 
-  const filteredClinical = clinicalNavItems.filter((i) =>
-    i.roles.includes(userRole)
-  )
-  const filteredManagement = managementNavItems.filter((i) =>
-    i.roles.includes(userRole)
-  )
+  const normalizeRole = (r: string) => r.toUpperCase().replace(/[\s_-]+/g, "")
+  const currentRole = normalizeRole(user?.role || user?.roles?.[0] || "HOSPITALADMIN")
+  const isSuperAdmin = currentRole.includes("SUPER")
+
+  const hasRole = (allowedRoles: string[]) => {
+    return allowedRoles.some((r) => {
+      const nr = normalizeRole(r)
+      if (isSuperAdmin) {
+        return nr === "SUPERADMIN"
+      }
+      return (
+        nr === currentRole ||
+        (nr === "HOSPITALADMIN" && (currentRole === "ADMIN" || currentRole === "HOSPITALADMIN")) ||
+        (nr === "ADMIN" && (currentRole === "ADMIN" || currentRole === "HOSPITALADMIN"))
+      )
+    })
+  }
+
+  const filteredClinical = clinicalNavItems.filter((i) => hasRole(i.roles))
+  const filteredManagement = managementNavItems.filter((i) => hasRole(i.roles))
+  const isSemiDark = theme === "semi-dark"
 
   return (
     <aside
-      className={`fixed top-16 bottom-0 left-0 z-30 flex h-[calc(100vh-4rem)] shrink-0 flex-col justify-between border-r border-border/80 bg-card/95 backdrop-blur-md transition-all duration-300 ease-in-out lg:relative lg:top-0 lg:z-auto lg:translate-x-0 ${
+      className={`fixed top-14 bottom-0 left-0 z-40 flex h-[calc(100vh-3.5rem)] shrink-0 flex-col justify-between border-r border-border/80 bg-card text-foreground transition-all duration-200 ease-in-out lg:relative lg:top-0 lg:z-40 lg:translate-x-0 ${
+        isSemiDark ? "dark bg-[#09090b] text-white border-white/5" : ""
+      } ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      } ${isCollapsed ? "lg:w-20" : "lg:w-64"} w-64 overflow-hidden`}
+      } ${isCollapsed ? "w-[72px] lg:w-[72px]" : "w-60 lg:w-60"} shadow-2xs select-none`}
     >
-      {/* Seamless Medical Line-Art Pattern Background Overlay */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-top bg-repeat opacity-[0.04] mix-blend-multiply transition-opacity duration-300 dark:opacity-[0.12] dark:invert"
-        style={{ backgroundImage: "url('/medical_pattern.png')" }}
-      />
-
-      {/* Cybernetic Accent Glow Lines */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-24 -bottom-24 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl" />
-
-      {/* Navigation Scrollable Body */}
-      <div className="custom-scrollbar relative z-10 flex-1 space-y-6 overflow-y-auto p-3.5">
-        {/* Clinical Section */}
-        <div>
-          {!isCollapsed && (
-            <div className="mb-2.5 flex items-center justify-between px-3">
-              <p className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase">
-                Clinical Workflows
-              </p>
-              <span className="h-1 w-1 rounded-full bg-primary/60" />
-            </div>
-          )}
-          <nav className="space-y-1">
-            {filteredClinical.map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  end={item.path === "/"}
-                  title={isCollapsed ? item.title : undefined}
-                  className={({ isActive }) =>
-                    `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
-                      isActive
-                        ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
-                        : "text-muted-foreground hover:bg-slate-100/80 hover:text-foreground dark:hover:bg-muted/60"
-                    } ${isCollapsed ? "justify-center px-0" : ""}`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <Icon
-                          className={`h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                            isActive
-                              ? "text-primary-foreground"
-                              : "text-muted-foreground group-hover:text-primary"
-                          }`}
-                        />
-                        {!isCollapsed && (
-                          <span className="truncate">{item.title}</span>
-                        )}
-                      </div>
-                      {/* {!isCollapsed &&
-                        (item?.badge && (
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                              isActive
-                                ? "bg-primary-foreground/20 text-primary-foreground"
-                                : "bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-400"
-                            }`}
-                          >
-                            {item .badge}
-                          </span>
-                        ) : (
-                          <ChevronRight
-                            className={`h-3.5 w-3.5 transition-all duration-200 ${
-                              isActive
-                                ? "text-primary-foreground opacity-100"
-                                : "text-muted-foreground opacity-0 group-hover:opacity-100"
-                            }`}
-                          />
-                        ))} */}
-                    </>
-                  )}
-                </NavLink>
-              )
-            })}
-          </nav>
-        </div>
-
-        {/* Management Section */}
-        {filteredManagement.length > 0 && (
+      {/* ─── Navigation Body with increased vertical spacing and slightly larger font ─── */}
+      <nav className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-6">
+        {isSuperAdmin ? (
           <div>
-            {!isCollapsed && (
-              <div className="mb-2.5 flex items-center justify-between px-3">
-                <p className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase">
-                  Management & Admin
-                </p>
-                <span className="h-1 w-1 rounded-full bg-emerald-500/60" />
+            {!isCollapsed ? (
+              <div className="flex items-center gap-2 mb-2 px-2">
+                <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 tracking-[0.2em] uppercase whitespace-nowrap">
+                  PLATFORM ADMIN
+                </span>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
               </div>
+            ) : (
+              <div className="w-6 h-px bg-slate-200 dark:bg-white/10 mx-auto mb-2" />
             )}
-            <nav className="space-y-1">
-              {filteredManagement.map((item) => {
+
+            <div className="space-y-1.5">
+              {superAdminNavItems.map((item) => {
                 const Icon = item.icon
                 return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setSidebarOpen(false)}
-                    title={isCollapsed ? item.title : undefined}
-                    className={({ isActive }) =>
-                      `group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
-                        isActive
-                          ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
-                          : "text-muted-foreground hover:bg-slate-100/80 hover:text-foreground dark:hover:bg-muted/60"
-                      } ${isCollapsed ? "justify-center px-0" : ""}`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <div className="flex items-center gap-3">
-                          <Icon
-                            className={`h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                              isActive
-                                ? "text-primary-foreground"
-                                : "text-muted-foreground group-hover:text-primary"
-                            }`}
-                          />
-                          {!isCollapsed && (
-                            <span className="truncate">{item.title}</span>
+                  <PortalTooltip key={item.path} text={item.title} visible={isCollapsed}>
+                    <NavLink
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      end={item.path === "/"}
+                      className={({ isActive }) =>
+                        `relative flex items-center text-[11.5px] font-semibold tracking-[0.02em] transition-all duration-200 group overflow-hidden ${
+                          isCollapsed
+                            ? "justify-center w-10 h-10 mx-auto rounded-xl"
+                            : "py-2.5 px-3 rounded-xl gap-2.5"
+                        } ${
+                          isActive
+                            ? `bg-gradient-to-r ${colorConfig.gradient} text-white shadow-md ${colorConfig.shadow}`
+                            : "text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10"
+                        }`
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {/* Active left bar indicator - only in expanded mode */}
+                          {isActive && !isCollapsed && (
+                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-white/60" />
                           )}
-                        </div>
-                        {!isCollapsed && (
-                          <ChevronRight
-                            className={`h-3.5 w-3.5 transition-all duration-200 ${
+
+                          {/* Hover shimmer */}
+                          {!isActive && (
+                            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-r from-purple-500/5 to-transparent rounded-xl" />
+                          )}
+
+                          <Icon
+                            strokeWidth={isActive ? 2.5 : 1.75}
+                            className={`flex-shrink-0 h-4 w-4 transition-all duration-200 relative z-10 ${
+                              isCollapsed ? "mx-auto" : ""
+                            } ${
                               isActive
-                                ? "text-primary-foreground opacity-100"
-                                : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                                ? "text-white drop-shadow-xs"
+                                : "text-slate-500 dark:text-slate-400 group-hover:text-foreground group-hover:scale-105"
                             }`}
                           />
-                        )}
-                      </>
-                    )}
-                  </NavLink>
+
+                          {!isCollapsed && (
+                            <span
+                              className={`whitespace-nowrap truncate relative z-10 transition-all duration-200 ${
+                                isActive ? "text-white font-bold" : "group-hover:translate-x-0.5"
+                              }`}
+                            >
+                              {item.title}
+                            </span>
+                          )}
+
+                          {/* Active dot badge in collapsed mode */}
+                          {isActive && isCollapsed && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-white border-2 border-purple-500" />
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  </PortalTooltip>
                 )
               })}
-            </nav>
+            </div>
           </div>
-        )}
-      </div>
+        ) : (
+          <>
+            {/* Clinical Workflows Section */}
+            {filteredClinical.length > 0 && (
+              <div>
+                {!isCollapsed ? (
+                  <div className="flex items-center gap-2 mb-2.5 px-2">
+                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-[0.2em] uppercase whitespace-nowrap">
+                      CLINICAL WORKFLOWS
+                    </span>
+                    <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
+                  </div>
+                ) : (
+                  <div className="w-6 h-px bg-slate-200 dark:bg-white/10 mx-auto mb-2" />
+                )}
 
-      {/* Bottom ABDM Health Node Card */}
-      {!isCollapsed && (
-        <div className="relative z-10 border-t border-border/60 p-3.5">
-          <div className="group flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs shadow-2xs transition-all hover:bg-emerald-500/15">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                <p className="truncate leading-tight font-semibold text-emerald-700 dark:text-emerald-300">
-                  ABDM Verified Node
-                </p>
+                <div className="space-y-1.5">
+                  {filteredClinical.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <PortalTooltip key={item.path} text={item.title} visible={isCollapsed}>
+                        <NavLink
+                          to={item.path}
+                          onClick={() => setSidebarOpen(false)}
+                          end={item.path === "/"}
+                          className={({ isActive }) =>
+                            `relative flex items-center text-[11.5px] font-semibold tracking-[0.02em] transition-all duration-200 group overflow-hidden ${
+                              isCollapsed
+                                ? "justify-center w-10 h-10 mx-auto rounded-xl"
+                                : "py-2.5 px-3 rounded-xl gap-2.5"
+                            } ${
+                              isActive
+                                ? `bg-gradient-to-r ${colorConfig.gradient} text-white shadow-md ${colorConfig.shadow}`
+                                : "text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10"
+                            }`
+                          }
+                        >
+                          {({ isActive }) => (
+                            <>
+                              {/* Active left bar indicator - only in expanded mode */}
+                              {isActive && !isCollapsed && (
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-white/60" />
+                              )}
+
+                              {/* Hover shimmer */}
+                              {!isActive && (
+                                <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-r from-purple-500/5 to-transparent rounded-xl" />
+                              )}
+
+                              <Icon
+                                strokeWidth={isActive ? 2.5 : 1.75}
+                                className={`flex-shrink-0 h-4 w-4 transition-all duration-200 relative z-10 ${
+                                  isCollapsed ? "mx-auto" : ""
+                                } ${
+                                  isActive
+                                    ? "text-white drop-shadow-xs"
+                                    : "text-slate-500 dark:text-slate-400 group-hover:text-foreground group-hover:scale-105"
+                                }`}
+                              />
+
+                              {!isCollapsed && (
+                                <span
+                                  className={`whitespace-nowrap truncate relative z-10 transition-all duration-200 ${
+                                    isActive ? "text-white font-bold" : "group-hover:translate-x-0.5"
+                                  }`}
+                                >
+                                  {item.title}
+                                </span>
+                              )}
+
+                              {/* Active dot badge in collapsed mode */}
+                              {isActive && isCollapsed && (
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-white border-2 border-purple-500" />
+                              )}
+                            </>
+                          )}
+                        </NavLink>
+                      </PortalTooltip>
+                    )
+                  })}
+                </div>
               </div>
-              <p className="truncate text-[10px] text-muted-foreground">
-                M1, M2 & M3 Connected
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
+
+            {/* Hospital Management Section */}
+            {filteredManagement.length > 0 && (
+              <div>
+                {!isCollapsed ? (
+                  <div className="flex items-center gap-2 mb-2.5 px-2 pt-2">
+                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-[0.2em] uppercase whitespace-nowrap">
+                      HOSPITAL SETUP
+                    </span>
+                    <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
+                  </div>
+                ) : (
+                  <div className="w-6 h-px bg-slate-200 dark:bg-white/10 mx-auto mb-2 mt-2" />
+                )}
+
+                <div className="space-y-1.5">
+                  {filteredManagement.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <PortalTooltip key={item.path} text={item.title} visible={isCollapsed}>
+                        <NavLink
+                          to={item.path}
+                          onClick={() => setSidebarOpen(false)}
+                          className={({ isActive }) =>
+                            `relative flex items-center text-[11.5px] font-semibold tracking-[0.02em] transition-all duration-200 group overflow-hidden ${
+                              isCollapsed
+                                ? "justify-center w-10 h-10 mx-auto rounded-xl"
+                                : "py-2.5 px-3 rounded-xl gap-2.5"
+                            } ${
+                              isActive
+                                ? `bg-gradient-to-r ${colorConfig.gradient} text-white shadow-md ${colorConfig.shadow}`
+                                : "text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10"
+                            }`
+                          }
+                        >
+                          {({ isActive }) => (
+                            <>
+                              {/* Active left bar indicator - only in expanded mode */}
+                              {isActive && !isCollapsed && (
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-white/60" />
+                              )}
+
+                              {/* Hover shimmer */}
+                              {!isActive && (
+                                <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-r from-purple-500/5 to-transparent rounded-xl" />
+                              )}
+
+                              <Icon
+                                strokeWidth={isActive ? 2.5 : 1.75}
+                                className={`flex-shrink-0 h-4 w-4 transition-all duration-200 relative z-10 ${
+                                  isCollapsed ? "mx-auto" : ""
+                                } ${
+                                  isActive
+                                    ? "text-white drop-shadow-xs"
+                                    : "text-slate-500 dark:text-slate-400 group-hover:text-foreground group-hover:scale-105"
+                                }`}
+                              />
+
+                              {!isCollapsed && (
+                                <span
+                                  className={`whitespace-nowrap truncate relative z-10 transition-all duration-200 ${
+                                    isActive ? "text-white font-bold" : "group-hover:translate-x-0.5"
+                                  }`}
+                                >
+                                  {item.title}
+                                </span>
+                              )}
+
+                              {/* Active dot badge in collapsed mode */}
+                              {isActive && isCollapsed && (
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-white border-2 border-purple-500" />
+                              )}
+                            </>
+                          )}
+                        </NavLink>
+                      </PortalTooltip>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </nav>
+
+      {/* ─── Bottom Section: Clean Red "LOG OUT" Button matching hotel reference ─── */}
+      <div className="px-3 pb-3.5 pt-2.5 border-t border-slate-100 dark:border-white/5 shrink-0">
+        <PortalTooltip text="LOG OUT" visible={isCollapsed}>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`relative flex items-center w-full text-[11.5px] font-semibold tracking-wide transition-all duration-200 group overflow-hidden text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl cursor-pointer ${
+              isCollapsed ? "justify-center w-10 h-10 mx-auto" : "py-2.5 px-3"
+            }`}
+          >
+            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-r from-rose-500/5 to-transparent rounded-xl" />
+            <LogOut
+              strokeWidth={1.75}
+              className={`flex-shrink-0 h-4 w-4 transition-all duration-200 group-hover:scale-110 group-hover:-translate-x-0.5 relative z-10 ${
+                isCollapsed ? "mx-auto" : "mr-2.5"
+              }`}
+            />
+            {!isCollapsed && (
+              <span className="whitespace-nowrap relative z-10 group-hover:translate-x-0.5 transition-transform duration-200 font-bold">
+                LOG OUT
+              </span>
+            )}
+          </button>
+        </PortalTooltip>
+      </div>
     </aside>
   )
 }

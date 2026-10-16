@@ -92,6 +92,38 @@ class VitalController extends Controller
         return $this->createdResponse($vital, 'Patient vitals recorded successfully');
     }
 
+    #[OA\Put(
+        path: "/api/v1/vitals/{id}",
+        summary: "Update an existing vital record",
+        security: [["bearerAuth" => []]],
+        tags: ["5. Triage & Vitals (Nurse)"]
+    )]
+    #[OA\Response(response: 200, description: "Vital record updated successfully")]
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'temperature'        => 'nullable|numeric|between:50,120',
+            'temperature_unit'   => 'nullable|in:F,C',
+            'blood_pressure_sys' => 'nullable|integer|between:40,300',
+            'blood_pressure_dia' => 'nullable|integer|between:20,200',
+            'pulse_rate'         => 'nullable|integer|between:30,250',
+            'respiratory_rate'   => 'nullable|integer|between:5,100',
+            'oxygen_saturation'  => 'nullable|numeric|between:40,100',
+            'weight'             => 'nullable|numeric|between:0.5,500',
+            'height'             => 'nullable|numeric|between:20,300',
+            'blood_glucose'      => 'nullable|numeric|between:10,1000',
+            'glucose_type'       => 'nullable|in:fasting,random,post_meal',
+            'custom_vitals'      => 'nullable|array',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()->id;
+
+        $vital = $this->vitalService->updateVital($hospitalId, $userId, (int) $id, $validated);
+
+        return $this->successResponse($vital, 'Vital record updated successfully');
+    }
+
     #[OA\Get(
         path: "/api/v1/vitals",
         summary: "Get list of recorded vitals",
@@ -252,6 +284,15 @@ class VitalController extends Controller
     #[OA\Response(response: 201, description: "Custom vital field created successfully")]
     public function createConfig(Request $request)
     {
+        if ($request->has('field_name') && !$request->has('field_key')) {
+            $request->merge(['field_key' => $request->input('field_name')]);
+        }
+        if (is_string($request->input('options'))) {
+            $request->merge([
+                'options' => array_values(array_filter(array_map('trim', explode(',', $request->input('options')))))
+            ]);
+        }
+
         $validated = $request->validate([
             'field_key'   => 'required|string|max:50',
             'label'       => 'required|string|max:100',
@@ -300,6 +341,15 @@ class VitalController extends Controller
     #[OA\Response(response: 200, description: "Configuration updated successfully")]
     public function updateConfig(Request $request, $id)
     {
+        if ($request->has('field_name') && !$request->has('field_key')) {
+            $request->merge(['field_key' => $request->input('field_name')]);
+        }
+        if (is_string($request->input('options'))) {
+            $request->merge([
+                'options' => array_values(array_filter(array_map('trim', explode(',', $request->input('options')))))
+            ]);
+        }
+
         $validated = $request->validate([
             'label'       => 'sometimes|string|max:100',
             'category'    => 'nullable|string|max:50',

@@ -28,6 +28,7 @@ class BillingLedgerItem extends Model
         'auto_generated',
         'notes',
         'status',
+        'invoice_id',
     ];
 
     protected $casts = [
@@ -63,5 +64,10 @@ class BillingLedgerItem extends Model
     public function ipdAdmission()
     {
         return $this->belongsTo(IpdAdmission::class, 'encounter_id');
+    }
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
     }
 }

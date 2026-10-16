@@ -33,6 +33,7 @@ class Patient extends Model
         'photo',
         'kyc_verified',
         'custom_fields',
+        'abha_card_pdf',
     ];
 
     protected $casts = [
@@ -40,6 +41,44 @@ class Patient extends Model
         'kyc_verified'  => 'boolean',
         'custom_fields' => 'array',
     ];
+
+    protected $appends = [
+        'age',
+        'first_name',
+        'last_name',
+        'phone',
+    ];
+
+    public function getFirstNameAttribute()
+    {
+        return $this->attributes['name'] ?? '';
+    }
+
+    public function getLastNameAttribute()
+    {
+        return '';
+    }
+
+    public function getPhoneAttribute()
+    {
+        return $this->attributes['phone'] ?? ($this->attributes['mobile'] ?? ($this->attributes['guardian_phone'] ?? null));
+    }
+
+    public function getAgeAttribute()
+    {
+        if (array_key_exists('age', $this->attributes) && $this->attributes['age'] !== null) {
+            return (int) $this->attributes['age'];
+        }
+        if ($this->dob) {
+            try {
+                $dob = $this->dob instanceof \Carbon\Carbon ? $this->dob : \Carbon\Carbon::parse($this->dob);
+                return (int) $dob->age;
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+        return null;
+    }
 
     protected static function booted()
     {

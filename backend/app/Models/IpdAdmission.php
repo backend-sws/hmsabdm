@@ -30,6 +30,12 @@ class IpdAdmission extends Model
         'payment_breakdown',
         'admission_date',
         'discharge_date',
+        'discharge_type',
+        'discharge_summary',
+        'discharge_advice',
+        'final_diagnosis',
+        'discharged_by_user_id',
+        'invoice_id',
         'attendant_name',
         'attendant_relation',
         'attendant_phone',
@@ -49,6 +55,13 @@ class IpdAdmission extends Model
         'advance_deposit'   => 'float',
         'payment_breakdown' => 'array',
     ];
+
+    protected $appends = ['admission_number'];
+
+    public function getAdmissionNumberAttribute(): ?string
+    {
+        return $this->attributes['ipd_number'] ?? null;
+    }
 
     protected static function booted()
     {
@@ -119,6 +132,61 @@ class IpdAdmission extends Model
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);
+    }
+
+    public function intakeOutputs()
+    {
+        return $this->hasMany(IpdIntakeOutput::class);
+    }
+
+    public function marAdministrations()
+    {
+        return $this->hasMany(IpdMarAdministration::class);
+    }
+
+    public function shiftHandovers()
+    {
+        return $this->hasMany(IpdShiftHandover::class);
+    }
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+
+    public function dischargedByUser()
+    {
+        return $this->belongsTo(User::class, 'discharged_by_user_id');
+    }
+
+    public function labOrders()
+    {
+        return $this->hasMany(LabOrder::class, 'ipd_admission_id')->orderBy('created_at', 'desc');
+    }
+
+    public function wardIndents()
+    {
+        return $this->hasMany(PharmacyWardIndent::class, 'ipd_admission_id')->orderBy('created_at', 'desc');
+    }
+
+    public function dischargeSummary()
+    {
+        return $this->hasOne(IpdDischargeSummary::class, 'ipd_admission_id');
+    }
+
+    public function preauths()
+    {
+        return $this->hasMany(InsurancePreauth::class, 'admission_id')->orderBy('created_at', 'desc');
+    }
+
+    public function claims()
+    {
+        return $this->hasMany(InsuranceClaim::class, 'admission_id')->orderBy('created_at', 'desc');
+    }
+
+    public function implantApprovals()
+    {
+        return $this->hasMany(InsuranceImplantApproval::class, 'admission_id')->orderBy('created_at', 'desc');
     }
 }
 

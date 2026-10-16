@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { useForm, Controller, type SubmitHandler } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
@@ -11,7 +12,8 @@ import { sectionHeader } from "@/components/sectionHeader"
 import { departmentService } from "@/services/departmentService"
 import { queryKeys } from "@/constants/queryKeys"
 import { DEPARTMENT_FORM_INITIAL_DATA } from "@/constants/department.constants"
-import type { Department, CreateDepartmentDto } from "@/types/department"
+import { departmentFormSchema, type DepartmentFormValues } from "@/schemas"
+import type { Department } from "@/types/department"
 
 interface DepartmentEditProps {
   open: boolean
@@ -24,7 +26,8 @@ export default function DepartmentEdit({ open, onClose, department }: Department
   const isEditMode = !!department?.id && !department?.viewMode
   const departmentId = department?.id
 
-  const { handleSubmit, control, reset } = useForm<CreateDepartmentDto>({
+  const { handleSubmit, control, reset } = useForm<DepartmentFormValues>({
+    resolver: zodResolver(departmentFormSchema),
     defaultValues: DEPARTMENT_FORM_INITIAL_DATA,
     mode: "onChange",
   })
@@ -47,7 +50,7 @@ export default function DepartmentEdit({ open, onClose, department }: Department
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
-    mutationFn: (data: CreateDepartmentDto) =>
+    mutationFn: (data: DepartmentFormValues) =>
       isEditMode && departmentId
         ? departmentService.updateDepartment(departmentId, data)
         : departmentService.createDepartment(data),
@@ -66,7 +69,7 @@ export default function DepartmentEdit({ open, onClose, department }: Department
     },
   })
 
-  const onSubmit: SubmitHandler<CreateDepartmentDto> = (data) => {
+  const onSubmit: SubmitHandler<DepartmentFormValues> = (data) => {
     mutation.mutate(data)
   }
 

@@ -7,7 +7,7 @@ interface OpdServiceInterface
     /**
      * Get today's queue for a specific doctor
      */
-    public function getTodayQueue(int $hospitalId, int $doctorId, $request = null);
+    public function getTodayQueue(int $hospitalId, ?int $doctorId = null, $request = null);
 
     /**
      * Call the next patient (or a specific patient)

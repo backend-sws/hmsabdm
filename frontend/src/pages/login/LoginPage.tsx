@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import { useNavigate, useLocation } from "react-router"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import { loginSchema, type LoginFormValues } from "@/schemas"
 import { useAuth } from "@/context/AuthContext"
 import { Button } from "@/components/ui/button"
 import { FormInput } from "@/components/common/FormInput"
@@ -19,14 +19,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 
-// Zod Form Validation Schema
-const loginSchema = z.object({
-  login_id: z.string().min(1, "Please enter your User ID or Email"),
-  password: z.string().min(1, "Please enter your password"),
-  rememberMe: z.boolean().optional(),
-})
-
-type LoginFormData = z.infer<typeof loginSchema>
+// loginSchema is centralized in src/schemas/auth.schema.ts
 
 export const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuth()
@@ -41,16 +34,15 @@ export const LoginPage: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
+  } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       login_id: "superadmin@hms.com",
       password: "password",
-      // rememberMe: true,
     },
   })
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormValues) => {
     setErrorMessage(null)
 
     try {

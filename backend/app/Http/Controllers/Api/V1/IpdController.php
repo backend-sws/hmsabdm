@@ -111,6 +111,15 @@ class IpdController extends Controller
             'dob'                => 'nullable|date',
             'id_proof_type'      => 'nullable|string',
             'id_proof_number'    => 'nullable|string',
+            'address'            => 'nullable|string',
+            'city'               => 'nullable|string|max:100',
+            'district'           => 'nullable|string|max:100',
+            'state'              => 'nullable|string|max:100',
+            'pincode'            => 'nullable|string|max:20',
+            'photo'              => 'nullable|string',
+            'kyc_verified'       => 'nullable|boolean',
+            'abha_number'        => 'nullable|string|max:50',
+            'abha_address'       => 'nullable|string|max:100',
             'doctor_id'          => 'required|integer|exists:doctors,id',
             'department_id'      => 'nullable|integer|exists:departments,id',
             'ward_id'            => 'nullable|integer|exists:wards,id',
@@ -393,7 +402,7 @@ class IpdController extends Controller
     #[OA\Get(
         path: "/api/v1/ipd/admissions/{id}/chart",
         summary: "Get Inpatient 360 Comprehensive Medical & Financial Chart",
-        description: "Retrieves complete inpatient clinical profile: admission info, doctor SOAP rounds, vital charts, drug prescriptions, bedside procedures, and live running financial bill summary.",
+        description: "Retrieves complete inpatient clinical profile: admission info, doctor SOAP rounds, vital charts, fluid balance summary, MAR drug chart, bedside procedures, shift handovers, and live running financial bill summary.",
         security: [["bearerAuth" => []]],
         tags: ["11. IPD (Inpatient Admissions)"]
     )]
@@ -404,6 +413,330 @@ class IpdController extends Controller
         $hospitalId = $this->getHospitalId($request);
         $chart = $this->ipdService->getInpatientChart($hospitalId, (int) $id);
         return $this->successResponse($chart, 'Inpatient chart retrieved successfully');
+    }
+
+    #[OA\Post(
+        path: "/api/v1/ipd/admissions/{id}/intake-output",
+        summary: "Record Fluid Intake or Output Entry",
+        description: "Logs fluid intake (IV fluid, oral, RT feed, blood) or output (urine, RT aspirate, drain, vomitus, stool) in ml.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 201, description: "Fluid balance entry recorded")]
+    public function recordIntakeOutput(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'entry_type'       => 'required|string|in:intake,output',
+            'category'         => 'required|string|max:50',
+            'item_name'        => 'required|string|max:150',
+            'quantity_ml'      => 'required|numeric|min:0.01',
+            'route'            => 'nullable|string|max:50',
+            'recorded_at'      => 'nullable|date',
+            'recorded_by_name' => 'nullable|string|max:100',
+            'remarks'          => 'nullable|string',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id;
+
+        try {
+            $entry = $this->ipdService->recordIntakeOutput($hospitalId, (int) $id, $validated, $userId);
+            return $this->createdResponse($entry, 'Fluid balance entry recorded successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/intake-output",
+        summary: "Get Fluid Balance Summary & I/O Logs",
+        description: "Returns total intake, total output, net fluid balance, category breakdowns, and chronological logs.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "date", in: "query", required: false, schema: new OA\Schema(type: "string", format: "date", example: "2026-09-30"))]
+    #[OA\Response(response: 200, description: "Fluid balance summary retrieved")]
+    public function getIntakeOutput(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $date = $request->query('date');
+        $summary = $this->ipdService->getIntakeOutputSummary($hospitalId, (int) $id, $date);
+        return $this->successResponse($summary, 'Fluid balance summary retrieved successfully');
+    }
+
+    #[OA\Post(
+        path: "/api/v1/ipd/admissions/{id}/mar",
+        summary: "Record Medication Administration Record (MAR / Drug Chart)",
+        description: "Logs drug administration status (given, omitted, refused, held, vomited) with nurse signature and optional auto-billing.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 201, description: "MAR administration recorded")]
+    public function recordMar(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'prescription_item_id' => 'nullable|integer',
+            'medicine_name'        => 'required|string|max:200',
+            'dosage'               => 'required|string|max:100',
+            'route'                => 'nullable|string|max:50',
+            'scheduled_at'         => 'nullable|date',
+            'administered_at'      => 'nullable|date',
+            'administered_by_name' => 'nullable|string|max:100',
+            'status'               => 'nullable|string|in:given,omitted,refused,held,vomited',
+            'omission_reason'      => 'nullable|string|max:255',
+            'batch_number'         => 'nullable|string|max:100',
+            'notes'                => 'nullable|string',
+            'charge_amount'        => 'nullable|numeric|min:0',
+            'auto_charge'          => 'nullable|boolean',
+            'unit_rate'            => 'nullable|numeric|min:0',
+            'quantity'             => 'nullable|integer|min:1',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id;
+
+        try {
+            $admin = $this->ipdService->recordMarAdministration($hospitalId, (int) $id, $validated, $userId);
+            return $this->createdResponse($admin, 'Medication administration recorded successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/mar",
+        summary: "Get MAR Drug Chart & Administration Progress",
+        description: "Returns prescribed medications alongside nurse administration events.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Parameter(name: "date", in: "query", required: false, schema: new OA\Schema(type: "string", format: "date"))]
+    #[OA\Response(response: 200, description: "MAR drug chart retrieved")]
+    public function getMar(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $date = $request->query('date');
+        $chart = $this->ipdService->getMarDrugChart($hospitalId, (int) $id, $date);
+        return $this->successResponse($chart, 'MAR drug chart retrieved successfully');
+    }
+
+    #[OA\Post(
+        path: "/api/v1/ipd/admissions/{id}/shift-handover",
+        summary: "Record Nursing Shift Handover Note",
+        description: "Creates a bed-by-bed shift transition note with patient condition, critical alerts, and pending tasks.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 201, description: "Shift handover note created")]
+    public function recordShiftHandover(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'shift_name'          => 'required|string|in:morning,evening,night',
+            'shift_date'          => 'nullable|date',
+            'outgoing_nurse_name' => 'required|string|max:100',
+            'incoming_nurse_name' => 'nullable|string|max:100',
+            'patient_condition'   => 'nullable|string|in:stable,critical,deteriorating,post_op,ventilated',
+            'handover_notes'      => 'required|string',
+            'critical_alerts'     => 'nullable|string',
+            'pending_tasks'       => 'nullable|string',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+
+        try {
+            $handover = $this->ipdService->recordShiftHandover($hospitalId, (int) $id, $validated);
+            return $this->createdResponse($handover, 'Shift handover recorded successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/shift-handover",
+        summary: "Get Nursing Shift Handovers History",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Shift handovers list retrieved")]
+    public function getShiftHandovers(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $handovers = $this->ipdService->getShiftHandovers($hospitalId, (int) $id);
+        return $this->successResponse($handovers, 'Shift handovers retrieved successfully');
+    }
+
+    #[OA\Put(
+        path: "/api/v1/ipd/shift-handover/{id}/acknowledge",
+        summary: "Acknowledge Shift Handover by Incoming Nurse",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Shift handover acknowledged")]
+    public function acknowledgeShiftHandover(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'incoming_nurse_name' => 'required|string|max:100',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+
+        try {
+            $handover = $this->ipdService->acknowledgeShiftHandover($hospitalId, (int) $id, $validated['incoming_nurse_name']);
+            return $this->successResponse($handover, 'Shift handover acknowledged successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/opd-referrals",
+        summary: "Get pending OPD doctor admission referrals",
+        description: "Returns patients where the OPD Doctor set disposition to 'admit_ipd' who are not yet admitted.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Response(response: 200, description: "OPD admission referrals retrieved")]
+    public function opdReferrals(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+
+        $referrals = \App\Models\Prescription::where('hospital_id', $hospitalId)
+            ->where('disposition', 'admit_ipd')
+            ->whereDoesntHave('patient.ipdAdmissions', function ($q) {
+                $q->where('status', 'admitted');
+            })
+            ->with([
+                'patient:id,name,uhid,mobile,gender,dob',
+                'doctor:id,name,qualification,department_id',
+                'doctor.department:id,name',
+                'opdVisit:id,queue_token,opd_number,visit_date',
+                'diagnoses',
+            ])
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        $data = $referrals->map(function ($rx) {
+            return [
+                'id'                  => $rx->id,
+                'prescription_id'     => $rx->id,
+                'prescription_number' => $rx->prescription_number,
+                'opd_visit_id'        => $rx->opd_visit_id,
+                'token_no'            => (string) ($rx->opdVisit?->queue_token ?? $rx->opdVisit?->opd_number ?? ''),
+                'opd_number'          => $rx->opdVisit?->opd_number,
+                'patient_id'          => $rx->patient_id,
+                'patient'             => $rx->patient,
+                'doctor_id'           => $rx->doctor_id,
+                'doctor'              => $rx->doctor,
+                'admit_priority'      => $rx->admit_priority ?? 'routine',
+                'recommended_ward'    => $rx->recommended_ward,
+                'disposition_notes'   => $rx->disposition_notes,
+                'diagnoses'           => $rx->diagnoses->map(fn($d) => [
+                    'code' => $d->icd_code,
+                    'name' => $d->diagnosis_name,
+                ]),
+                'referred_at'         => $rx->created_at->toISOString(),
+            ];
+        });
+
+        return $this->successResponse($data, 'OPD admission referrals retrieved successfully');
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/discharge-summary",
+        summary: "Get or auto-prefill Clinical Discharge Summary",
+        description: "Returns existing discharge summary or generates a prefilled draft from admission SOAP rounds, lab investigations, and vitals.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Discharge summary retrieved")]
+    public function getDischargeSummary(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        try {
+            $data = $this->ipdService->getDischargeSummary($hospitalId, (int) $id);
+            return $this->successResponse($data, 'Discharge summary retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Post(
+        path: "/api/v1/ipd/admissions/{id}/discharge-summary",
+        summary: "Create or update Clinical Discharge Summary (Draft or Finalize)",
+        description: "Saves clinical narrative, diagnoses, take-home Rx medication list, follow-up plan, and optionally finalizes & discharges patient.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Discharge summary saved")]
+    public function saveDischargeSummary(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 1;
+
+        $validated = $request->validate([
+            'status'                     => 'nullable|string|in:draft,finalized',
+            'discharge_type'             => 'nullable|string|in:normal,dama,lama,absconded,referred,expired',
+            'admission_date'             => 'nullable|date',
+            'discharge_date'             => 'nullable|date',
+            'admission_diagnosis'        => 'nullable|string',
+            'final_diagnosis'            => 'nullable|string',
+            'icd10_code'                 => 'nullable|string',
+            'chief_complaints'           => 'nullable|string',
+            'history_of_present_illness' => 'nullable|string',
+            'past_history_and_allergies' => 'nullable|string',
+            'condition_at_discharge'     => 'nullable|string',
+            'discharge_vitals'           => 'nullable|array',
+            'hospital_course'            => 'nullable|string',
+            'procedures_surgeries'       => 'nullable|string',
+            'investigations_summary'     => 'nullable|string',
+            'treatment_given'            => 'nullable|string',
+            'discharge_medications'      => 'nullable|array',
+            'dietary_advice'             => 'nullable|string',
+            'physical_activity_advice'   => 'nullable|string',
+            'wound_care_instructions'    => 'nullable|string',
+            'emergency_red_flags'        => 'nullable|string',
+            'follow_up_date'             => 'nullable|date',
+            'follow_up_doctor_id'        => 'nullable|integer',
+            'follow_up_instructions'     => 'nullable|string',
+            'mark_as_discharged'         => 'nullable|boolean',
+        ]);
+
+        try {
+            $saved = $this->ipdService->saveDischargeSummary($hospitalId, (int) $id, $validated, $userId);
+            return $this->successResponse($saved, 'Discharge summary saved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/ipd/admissions/{id}/discharge-summary/print",
+        summary: "Get complete printable NABH Discharge Card Data",
+        description: "Returns hospital letterhead details, patient demographic info, summary, medications, and digital sign-off blocks.",
+        security: [["bearerAuth" => []]],
+        tags: ["11. IPD (Inpatient Admissions)"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Discharge print data retrieved")]
+    public function getDischargePrintData(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        try {
+            $printData = $this->ipdService->getDischargePrintData($hospitalId, (int) $id);
+            return $this->successResponse($printData, 'Discharge card print data retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
     }
 }
 
