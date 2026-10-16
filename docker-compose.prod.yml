@@ -45,7 +45,7 @@ services:
     container_name: hms_nginx
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "3015:80"
     volumes:
       - ./docker/nginx/prod.conf:/etc/nginx/conf.d/default.conf
       - hms_storage:/var/www/storage/app:ro
@@ -65,8 +65,6 @@ services:
       POSTGRES_DB: ${DB_DATABASE:-hms_abdm}
       POSTGRES_USER: ${DB_USERNAME:-hms_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-hms_pass}
-    ports:
-      - "${DB_PORT:-5432}:5432"
     healthcheck:
       test:
         [
@@ -85,8 +83,6 @@ services:
     image: redis:7-alpine
     container_name: hms_redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     volumes:
       - hms_redisdata:/data
     networks:
