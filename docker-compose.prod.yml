@@ -61,10 +61,6 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
-    environment:
-      POSTGRES_DB: ${DB_DATABASE:-hms_abdm}
-      POSTGRES_USER: ${DB_USERNAME:-hms_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-hms_pass}
     healthcheck:
       test:
         [
