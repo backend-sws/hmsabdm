@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Models\GlobalTest;
 use Illuminate\Database\Seeder;
 
-class GlobalTestSeeder extends Seeder
+class GlobalTestSeeder_Original extends Seeder
 {
     public function run(): void
     {

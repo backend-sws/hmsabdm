@@ -1,0 +1,32 @@
+# Version control & system
+.git
+.gitignore
+.DS_Store
+.idea
+.vscode
+
+# Backend files
+backend/vendor
+backend/bootstrap/cache/*.php
+!backend/bootstrap/cache/.gitignore
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/.phpunit.result.cache
+
+# Frontend files
+frontend/node_modules
+frontend/dist
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Large documentation & assets
+*.pdf
+*.docx
+*.xlsx
+*.postman_collection.json
