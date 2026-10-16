@@ -11,13 +11,12 @@ import {
   Menu,
   X,
   Search,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
   Building,
   Settings,
   Maximize2,
   Minimize2,
-  HelpCircle,
   LayoutDashboard,
   Users,
   UserCheck,
@@ -31,7 +30,6 @@ import {
   FlaskConical,
   Pill,
   Scissors,
-  Keyboard,
 } from "lucide-react"
 
 import { useBranding } from "@/context/BrandingContext"
@@ -165,11 +163,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Mobile hamburger */}
           <button
+            type="button"
             onClick={() => setSidebarOpen((prev) => !prev)}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted focus:outline-none lg:hidden"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background/80 text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground hover:border-purple-500/50 focus:outline-none lg:hidden cursor-pointer shadow-2xs active:scale-95"
             aria-label="Toggle navigation menu"
           >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
 
           {/* Hospital Brand Logo & Name */}
@@ -207,20 +206,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             )}
           </div>
 
-          {/* Desktop Sidebar Toggle Switch */}
-          <Button
-            variant="ghost"
-            size="icon-sm"
+          {/* Desktop Sidebar Toggle Switch (Circular Theme Single-Arrow Style) */}
+          <button
+            type="button"
             onClick={() => setIsCollapsed((prev) => !prev)}
-            className="hidden rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground lg:flex"
-            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            className={`hidden lg:flex items-center justify-center h-9 w-9 rounded-full bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:brightness-110 active:scale-95 transition-all duration-200 cursor-pointer group shrink-0 ${colorConfig.shadow}`}
+            title={isCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
+            aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
             {isCollapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2.5} />
             ) : (
-              <PanelLeftClose className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5 transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={2.5} />
             )}
-          </Button>
+          </button>
 
           <div className="hidden md:block h-4 w-px bg-border/80" />
 
@@ -303,30 +302,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             ) : (
               <Moon className="h-4.5 w-4.5 text-slate-700 dark:text-slate-200" />
             )}
-          </button>
-
-          {/* Keyboard Shortcuts Trigger Button with border matching reference screenshot */}
-          <button
-            type="button"
-            onClick={() => setIsSearchOpen(true)}
-            className="hidden sm:flex h-9 w-9 rounded-xl border border-border/80 bg-background dark:bg-card items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer shadow-2xs relative shrink-0"
-            title="Keyboard Shortcuts Map (⌘K)"
-          >
-            <Keyboard className="h-4.5 w-4.5" />
-            <span className="absolute -bottom-0.5 -right-0.5 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-600"></span>
-            </span>
-          </button>
-
-          {/* Help / Guide Icon Button (matching reference) */}
-          <button
-            type="button"
-            onClick={() => navigate("/settings")}
-            className="hidden sm:flex h-9 w-9 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground items-center justify-center transition-colors cursor-pointer shrink-0"
-            title="Hospital System Help & Guide"
-          >
-            <HelpCircle className="h-4.5 w-4.5" />
           </button>
 
           {/* Theme Customizer Modal/Popover matching reference screenshot */}

@@ -14,12 +14,16 @@ export const AppLayout: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false)
 
-  // Listen for Cmd+K or Ctrl+K keyboard shortcut
+  // Listen for Cmd+K / Ctrl+K (search) or Cmd+B / Ctrl+B (sidebar toggle)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault()
         setIsSearchOpen((prev) => !prev)
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault()
+        setIsCollapsed((prev) => !prev)
       }
     }
     window.addEventListener("keydown", handleKeyDown)
