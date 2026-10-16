@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { createPortal } from "react-dom"
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { X, Building2, Phone, Mail, Globe, Percent, Clock } from "lucide-react"
@@ -68,9 +69,9 @@ export const InsurancePayerModal: React.FC<Props> = ({ open, onClose, editingPay
 
   if (!open) return null
 
-  return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-xs">
+      <div className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-border animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div className="flex items-center gap-2">
@@ -197,6 +198,7 @@ export const InsurancePayerModal: React.FC<Props> = ({ open, onClose, editingPay
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

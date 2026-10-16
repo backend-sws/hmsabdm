@@ -44,6 +44,7 @@ class InsuranceController extends Controller
     // ─────────────────────────────────────────────────────────────────────
 
     #[OA\Get(path: "/api/v1/insurance/payers", summary: "List all insurance payers/TPAs", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getPayers(Request $request)
     {
         $hospitalId = $request->user()->hospital_id;
@@ -52,6 +53,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/payers", summary: "Create insurance payer/TPA", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function createPayer(Request $request)
     {
         $validated = $request->validate([
@@ -81,6 +83,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Put(path: "/api/v1/insurance/payers/{id}", summary: "Update insurance payer", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function updatePayer(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -102,6 +105,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Delete(path: "/api/v1/insurance/payers/{id}", summary: "Deactivate payer", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function deletePayer(Request $request, int $id)
     {
         $result = $this->insuranceService->deletePayer($request->user()->hospital_id, $id);
@@ -109,6 +113,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Get(path: "/api/v1/insurance/payers/{id}/tariffs", summary: "Get payer tariff packages", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getPayerTariffs(Request $request, int $id)
     {
         $data = $this->insuranceService->getPayerTariffs($request->user()->hospital_id, $id);
@@ -116,6 +121,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/payers/{id}/tariffs", summary: "Save tariff package for payer", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function saveTariffPackage(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -140,6 +146,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Delete(path: "/api/v1/insurance/payers/{id}/tariffs/{tariffId}", summary: "Delete tariff package", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function deleteTariffPackage(Request $request, int $id, int $tariffId)
     {
         $result = $this->insuranceService->deleteTariffPackage($request->user()->hospital_id, $id, $tariffId);
@@ -151,6 +158,7 @@ class InsuranceController extends Controller
     // ─────────────────────────────────────────────────────────────────────
 
     #[OA\Get(path: "/api/v1/insurance/patients/{patientId}/policies", summary: "Get patient insurance policies", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getPatientInsurances(Request $request, int $patientId)
     {
         $data = $this->insuranceService->getPatientInsurances($request->user()->hospital_id, $patientId);
@@ -158,6 +166,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/patients/{patientId}/policies", summary: "Add insurance policy to patient", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function addPatientInsurance(Request $request, int $patientId)
     {
         $validated = $request->validate([
@@ -187,6 +196,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Put(path: "/api/v1/insurance/policies/{id}", summary: "Update patient insurance policy", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function updatePatientInsurance(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -203,6 +213,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/policies/{id}/verify", summary: "Verify patient insurance eligibility", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function verifyEligibility(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -220,6 +231,7 @@ class InsuranceController extends Controller
     // ─────────────────────────────────────────────────────────────────────
 
     #[OA\Get(path: "/api/v1/insurance/preauth", summary: "List all pre-authorizations", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getPreauths(Request $request)
     {
         $data = $this->insuranceService->getPreauths($request->user()->hospital_id, $request->all());
@@ -227,6 +239,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Get(path: "/api/v1/insurance/preauth/{id}", summary: "Get pre-auth details", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getPreauth(Request $request, int $id)
     {
         $data = $this->insuranceService->getPreauth($request->user()->hospital_id, $id);
@@ -234,6 +247,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/preauth", summary: "Create pre-authorization request", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function createPreauth(Request $request)
     {
         $validated = $request->validate([
@@ -260,6 +274,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Put(path: "/api/v1/insurance/preauth/{id}/status", summary: "Update pre-auth status (Approved/Denied/Queried)", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function updatePreauthStatus(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -282,6 +297,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/preauth/{id}/respond-query", summary: "Respond to TPA shortfall query", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function respondToQuery(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -293,6 +309,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/preauth/{id}/enhancement", summary: "Raise enhancement request", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function createEnhancement(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -310,6 +327,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Get(path: "/api/v1/insurance/preauth/expiring", summary: "Get pre-auths expiring soon", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function expiringPreauths(Request $request)
     {
         $days = $request->integer('days', 2);
@@ -318,6 +336,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/preauth/{id}/followup", summary: "Log call/followup communication for pre-auth", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function addPreauthFollowup(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -339,6 +358,7 @@ class InsuranceController extends Controller
     // ─────────────────────────────────────────────────────────────────────
 
     #[OA\Get(path: "/api/v1/insurance/claims", summary: "List all insurance claims", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getClaims(Request $request)
     {
         $data = $this->insuranceService->getClaims($request->user()->hospital_id, $request->all());
@@ -346,6 +366,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Get(path: "/api/v1/insurance/claims/{id}", summary: "Get claim details with AR ledger", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getClaim(Request $request, int $id)
     {
         $data = $this->insuranceService->getClaim($request->user()->hospital_id, $id);
@@ -353,6 +374,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/claims", summary: "Create insurance claim", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function createClaim(Request $request)
     {
         $validated = $request->validate([
@@ -379,6 +401,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Put(path: "/api/v1/insurance/claims/{id}/status", summary: "Update claim status", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function updateClaimStatus(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -395,6 +418,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/claims/{id}/settle", summary: "Record claim settlement", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function settleClaim(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -410,6 +434,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/claims/{id}/resubmit", summary: "Resubmit rejected claim", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function resubmitClaim(Request $request, int $id)
     {
         $validated = $request->validate(['notes' => 'nullable|string']);
@@ -420,6 +445,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/claims/{id}/grievance", summary: "Raise grievance on claim", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function raiseGrievance(Request $request, int $id)
     {
         $validated = $request->validate(['notes' => 'required|string']);
@@ -430,6 +456,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Get(path: "/api/v1/insurance/claims/{id}/dossier", summary: "Get claim dossier completeness", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getClaimDossier(Request $request, int $id)
     {
         $data = $this->insuranceService->getClaimDossier($request->user()->hospital_id, $id);
@@ -437,6 +464,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/claims/{id}/followup", summary: "Log call/followup communication for claim", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function addClaimFollowup(Request $request, int $id)
     {
         $validated = $request->validate([
@@ -458,6 +486,7 @@ class InsuranceController extends Controller
     // ─────────────────────────────────────────────────────────────────────
 
     #[OA\Get(path: "/api/v1/insurance/non-payables", summary: "Get IRDAI non-payable items", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getNonPayableItems(Request $request)
     {
         $data = $this->insuranceService->getNonPayableItems(
@@ -468,6 +497,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/non-payables", summary: "Save non-payable item", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function saveNonPayableItem(Request $request)
     {
         $validated = $request->validate([
@@ -487,6 +517,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Delete(path: "/api/v1/insurance/non-payables/{id}", summary: "Delete non-payable item", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function deleteNonPayableItem(Request $request, int $id)
     {
         $result = $this->insuranceService->deleteNonPayableItem($request->user()->hospital_id, $id);
@@ -494,6 +525,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Get(path: "/api/v1/insurance/detect-non-payables/{admissionId}", summary: "Auto-detect non-payable items in admission bill", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function detectNonPayables(Request $request, int $admissionId)
     {
         $data = $this->insuranceService->detectNonPayables(
@@ -509,6 +541,7 @@ class InsuranceController extends Controller
     // ─────────────────────────────────────────────────────────────────────
 
     #[OA\Get(path: "/api/v1/insurance/ar-ledger", summary: "AR Aging Ledger", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getArLedger(Request $request)
     {
         $data = $this->insuranceService->getArLedger($request->user()->hospital_id, $request->all());
@@ -516,6 +549,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Get(path: "/api/v1/insurance/ar-summary", summary: "AR Aging Summary by bucket", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getArSummary(Request $request)
     {
         $data = $this->insuranceService->getArAgingSummary($request->user()->hospital_id);
@@ -527,6 +561,7 @@ class InsuranceController extends Controller
     // ─────────────────────────────────────────────────────────────────────
 
     #[OA\Get(path: "/api/v1/insurance/implants", summary: "List implant/device prior approvals", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getImplantApprovals(Request $request)
     {
         $data = $this->insuranceService->getImplantApprovals($request->user()->hospital_id, $request->all());
@@ -534,6 +569,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Post(path: "/api/v1/insurance/implants", summary: "Create implant prior approval request", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function createImplantApproval(Request $request)
     {
         $validated = $request->validate([
@@ -554,6 +590,7 @@ class InsuranceController extends Controller
     }
 
     #[OA\Put(path: "/api/v1/insurance/implants/{id}", summary: "Update implant approval status", security: [["bearerAuth" => []]], tags: ["13. Insurance, TPA & Ayushman Bharat"])]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function updateImplantApproval(Request $request, int $id)
     {
         $validated = $request->validate([

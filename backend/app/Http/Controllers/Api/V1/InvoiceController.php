@@ -62,6 +62,8 @@ class InvoiceController extends Controller
             'payment_method'            => 'nullable|string|max:50',
             'payment_breakdown'         => 'nullable|array',
             'discharge_date'            => 'nullable|date',
+            'mark_bed_cleaning'         => 'nullable|boolean',
+            'bed_status_after_discharge'=> 'nullable|string|in:cleaning,available',
             'notes'                     => 'nullable|string',
         ]);
 

@@ -108,6 +108,7 @@ class LabOrderController extends Controller
         tags: ["13. Lab — Orders & Billing"],
         security: [["bearerAuth" => []]]
     )]
+    #[OA\Response(response: 201, description: "Bedside lab requisition created successfully")]
     public function createIpdOrder(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);

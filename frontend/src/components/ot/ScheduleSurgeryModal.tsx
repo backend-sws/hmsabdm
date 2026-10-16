@@ -40,6 +40,8 @@ interface ScheduleSurgeryModalProps {
   prefillAdmissionId?: number
   prefillDoctorId?: number
   prefillDepartmentId?: number
+  prefillPriority?: "elective" | "urgent" | "emergency"
+  prefillProcedureName?: string
 }
 
 const COMMON_PROCEDURES = [
@@ -68,6 +70,8 @@ export const ScheduleSurgeryModal: React.FC<ScheduleSurgeryModalProps> = ({
   prefillAdmissionId,
   prefillDoctorId,
   prefillDepartmentId,
+  prefillPriority,
+  prefillProcedureName,
 }) => {
   const queryClient = useQueryClient()
 
@@ -79,13 +83,13 @@ export const ScheduleSurgeryModal: React.FC<ScheduleSurgeryModalProps> = ({
     anesthetist_id: null,
     surgical_department_id: prefillDepartmentId || null,
     operation_theatre_id: null,
-    procedure_name: "",
+    procedure_name: prefillProcedureName || "",
     procedure_code: "",
     surgery_date: new Date().toISOString().split("T")[0],
     scheduled_start_time: "09:00",
     scheduled_end_time: "11:00",
     anesthesia_type: "ga",
-    priority: "elective",
+    priority: prefillPriority || (prefillAdmissionId ? "urgent" : "elective"),
     status: "booked",
     pre_op_diagnosis: "",
     post_op_diagnosis: "",
@@ -94,6 +98,21 @@ export const ScheduleSurgeryModal: React.FC<ScheduleSurgeryModalProps> = ({
     blood_required_units: 0,
     special_instruments: "",
   })
+
+  // Sync state when prefill props change
+  React.useEffect(() => {
+    if (isOpen) {
+      setFormData((prev) => ({
+        ...prev,
+        patient_id: prefillPatientId || prev.patient_id,
+        ipd_admission_id: prefillAdmissionId !== undefined ? prefillAdmissionId : prev.ipd_admission_id,
+        primary_surgeon_id: prefillDoctorId || prev.primary_surgeon_id,
+        surgical_department_id: prefillDepartmentId || prev.surgical_department_id,
+        priority: prefillPriority || prev.priority,
+        procedure_name: prefillProcedureName || prev.procedure_name,
+      }))
+    }
+  }, [isOpen, prefillPatientId, prefillAdmissionId, prefillDoctorId, prefillDepartmentId, prefillPriority, prefillProcedureName])
 
   // Queries for Theatres, Doctors, Departments, and Patients (if not prefilled)
   const { data: theatres = [] } = useQuery({

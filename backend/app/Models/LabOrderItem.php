@@ -22,15 +22,37 @@ class LabOrderItem extends Model
         'status',
         'technician_remarks',
         'pathologist_remarks',
+        'fulfillment_type',
+        'outsource_status',
+        'external_vendor_id',
+        'outsource_manifest_id',
+        'b2b_cost',
+        'external_accession_no',
+        'external_report_file',
+        'outsourced_at',
+        'outsource_received_at',
     ];
 
     protected $casts = [
-        'rate' => 'float',
+        'rate'                  => 'float',
+        'b2b_cost'              => 'float',
+        'outsourced_at'         => 'datetime',
+        'outsource_received_at' => 'datetime',
     ];
 
     public function order()
     {
         return $this->belongsTo(LabOrder::class, 'order_id');
+    }
+
+    public function externalVendor()
+    {
+        return $this->belongsTo(LabExternalVendor::class, 'external_vendor_id');
+    }
+
+    public function manifest()
+    {
+        return $this->belongsTo(LabOutsourceManifest::class, 'outsource_manifest_id');
     }
 
     public function testTemplate()

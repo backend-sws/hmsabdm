@@ -26,6 +26,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function dashboardStats(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -42,6 +43,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function searchMaster(Request $request)
     {
         $query = $request->input('q', '');
@@ -59,6 +61,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function formulary(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -84,6 +87,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function importFromMaster(Request $request)
     {
         $validated = $request->validate([
@@ -125,6 +129,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function createCustom(Request $request)
     {
         $validated = $request->validate([
@@ -169,6 +174,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function updateMedicine(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -212,6 +218,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function showMedicine(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -232,6 +239,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function suppliers(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -249,6 +257,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function createSupplier(Request $request)
     {
         $validated = $request->validate([
@@ -288,6 +297,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function updateSupplier(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -326,6 +336,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function supplierLedger(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -346,6 +357,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function recordSupplierPayment(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -381,6 +393,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function supplierPayments(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -398,6 +411,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function createPurchase(Request $request)
     {
         $validated = $request->validate([
@@ -442,6 +456,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function purchases(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -456,6 +471,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function showPurchase(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -476,6 +492,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function batchStock(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -490,6 +507,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function nearExpiry(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -504,6 +522,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function batchesForMedicine(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -517,6 +536,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function substitutes(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -531,6 +551,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function adjustStock(Request $request, $id)
     {
         $validated = $request->validate([
@@ -564,6 +585,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function pendingPrescriptions(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -578,6 +600,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function prescriptionDispenseDetails(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -598,6 +621,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function processSale(Request $request)
     {
         $validated = $request->validate([
@@ -639,6 +663,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function sales(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -653,6 +678,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function showSale(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -670,6 +696,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function patientMedicationHistory(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -686,6 +713,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function processReturn(Request $request)
     {
         $validated = $request->validate([
@@ -714,6 +742,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function returns(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -728,6 +757,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function showReturn(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -748,6 +778,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function stockTransactions(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -765,6 +796,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function supplierReturns(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -782,6 +814,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function createSupplierReturn(Request $request)
     {
         $validated = $request->validate([
@@ -816,6 +849,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function showSupplierReturn(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -836,6 +870,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function updateSupplierReturnStatus(Request $request, $id)
     {
         $validated = $request->validate([
@@ -871,6 +906,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function expiryDashboard(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -887,6 +923,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function quarantineBatch(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -909,6 +946,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function cdscoRegister(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -933,6 +971,7 @@ class PharmacyController extends Controller
         security: [["bearerAuth" => []]],
         tags: ["13. Pharmacy & Inventory"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function gstReport(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);

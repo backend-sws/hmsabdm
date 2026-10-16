@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { useParams, useNavigate } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -26,6 +26,14 @@ import {
   FileText,
   Scissors,
   ShieldCheck,
+  HeartPulse,
+  Wind,
+  Bed,
+  Phone,
+  ShieldAlert,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 
 import { SectionCard } from "@/components/SectionCard"
@@ -96,6 +104,36 @@ export const IpdPatientChartPage: React.FC = () => {
   const [selectedOtSchedule, setSelectedOtSchedule] = useState<OtSchedule | null>(null)
   const [otChecklistModalOpen, setOtChecklistModalOpen] = useState(false)
   const [otPrintModalOpen, setOtPrintModalOpen] = useState(false)
+
+  // ─── Bedside Navigation Tabs Scroll Management ──────────────────────
+  const tabsContainerRef = useRef<HTMLDivElement>(null)
+
+  const handleScrollTabs = (direction: "left" | "right") => {
+    if (tabsContainerRef.current) {
+      const scrollAmount = 280
+      tabsContainerRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      })
+    }
+  }
+
+  const handleTabsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (tabsContainerRef.current) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        tabsContainerRef.current.scrollLeft += e.deltaY
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (tabsContainerRef.current) {
+      const activeEl = tabsContainerRef.current.querySelector<HTMLElement>(`[data-tab="${activeTab}"]`)
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
+      }
+    }
+  }, [activeTab])
 
   // ─── Query ──────────────────────────────────────────────────────────
   const {
@@ -298,7 +336,7 @@ export const IpdPatientChartPage: React.FC = () => {
     payment_method: "cash",
   })
   const settleDischargeMutation = useMutation({
-    mutationFn: () => ipdService.settleDischarge(admissionId, settlePayload),
+    mutationFn: () => ipdService.settleDischarge(admissionId, { ...settlePayload, mark_bed_cleaning: true }),
     onSuccess: async () => {
       toast.success("Bill settled and patient discharged successfully!")
       queryClient.invalidateQueries({ queryKey: queryKeys.ipd.chart(admissionId) })
@@ -349,69 +387,93 @@ export const IpdPatientChartPage: React.FC = () => {
 
   const isDischarged = admission.status === "discharged"
 
-  return (
-    <div className="space-y-6 pb-16">
-      {/* ── Top Bar ── */}
-      <div className="flex items-center justify-between gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/ipd")}
-          className="gap-2 text-xs"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to IPD Desk
-        </Button>
+  const patientAge = patient?.dob
+    ? Math.abs(new Date().getFullYear() - new Date(patient.dob).getFullYear())
+    : (patient as any)?.age || null
 
+  const genderLabel =
+    patient?.gender === "M"
+      ? "Male"
+      : patient?.gender === "F"
+      ? "Female"
+      : patient?.gender || "—"
+
+  return (
+    <div className="space-y-5 pb-16">
+      {/* ── Top Bar: Breadcrumb Navigation & Quick Clinical Actions ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/ipd")}
+            className="h-8 px-2.5 text-xs font-semibold gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/20 shadow-2xs text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>IPD Inpatients</span>
+          </Button>
+          <span className="text-muted-foreground/60 text-xs">/</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-xs text-foreground">Bedside Chart</span>
+            <Badge variant="outline" className="font-mono text-[10px] bg-primary/10 text-primary border-primary/25 py-0 font-bold">
+              {admission.ipd_number}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
             onClick={() => refetchChart()}
             disabled={isRefetching}
-            className="gap-1.5 text-xs"
+            className="h-8 px-2.5 text-xs gap-1.5 bg-card shadow-2xs text-muted-foreground hover:text-foreground"
+            title="Refresh clinical chart data"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`} />
-            Refresh Chart
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
 
           <Button
             size="sm"
             variant="outline"
-            className="gap-1.5 text-xs bg-card hover:bg-accent border-blue-200 dark:border-blue-900/60 font-semibold shadow-2xs"
+            className="h-8 px-3 text-xs gap-1.5 bg-card hover:bg-blue-500/10 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold shadow-2xs"
             onClick={() => setDischargeSummaryModalOpen(true)}
           >
-            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Clinical Discharge Summary
+            <FileText className="h-3.5 w-3.5" />
+            <span>Discharge Summary</span>
           </Button>
 
           <Button
             size="sm"
             variant="outline"
-            className="gap-1.5 text-xs bg-card hover:bg-accent border-purple-200 dark:border-purple-900/60 font-semibold shadow-2xs"
+            className="h-8 px-3 text-xs gap-1.5 bg-card hover:bg-purple-500/10 border-purple-200 dark:border-purple-900/60 text-purple-700 dark:text-purple-300 font-semibold shadow-2xs"
             onClick={() => setPrintDischargeModalOpen(true)}
           >
-            <Printer className="h-4 w-4 text-purple-600 dark:text-purple-400" /> Discharge Card
+            <Printer className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">Discharge Card</span>
           </Button>
 
           <Button
             size="sm"
-            variant="outline"
-            className="gap-1.5 text-xs bg-card hover:bg-accent border-purple-300 dark:border-purple-800 font-semibold shadow-2xs text-purple-700 dark:text-purple-300"
+            className="h-8 px-3 text-xs gap-1.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white font-semibold shadow-xs"
             onClick={() => setOtBookingModalOpen(true)}
           >
-            <Scissors className="h-4 w-4" /> Book OT Surgery
+            <Scissors className="h-3.5 w-3.5" />
+            <span>Book OT Surgery</span>
           </Button>
 
           {!isDischarged && (
             <Button
               size="sm"
-              variant="default"
-              className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
+              className="h-8 px-3.5 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs transition-all"
               onClick={() => {
                 fetchEstimate()
                 setSettleModalOpen(true)
               }}
             >
-              <Receipt className="h-4 w-4" /> Discharge & Settle Bill
+              <Receipt className="h-3.5 w-3.5" />
+              <span>Discharge & Settle</span>
             </Button>
           )}
 
@@ -419,31 +481,41 @@ export const IpdPatientChartPage: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
-              className="gap-1.5 text-xs"
+              className="h-8 px-3 text-xs gap-1.5 bg-emerald-500/10 text-emerald-700 border-emerald-300 font-semibold"
               onClick={async () => {
                 const pass = await ipdService.getGatePass(admissionId)
                 setGatePassData(pass)
                 setGatePassModalOpen(true)
               }}
             >
-              <Printer className="h-4 w-4" /> View Gate Pass
+              <Printer className="h-3.5 w-3.5" /> Gate Pass
             </Button>
           )}
         </div>
       </div>
 
-      {/* ── Patient 360 Bedside Strip ── */}
-      <Card className="overflow-hidden border-2 border-primary/20 shadow-sm bg-card">
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-600 p-4 sm:p-5 text-white">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center font-bold text-xl border border-white/30 text-white">
-                {patient?.name?.charAt(0) || "P"}
+      {/* ── Patient 360 Bedside Hero Banner Card (Theme-tinted light background) ── */}
+      <Card className="overflow-hidden border border-primary/25 shadow-xs bg-gradient-to-b from-primary/[0.08] via-primary/[0.03] to-card rounded-2xl dark:from-primary/[0.14] dark:via-primary/[0.05] dark:to-card">
+        {/* Tier 1: Patient Primary Demographics & Stay Header (Theme-aware light gradient) */}
+        <div className="relative bg-gradient-to-r from-primary/[0.08] via-primary/[0.04] to-transparent dark:from-primary/[0.18] dark:via-primary/[0.08] dark:to-transparent text-card-foreground p-5 sm:p-6 border-b border-primary/15 overflow-hidden">
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            {/* Left: Patient Profile Details */}
+            <div className="flex items-start sm:items-center gap-4">
+              <div className="relative shrink-0">
+                <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-primary/15 border-2 border-primary/30 flex items-center justify-center font-black text-2xl sm:text-3xl text-primary shadow-xs">
+                  {patient?.name?.charAt(0).toUpperCase() || "P"}
+                </div>
+                <span className="absolute -bottom-1 -right-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary border-2 border-background shadow-xs text-primary-foreground">
+                  {patient?.gender === "F" ? "♀" : "♂"}
+                </span>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold">{patient?.name}</h3>
-                  <Badge className="bg-white/20 text-white border-white/30 text-xs font-mono">
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+                    {patient?.name}
+                  </h2>
+                  <Badge variant="outline" className="font-mono font-bold text-xs bg-background/85 dark:bg-card/85 text-foreground border-primary/25 shadow-2xs">
                     {admission.ipd_number}
                   </Badge>
                   {isDischarged ? (
@@ -451,93 +523,181 @@ export const IpdPatientChartPage: React.FC = () => {
                       Discharged
                     </Badge>
                   ) : (
-                    <Badge className="bg-emerald-500 text-white text-xs">Admitted</Badge>
+                    <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold gap-1.5 shadow-2xs">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Admitted
+                    </Badge>
                   )}
+                  {admission.is_mlc && (
+                    <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 font-bold text-xs shadow-2xs gap-1">
+                      <ShieldAlert className="h-3 w-3" /> MLC Case
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="border-border bg-background/70 text-muted-foreground text-xs font-medium capitalize">
+                    {admission.admission_type || "Planned"}
+                  </Badge>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-white/80 mt-1">
-                  <span>UHID: {patient?.uhid}</span>
-                  <span>• {patient?.gender === "M" ? "Male" : patient?.gender === "F" ? "Female" : patient?.gender}</span>
-                  {patient?.blood_group && <span>• Blood: {patient.blood_group}</span>}
-                  <span>• +91 {patient?.mobile || "N/A"}</span>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-mono bg-background/85 dark:bg-card/85 backdrop-blur-xs px-2.5 py-0.5 rounded-md border border-primary/20 text-foreground shadow-2xs">
+                    UHID: {patient?.uhid}
+                  </span>
+                  <span className="bg-background/85 dark:bg-card/85 backdrop-blur-xs px-2.5 py-0.5 rounded-md border border-primary/20 text-foreground shadow-2xs">
+                    {genderLabel}{patientAge ? `, ${patientAge} yrs` : ""}
+                  </span>
+                  {patient?.blood_group && (
+                    <span className="bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25 px-2.5 py-0.5 rounded-md font-bold flex items-center gap-1 shadow-2xs">
+                      <Droplet className="h-3 w-3 fill-rose-500 text-rose-500" />
+                      {patient.blood_group}
+                    </span>
+                  )}
+                  <span className="bg-background/85 dark:bg-card/85 backdrop-blur-xs px-2.5 py-0.5 rounded-md border border-primary/20 flex items-center gap-1 text-muted-foreground shadow-2xs">
+                    <Phone className="h-3 w-3 text-muted-foreground" />
+                    +91 {patient?.mobile || "N/A"}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Bed & Doctor Info */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="rounded-xl bg-white/10 backdrop-blur-xs px-3.5 py-2 border border-white/20 text-right">
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-80 block">
-                  Location
-                </span>
-                <span className="font-bold text-sm">
-                  {admission.ward?.name || "Ward"} • Bed #{admission.bed?.bed_number}
-                </span>
+            {/* Right: Assigned Location & Length of Stay KPI Cards */}
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+              <div className="rounded-xl bg-background/90 dark:bg-card/90 backdrop-blur-xs p-3 border border-primary/20 min-w-[170px] shadow-2xs flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <Bed className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">
+                    Assigned Location
+                  </span>
+                  <span className="font-bold text-sm text-foreground block">
+                    Bed #{admission.bed?.bed_number || "—"}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground truncate block max-w-[140px]">
+                    {admission.ward?.name || "General Ward"}
+                  </span>
+                </div>
               </div>
 
-              <div className="rounded-xl bg-white/10 backdrop-blur-xs px-3.5 py-2 border border-white/20 text-right">
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-80 block">
-                  Stay Duration
-                </span>
-                <span className="font-bold text-sm">{admission.elapsed_days} Days Admitted</span>
+              <div className="rounded-xl bg-background/90 dark:bg-card/90 backdrop-blur-xs p-3 border border-primary/20 min-w-[170px] shadow-2xs flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">
+                    Stay Duration
+                  </span>
+                  <span className="font-black text-sm text-foreground font-mono block">
+                    {(() => {
+                      const days = typeof admission.elapsed_days === "number" && !isNaN(admission.elapsed_days) ? admission.elapsed_days : 0
+                      const hours = typeof admission.elapsed_hours === "number" && !isNaN(admission.elapsed_hours) ? admission.elapsed_hours : null
+                      return hours !== null ? `${days}d ${hours % 24}h` : `${days} ${days === 1 ? "day" : "days"}`
+                    })()}
+                  </span>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active Inpatient
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Doctor and Financial Strip */}
-        <div className="px-5 py-3 bg-accent/20 border-b border-border flex flex-wrap items-center justify-between text-xs gap-3">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 font-medium text-foreground">
-              <Stethoscope className="h-4 w-4 text-primary" />
-              Consultant: {admission.doctor?.name || "Attending Doctor"} (
-              {admission.doctor?.specialization || "General"})
-            </span>
-            {admission.admission_reason && (
-              <span className="text-muted-foreground truncate max-w-md">
-                Reason: {admission.admission_reason}
+        {/* Tier 2: Attending Consultant & Admission Clinical Context (Without Upper Billing Amounts) */}
+        <div className="px-5 py-2.5 bg-primary/[0.035] dark:bg-primary/[0.07] border-b border-primary/15 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-background/90 dark:bg-card/90 px-3 py-1.5 rounded-lg border border-primary/15 shadow-2xs">
+              <Stethoscope className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-muted-foreground font-medium">Consultant:</span>
+              <span className="font-bold text-foreground">
+                {admission.doctor?.name || "Attending Doctor"}
               </span>
+              <span className="text-[11px] text-muted-foreground">
+                ({admission.doctor?.specialization || "General"})
+              </span>
+            </div>
+
+            {admission.department?.name && (
+              <div className="flex items-center gap-1.5 bg-background/90 dark:bg-card/90 px-3 py-1.5 rounded-lg border border-primary/15 shadow-2xs text-muted-foreground">
+                <span className="font-medium text-foreground">Dept:</span>
+                <span>{admission.department.name}</span>
+              </div>
+            )}
+
+            {admission.admission_reason && (
+              <div className="flex items-center gap-1.5 bg-background/90 dark:bg-card/90 px-3 py-1.5 rounded-lg border border-primary/15 shadow-2xs text-muted-foreground max-w-xl">
+                <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="font-semibold text-foreground">Reason:</span>
+                <span className="italic truncate">{admission.admission_reason}</span>
+              </div>
             )}
           </div>
 
-          <div className="flex items-center gap-4 font-mono">
-            <span>Total Charged: ₹{financial_summary?.total_charged || 0}</span>
-            <span>Advance: ₹{financial_summary?.advance_deposit || 0}</span>
-            <span className="font-bold text-rose-600 dark:text-rose-400">
-              Net Due: ₹{financial_summary?.net_balance_due || 0}
-            </span>
-          </div>
+          {admission.attendant?.name && (
+            <div className="text-muted-foreground text-xs flex items-center gap-1.5 bg-background/90 dark:bg-card/90 px-3 py-1.5 rounded-lg border border-primary/15 shadow-2xs">
+              <span className="text-muted-foreground/70">Attendant:</span>
+              <span className="font-medium text-foreground">{admission.attendant.name}</span>
+              {admission.attendant.phone && (
+                <span className="font-mono text-[11px] text-muted-foreground">({admission.attendant.phone})</span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Latest Bedside Vitals Strip */}
-        <div className="px-5 py-2.5 bg-background/60 border-b border-border flex flex-wrap items-center justify-between text-xs gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Thermometer className="h-3.5 w-3.5 text-rose-500" />
-              Latest Bedside Vitals:
-            </span>
+        {/* Tier 3: Bedside Clinical Telemetry Strip */}
+        <div className="px-5 py-3 bg-gradient-to-r from-primary/[0.05] via-primary/[0.02] to-background/90 dark:from-primary/[0.10] dark:via-primary/[0.04] dark:to-card border-b border-primary/15 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-1.5 text-foreground font-bold mr-1">
+              <Activity className="h-4 w-4 text-primary animate-pulse" />
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold">
+                Bedside Telemetry
+              </span>
+            </div>
+
             {latestVital ? (
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60">
-                  🌡️ {latestVital.temperature ? `${latestVital.temperature}°F` : "—"}
-                </span>
-                <span className="font-mono font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60">
-                  💓 {latestVital.pulse_rate ? `${latestVital.pulse_rate} bpm` : "—"}
-                </span>
-                <span className="font-mono font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60">
-                  🩸 {latestVital.blood_pressure_sys && latestVital.blood_pressure_dia ? `${latestVital.blood_pressure_sys}/${latestVital.blood_pressure_dia}` : "—"}
-                </span>
-                <span className="font-mono font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60">
-                  🫁 {latestVital.oxygen_saturation ? `${latestVital.oxygen_saturation}%` : "—"}
-                </span>
-                {latestVital.blood_glucose && (
-                  <span className="font-mono font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60">
-                    🍬 {latestVital.blood_glucose} mg/dL
+                {/* Temperature */}
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-mono ${latestVital.temperature && latestVital.temperature >= 100.4 ? "bg-rose-500/10 border-rose-300 text-rose-700 dark:text-rose-400 font-bold" : "bg-background/85 dark:bg-card/85 border-border/80 text-foreground"}`}>
+                  <Thermometer className="h-3.5 w-3.5 text-rose-500" />
+                  <span className="text-[10px] text-muted-foreground">Temp:</span>
+                  <span className="font-bold">{latestVital.temperature ? `${latestVital.temperature}°F` : "—"}</span>
+                </div>
+
+                {/* Pulse */}
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-mono ${latestVital.pulse_rate && (latestVital.pulse_rate > 100 || latestVital.pulse_rate < 55) ? "bg-rose-500/10 border-rose-300 text-rose-700 dark:text-rose-400 font-bold" : "bg-background/85 dark:bg-card/85 border-border/80 text-foreground"}`}>
+                  <HeartPulse className="h-3.5 w-3.5 text-rose-500" />
+                  <span className="text-[10px] text-muted-foreground">Pulse:</span>
+                  <span className="font-bold">{latestVital.pulse_rate ? `${latestVital.pulse_rate} bpm` : "—"}</span>
+                </div>
+
+                {/* Blood Pressure */}
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-mono ${latestVital.blood_pressure_sys && (latestVital.blood_pressure_sys < 90 || latestVital.blood_pressure_sys > 140) ? "bg-amber-500/10 border-amber-300 text-amber-800 dark:text-amber-300 font-bold" : "bg-background/85 dark:bg-card/85 border-border/80 text-foreground"}`}>
+                  <Activity className="h-3.5 w-3.5 text-blue-500" />
+                  <span className="text-[10px] text-muted-foreground">BP:</span>
+                  <span className="font-bold">
+                    {latestVital.blood_pressure_sys && latestVital.blood_pressure_dia ? `${latestVital.blood_pressure_sys}/${latestVital.blood_pressure_dia}` : "—"}
                   </span>
+                </div>
+
+                {/* SpO2 */}
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-mono ${latestVital.oxygen_saturation && latestVital.oxygen_saturation < 95 ? "bg-rose-500/15 border-rose-400 text-rose-700 dark:text-rose-400 font-bold animate-pulse" : "bg-background/85 dark:bg-card/85 border-border/80 text-foreground"}`}>
+                  <Wind className="h-3.5 w-3.5 text-cyan-500" />
+                  <span className="text-[10px] text-muted-foreground">SpO2:</span>
+                  <span className="font-bold">{latestVital.oxygen_saturation ? `${latestVital.oxygen_saturation}%` : "—"}</span>
+                </div>
+
+                {/* Blood Glucose */}
+                {latestVital.blood_glucose && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-background/85 dark:bg-card/85 border-border/80 font-mono">
+                    <Droplet className="h-3.5 w-3.5 text-purple-500" />
+                    <span className="text-[10px] text-muted-foreground">Sugar:</span>
+                    <span className="font-bold">{latestVital.blood_glucose} mg/dL</span>
+                  </div>
                 )}
+
+                {/* MEWS Alert */}
                 {latestMews && (
                   <Badge
                     variant={latestMews.score >= 5 ? "destructive" : latestMews.score >= 3 ? "secondary" : "outline"}
-                    className={`font-mono text-[10px] font-bold ${
+                    className={`font-mono text-[10px] font-bold px-2 py-0.5 gap-1 ${
                       latestMews.score >= 5
                         ? "bg-rose-600 text-white animate-pulse"
                         : latestMews.score >= 3
@@ -545,11 +705,14 @@ export const IpdPatientChartPage: React.FC = () => {
                         : "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
                     }`}
                   >
+                    {latestMews.score >= 5 && <AlertTriangle className="h-3 w-3" />}
                     MEWS: {latestMews.score} ({latestMews.risk.toUpperCase()})
                   </Badge>
                 )}
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  ({new Date(latestVital.recorded_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})
+
+                <span className="text-[11px] text-muted-foreground font-mono flex items-center gap-1 ml-1">
+                  <Clock className="h-3 w-3 text-muted-foreground" />
+                  {new Date(latestVital.recorded_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
             ) : (
@@ -561,7 +724,7 @@ export const IpdPatientChartPage: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 text-[11px] gap-1 text-primary hover:bg-primary/10 border-primary/30"
+              className="h-7 text-xs font-semibold gap-1 text-primary hover:bg-primary/10 border-primary/30 shadow-2xs bg-background/90 dark:bg-card/90"
               onClick={() => setVitalsModalOpen(true)}
             >
               <Plus className="h-3 w-3" /> Quick Log Vital
@@ -570,137 +733,216 @@ export const IpdPatientChartPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* ── Bedside Navigation Tabs ── */}
-      <div className="flex overflow-x-auto border-b border-border bg-card/60 p-1.5 rounded-xl shadow-xs gap-2">
+      {/* ── Bedside Navigation Tabs Strip ── */}
+      <div className="relative flex items-center gap-1.5 p-1 rounded-xl border border-primary/25 bg-primary/[0.035] dark:bg-primary/[0.07] backdrop-blur-xs shadow-xs">
+        {/* Left Scroll Button */}
         <button
-          onClick={() => setActiveTab("soap")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "soap"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
+          type="button"
+          onClick={() => handleScrollTabs("left")}
+          className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-card/90 border border-primary/20 text-muted-foreground hover:text-primary hover:bg-primary/10 shadow-2xs transition-all active:scale-95"
+          title="Scroll tabs left"
+          aria-label="Scroll tabs left"
         >
-          <Stethoscope className="h-3.5 w-3.5" />
-          Doctor Daily Rounds ({doctor_rounds.length})
+          <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <button
-          onClick={() => setActiveTab("vitals")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "vitals"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
+        {/* Scrollable Tabs Track */}
+        <div
+          ref={tabsContainerRef}
+          onWheel={handleTabsWheel}
+          className="flex-1 flex overflow-x-auto custom-scrollbar gap-1.5 py-1 px-0.5 scroll-smooth select-none"
         >
-          <Thermometer className="h-3.5 w-3.5 text-rose-500" />
-          Vitals & TPR Flowsheet ({ipdVitals.length})
-          {latestMews && latestMews.score >= 3 && (
-            <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-          )}
-        </button>
+          <button
+            data-tab="soap"
+            onClick={() => setActiveTab("soap")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "soap"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+            }`}
+          >
+            <Stethoscope className="h-3.5 w-3.5" />
+            <span>Doctor Daily Rounds</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              activeTab === "soap" ? "bg-primary-foreground/20 text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
+            }`}>
+              {doctor_rounds.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("fluid")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "fluid"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
-        >
-          <Droplet className="h-3.5 w-3.5" />
-          Fluid Balance (I/O)
-        </button>
+          <button
+            data-tab="vitals"
+            onClick={() => setActiveTab("vitals")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "vitals"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <Thermometer className="h-3.5 w-3.5 text-rose-500" />
+            <span>Vitals & Flowsheet</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              activeTab === "vitals" ? "bg-primary-foreground/20 text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
+            }`}>
+              {ipdVitals.length}
+            </span>
+            {latestMews && latestMews.score >= 3 && (
+              <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse ml-0.5" />
+            )}
+          </button>
 
-        <button
-          onClick={() => setActiveTab("mar")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "mar"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
-        >
-          <Pill className="h-3.5 w-3.5" />
-          MAR Drug Chart ({mar_administrations.length})
-        </button>
+          <button
+            data-tab="fluid"
+            onClick={() => setActiveTab("fluid")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "fluid"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <Droplet className="h-3.5 w-3.5 text-blue-500" />
+            <span>Fluid Balance (I/O)</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("procedures")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "procedures"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
-        >
-          <Activity className="h-3.5 w-3.5" />
-          Nursing Procedures ({nursing_procedures.length})
-        </button>
+          <button
+            data-tab="mar"
+            onClick={() => setActiveTab("mar")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "mar"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <Pill className="h-3.5 w-3.5 text-emerald-500" />
+            <span>MAR Drug Chart</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              activeTab === "mar" ? "bg-primary-foreground/20 text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
+            }`}>
+              {mar_administrations.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("handover")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "handover"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
-        >
-          <ArrowRightLeft className="h-3.5 w-3.5" />
-          Shift Handover ({shift_handovers.length})
-        </button>
+          <button
+            data-tab="procedures"
+            onClick={() => setActiveTab("procedures")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "procedures"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <Activity className="h-3.5 w-3.5 text-indigo-500" />
+            <span>Nursing Procedures</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              activeTab === "procedures" ? "bg-primary-foreground/20 text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
+            }`}>
+              {nursing_procedures.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("indents")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "indents"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
-        >
-          <ClipboardList className="h-3.5 w-3.5" />
-          Pharmacy Indents ({patientIndents.length})
-          {patientIndents.some((i: any) => i.status === "PENDING") && (
-            <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-          )}
-        </button>
+          <button
+            data-tab="handover"
+            onClick={() => setActiveTab("handover")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "handover"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <ArrowRightLeft className="h-3.5 w-3.5 text-amber-500" />
+            <span>Shift Handover</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              activeTab === "handover" ? "bg-primary-foreground/20 text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
+            }`}>
+              {shift_handovers.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("labs")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "labs"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
-        >
-          <FlaskConical className="h-3.5 w-3.5" />
-          Lab Investigations ({patientLabOrders.length})
-          {patientLabOrders.some(
-            (o) => o.urgency === "STAT" && o.status !== "authorized" && o.status !== "cancelled"
-          ) && (
-            <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-          )}
-        </button>
+          <button
+            data-tab="indents"
+            onClick={() => setActiveTab("indents")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "indents"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <ClipboardList className="h-3.5 w-3.5 text-cyan-500" />
+            <span>Pharmacy Indents</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              activeTab === "indents" ? "bg-primary-foreground/20 text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
+            }`}>
+              {patientIndents.length}
+            </span>
+            {patientIndents.some((i: any) => i.status === "PENDING") && (
+              <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse ml-0.5" />
+            )}
+          </button>
 
-        <button
-          onClick={() => setActiveTab("ot")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "ot"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
-        >
-          <Scissors className="h-3.5 w-3.5 text-purple-400" />
-          Surgeries & OT ({patientSurgeries.length})
-        </button>
+          <button
+            data-tab="labs"
+            onClick={() => setActiveTab("labs")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "labs"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <FlaskConical className="h-3.5 w-3.5 text-teal-500" />
+            <span>Lab Orders</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              activeTab === "labs" ? "bg-primary-foreground/20 text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
+            }`}>
+              {patientLabOrders.length}
+            </span>
+            {patientLabOrders.some(
+              (o) => o.urgency === "STAT" && o.status !== "authorized" && o.status !== "cancelled"
+            ) && (
+              <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse ml-0.5" />
+            )}
+          </button>
 
+          <button
+            data-tab="ot"
+            onClick={() => setActiveTab("ot")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "ot"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <Scissors className="h-3.5 w-3.5 text-purple-400" />
+            <span>Surgeries & OT</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              activeTab === "ot" ? "bg-primary-foreground/20 text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
+            }`}>
+              {patientSurgeries.length}
+            </span>
+          </button>
+
+          <button
+            data-tab="financials"
+            onClick={() => setActiveTab("financials")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              activeTab === "financials"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Financial Ledger & Billing</span>
+          </button>
+        </div>
+
+        {/* Right Scroll Button */}
         <button
-          onClick={() => setActiveTab("financials")}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === "financials"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          }`}
+          type="button"
+          onClick={() => handleScrollTabs("right")}
+          className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-card/90 border border-primary/20 text-muted-foreground hover:text-primary hover:bg-primary/10 shadow-2xs transition-all active:scale-95"
+          title="Scroll tabs right"
+          aria-label="Scroll tabs right"
         >
-          <DollarSign className="h-3.5 w-3.5" />
-          Financial Ledger & Billing
+          <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
@@ -1421,7 +1663,7 @@ export const IpdPatientChartPage: React.FC = () => {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h4 className="font-bold text-base text-foreground flex items-center gap-2">
-                <FlaskConical className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <FlaskConical className="h-5 w-5 text-primary" />
                 Bedside Lab & Diagnostic Investigations
               </h4>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -1433,7 +1675,7 @@ export const IpdPatientChartPage: React.FC = () => {
               <Button
                 size="sm"
                 onClick={() => setLabOrderModalOpen(true)}
-                className="gap-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/25"
+                className="gap-2 text-xs font-bold"
               >
                 <Plus className="h-4 w-4" />
                 Order Lab Tests (Bedside Requisition)
@@ -1507,7 +1749,7 @@ export const IpdPatientChartPage: React.FC = () => {
               {!isDischarged && (
                 <Button
                   onClick={() => setLabOrderModalOpen(true)}
-                  className="mt-4 gap-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white"
+                  className="mt-4 gap-2 text-xs font-bold"
                   size="sm"
                 >
                   <Plus className="h-4 w-4" /> Order First Lab Investigation
@@ -1813,7 +2055,7 @@ export const IpdPatientChartPage: React.FC = () => {
 
                         <Button
                           size="sm"
-                          className="h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                          className="h-8 text-xs gap-1.5 font-semibold"
                           onClick={() => {
                             setSelectedOtSchedule(s)
                             setOtChecklistModalOpen(true)

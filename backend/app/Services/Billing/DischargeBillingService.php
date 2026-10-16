@@ -171,10 +171,14 @@ class DischargeBillingService implements DischargeBillingServiceInterface
 
             // 4. Free Bed
             if ($admission->bed_id) {
+                $statusAfter = !empty($data['mark_bed_cleaning']) || ($data['bed_status_after_discharge'] ?? '') === 'cleaning'
+                    ? 'cleaning'
+                    : 'available';
+
                 Bed::where('id', $admission->bed_id)
                     ->where('hospital_id', $hospitalId)
                     ->update([
-                        'status'               => 'available',
+                        'status'               => $statusAfter,
                         'current_admission_id' => null,
                     ]);
             }

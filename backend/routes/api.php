@@ -364,6 +364,22 @@ Route::prefix('v1')->group(function () {
             Route::post('/templates', [\App\Http\Controllers\Api\V1\LabTestController::class, 'store']);
             Route::put('/templates/{id}', [\App\Http\Controllers\Api\V1\LabTestController::class, 'update']);
             Route::delete('/templates/{id}', [\App\Http\Controllers\Api\V1\LabTestController::class, 'destroy']);
+
+            // 6. Outsource Reference Lab Management (LabOutsourceController)
+            Route::get('/outsource/vendors', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'vendors']);
+            Route::post('/outsource/vendors', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'storeVendor']);
+            Route::get('/outsource/pending-dispatch', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'pendingDispatch']);
+            Route::post('/outsource/manifests', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'createManifest']);
+            Route::get('/outsource/manifests', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'manifests']);
+            Route::get('/outsource/manifests/{id}', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'showManifest']);
+            Route::post('/outsource/receive-sample', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'receiveSample']);
+            Route::get('/outsource/reconciliation', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'reconciliation']);
+
+            // 7. Direct Rate List, Pricing Matrix & Profit Analytics (LabRateListController)
+            Route::get('/rate-list', [\App\Http\Controllers\Api\V1\LabRateListController::class, 'index']);
+            Route::put('/rate-list/bulk-update', [\App\Http\Controllers\Api\V1\LabRateListController::class, 'bulkUpdate']);
+            Route::post('/rate-list/apply-percentage', [\App\Http\Controllers\Api\V1\LabRateListController::class, 'applyPercentage']);
+            Route::get('/analytics/profitability', [\App\Http\Controllers\Api\V1\LabRateListController::class, 'profitabilityAnalytics']);
         });
 
         // Enterprise Hospital Pharmacy & Supply Chain Desk

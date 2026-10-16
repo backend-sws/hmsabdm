@@ -321,13 +321,12 @@ class ReceptionService implements ReceptionServiceInterface
         $date = now()->toDateString();
         $cutoffDate = now()->subDays($validityDays)->toDateString();
 
-        $lastVisitWithDoctor = OpdVisit::where('hospital_id', $hospitalId)
+        $anyPastVisit = OpdVisit::where('hospital_id', $hospitalId)
             ->where('patient_id', $patient->id)
             ->where(function ($q) use ($doctor, $departmentId) {
                 $q->where('doctor_id', $doctor->id)
                   ->orWhere('department_id', $departmentId);
             })
-            ->where('visit_date', '>=', $cutoffDate)
             ->where('visit_date', '<=', $date)
             ->orderByDesc('visit_date')
             ->orderByDesc('id')
@@ -336,10 +335,12 @@ class ReceptionService implements ReceptionServiceInterface
         $isFreeRevisit = false;
         $daysSinceLastVisit = null;
 
-        if ($lastVisitWithDoctor) {
-            $isFreeRevisit = true;
-            $daysSinceLastVisit = (int) abs(now()->diffInDays($lastVisitWithDoctor->visit_date));
+        if ($anyPastVisit) {
+            $daysSinceLastVisit = (int) abs(now()->diffInDays($anyPastVisit->visit_date));
+            $isFreeRevisit = $daysSinceLastVisit <= $validityDays;
         }
+
+        $lastVisitWithDoctor = $anyPastVisit;
 
         // 4. Calculate Billing & Fees
         if ($isFreeRevisit && !isset($data['fee_charged'])) {
@@ -347,6 +348,7 @@ class ReceptionService implements ReceptionServiceInterface
             $discount = 0.00;
             $amountPaid = 0.00;
             $paymentStatus = 'waived';
+            $paymentMethod = null;
             $slotPrefix = !empty($data['slot_time']) ? "Appointment Slot: {$data['slot_time']} | " : "";
             $freeNote = $data['notes'] ?? "Free Follow-up Re-visit within {$validityDays} days (Previous visit: {$lastVisitWithDoctor->opd_number})";
             $notes = $slotPrefix . $freeNote;
@@ -369,6 +371,16 @@ class ReceptionService implements ReceptionServiceInterface
             $amountPaid = (float) ($data['amount_paid'] ?? 0);
             $netPayable = max(0, $feeCharged - $discount);
 
+            $paymentBreakdown = $data['payment_breakdown'] ?? null;
+            if (!empty($paymentBreakdown) && is_array($paymentBreakdown)) {
+                if (!isset($data['amount_paid'])) {
+                    $amountPaid = (float) array_sum(array_column($paymentBreakdown, 'amount'));
+                }
+                $paymentMethod = count($paymentBreakdown) > 1 ? 'split' : ($paymentBreakdown[0]['method'] ?? 'cash');
+            } else {
+                $paymentMethod = $data['payment_method'] ?? ($amountPaid > 0 ? 'cash' : null);
+            }
+
             if (!empty($data['payment_status'])) {
                 $paymentStatus = $data['payment_status'];
             } elseif ($feeCharged == 0 || $amountPaid >= $netPayable) {
@@ -379,7 +391,6 @@ class ReceptionService implements ReceptionServiceInterface
                 $paymentStatus = 'pending';
             }
 
-            $paymentMethod = $data['payment_method'] ?? ($amountPaid > 0 ? 'cash' : null);
             $slotPrefix = !empty($data['slot_time']) ? "Appointment Slot: {$data['slot_time']} | " : "";
             $defaultNote = $data['notes'] ?? 'Follow-up Consultation';
             $notes = $slotPrefix . $defaultNote;

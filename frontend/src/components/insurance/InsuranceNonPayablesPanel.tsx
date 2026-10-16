@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { createPortal } from "react-dom"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import {
@@ -240,8 +241,9 @@ export const InsuranceNonPayablesPanel: React.FC = () => {
       </div>
 
       {/* ── ADD ITEM MODAL ───────────────────────────────────────────── */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      {showAddModal &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <h3 className="font-semibold text-base flex items-center gap-2">
               <Plus className="h-4 w-4 text-primary" /> Add IRDAI Non-Payable Item
@@ -302,7 +304,8 @@ export const InsuranceNonPayablesPanel: React.FC = () => {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

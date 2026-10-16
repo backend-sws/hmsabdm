@@ -48,9 +48,9 @@ export const InsuranceDeskPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard")
   const [payerSearch, setPayerSearch] = useState("")
   const [showPayerModal, setShowPayerModal] = useState(false)
-  const [showPreauthModal, setShowPreauthModal] = useState(false)
-  const [showClaimModal, setShowClaimModal] = useState(false)
-  const [showImplantModal, setShowImplantModal] = useState(false)
+  const [openCreatePreauth, setOpenCreatePreauth] = useState(false)
+  const [openCreateClaim, setOpenCreateClaim] = useState(false)
+  const [openCreateImplant, setOpenCreateImplant] = useState(false)
   const [editingPayer, setEditingPayer] = useState<InsurancePayer | null>(null)
   const [selectedTariffPayer, setSelectedTariffPayer] = useState<InsurancePayer | null>(null)
   const [initialClaimData, setInitialClaimData] = useState<Partial<InsuranceClaim> | Partial<InsurancePreauth> | null>(null)
@@ -108,10 +108,23 @@ export const InsuranceDeskPage: React.FC = () => {
             <Button size="sm" variant="outline" onClick={() => refetchStats()}>
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
             </Button>
-            <Button size="sm" onClick={() => setShowPreauthModal(true)}>
+            <Button
+              size="sm"
+              onClick={() => {
+                setActiveTab("preauth")
+                setOpenCreatePreauth(true)
+              }}
+            >
               <Plus className="h-3.5 w-3.5 mr-1.5" /> New Pre-Auth
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setShowClaimModal(true)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setActiveTab("claims")
+                setOpenCreateClaim(true)
+              }}
+            >
               <Plus className="h-3.5 w-3.5 mr-1.5" /> New Claim
             </Button>
           </div>
@@ -371,10 +384,13 @@ export const InsuranceDeskPage: React.FC = () => {
         {activeTab === "preauth" && (
           <InsurancePreauthModal
             embedded
+            initialOpenCreate={openCreatePreauth}
+            onResetOpenCreate={() => setOpenCreatePreauth(false)}
             onRefresh={() => qc.invalidateQueries({ queryKey: ["insurance"] })}
             onFileClaim={(pa: InsurancePreauth) => {
               setInitialClaimData(pa)
               setActiveTab("claims")
+              setOpenCreateClaim(true)
             }}
           />
         )}
@@ -383,6 +399,8 @@ export const InsuranceDeskPage: React.FC = () => {
         {activeTab === "claims" && (
           <InsuranceClaimModal
             embedded
+            initialOpenCreate={openCreateClaim}
+            onResetOpenCreate={() => setOpenCreateClaim(false)}
             initialData={initialClaimData}
             onRefresh={() => qc.invalidateQueries({ queryKey: ["insurance"] })}
           />
@@ -399,16 +417,12 @@ export const InsuranceDeskPage: React.FC = () => {
 
         {/* ── IMPLANTS ──────────────────────────────────────────────── */}
         {activeTab === "implants" && (
-          <div className="space-y-3">
-            <div className="flex justify-end">
-              <Button size="sm" onClick={() => setShowImplantModal(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" /> New Implant Approval
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground text-center py-8">
-              Implant approval requests (stents, prosthetics, cochlear implants, hip/knee) will appear here.
-            </p>
-          </div>
+          <InsuranceImplantModal
+            embedded
+            initialOpenCreate={openCreateImplant}
+            onResetOpenCreate={() => setOpenCreateImplant(false)}
+            onRefresh={() => qc.invalidateQueries({ queryKey: ["insurance"] })}
+          />
         )}
       </div>
 
@@ -419,39 +433,6 @@ export const InsuranceDeskPage: React.FC = () => {
         editingPayer={editingPayer}
         onSaved={() => qc.invalidateQueries({ queryKey: ["insurance", "payers"] })}
       />
-      {showPreauthModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <InsurancePreauthModal
-            onClose={() => setShowPreauthModal(false)}
-            onRefresh={() => qc.invalidateQueries({ queryKey: ["insurance"] })}
-            onFileClaim={(pa: InsurancePreauth) => {
-              setShowPreauthModal(false)
-              setInitialClaimData(pa)
-              setShowClaimModal(true)
-            }}
-          />
-        </div>
-      )}
-      {showClaimModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <InsuranceClaimModal
-            initialData={initialClaimData}
-            onClose={() => {
-              setShowClaimModal(false)
-              setInitialClaimData(null)
-            }}
-            onRefresh={() => qc.invalidateQueries({ queryKey: ["insurance"] })}
-          />
-        </div>
-      )}
-      {showImplantModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <InsuranceImplantModal
-            onClose={() => setShowImplantModal(false)}
-            onRefresh={() => qc.invalidateQueries({ queryKey: ["insurance", "implants"] })}
-          />
-        </div>
-      )}
       {selectedTariffPayer && (
         <InsuranceTariffModal
           payer={selectedTariffPayer}

@@ -2,7 +2,7 @@ import type { Patient } from "./patient"
 import type { Doctor } from "./doctor"
 import type { Department } from "./department"
 
-export type BedStatus = "available" | "occupied" | "maintenance"
+export type BedStatus = "available" | "occupied" | "cleaning" | "maintenance"
 export type AdmissionStatus = "admitted" | "discharged" | "transferred" | "cancelled"
 export type AdmissionType = "planned" | "emergency" | "day_care" | "maternity" | "transfer"
 
@@ -133,6 +133,7 @@ export interface BedMatrixSummary {
   total_beds: number
   available_beds: number
   occupied_beds: number
+  cleaning_beds?: number
   maintenance_beds: number
   occupancy_rate: number
 }
@@ -173,6 +174,8 @@ export interface IpdAdmission {
     payment_breakdown?: Array<{ method: string; amount: number; ref?: string }>
   }
   latest_vital?: any
+  elapsed_days?: number
+  elapsed_hours?: number
   created_at?: string
 }
 
@@ -217,6 +220,8 @@ export interface TransferBedPayload {
 
 export interface DischargePayload {
   discharge_date?: string
+  mark_bed_cleaning?: boolean
+  bed_status_after_discharge?: "cleaning" | "available"
 }
 
 // Doctor SOAP Rounds
@@ -401,6 +406,8 @@ export interface SettleDischargePayload {
   amount_paid?: number
   payment_method?: string
   discharge_date?: string
+  mark_bed_cleaning?: boolean
+  bed_status_after_discharge?: "cleaning" | "available"
   notes?: string
 }
 
@@ -434,6 +441,7 @@ export interface InpatientChart {
     admission_date?: string
     discharge_date?: string
     elapsed_days: number
+    elapsed_hours?: number
     is_mlc: boolean
     ward?: IpdWard | null
     bed?: IpdBed | null

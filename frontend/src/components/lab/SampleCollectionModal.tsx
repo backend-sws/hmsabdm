@@ -68,10 +68,21 @@ export const SampleCollectionModal: React.FC<SampleCollectionModalProps> = ({
     )
   )
 
+  const formatTestCode = (i: any) => {
+    const raw = i.test_template?.test_code || i.test_code || ""
+    const clean = raw.replace(/^(LAB|RAD|PATH)-/i, "").trim()
+    if (clean) return clean
+    const match = (i.test_name || "").match(/\(([^)]+)\)/)
+    if (match && match[1] && match[1].length <= 8) {
+      return match[1].trim()
+    }
+    return i.test_name || "TEST"
+  }
+
   const handlePrintSticker = () => {
     const accession = order.sample_accession_number || `SMP-${order.order_number}`
     const patient = order.patient
-    const testsList = order.items?.map((i) => i.test_code || i.test_name).join(", ") || "General Panel"
+    const testsList = order.items?.map(formatTestCode).join(", ") || "General Panel"
     const now = new Date()
     const collectionDate = order.sample_collected_at
       ? new Date(order.sample_collected_at).toLocaleDateString("en-GB")
@@ -416,7 +427,7 @@ export const SampleCollectionModal: React.FC<SampleCollectionModalProps> = ({
                   </span>
                 </div>
                 <div className="text-[8px] text-slate-500 truncate mt-0.5">
-                  TESTS: {order.items?.map((i) => i.test_code || i.test_name).join(", ")}
+                  TESTS: {order.items?.map(formatTestCode).join(", ")}
                 </div>
               </div>
             </div>

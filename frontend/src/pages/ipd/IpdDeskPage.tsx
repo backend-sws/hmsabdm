@@ -50,6 +50,7 @@ import type {
   IpdBed,
   IpdAdmission,
   AdmitPatientPayload,
+  BedStatus,
 } from "@/types/ipd"
 import type { Patient } from "@/types/patient"
 
@@ -167,9 +168,10 @@ export const IpdDeskPage: React.FC = () => {
   })
 
   const dischargeMutation = useMutation({
-    mutationFn: (admissionId: number) => ipdService.dischargePatient(admissionId),
+    mutationFn: (admissionId: number) =>
+      ipdService.dischargePatient(admissionId, { mark_bed_cleaning: true }),
     onSuccess: () => {
-      toast.success("Patient discharged successfully! Bed is now vacant.")
+      toast.success("Patient discharged successfully! Bed is marked for housekeeping.")
       queryClient.invalidateQueries({ queryKey: queryKeys.ipd.bedMatrix })
       queryClient.invalidateQueries({ queryKey: queryKeys.ipd.admissions() })
     },
@@ -178,13 +180,34 @@ export const IpdDeskPage: React.FC = () => {
     },
   })
 
+  const updateBedStatusMutation = useMutation({
+    mutationFn: ({ bedId, status }: { bedId: number; status: BedStatus }) =>
+      ipdService.updateBed(bedId, { status }),
+    onSuccess: (_, variables) => {
+      const label =
+        variables.status === "available"
+          ? "Bed marked as Cleaned & Available!"
+          : variables.status === "cleaning"
+          ? "Bed marked for Cleaning / Housekeeping."
+          : `Bed status updated to ${variables.status}.`
+      toast.success(label)
+      queryClient.invalidateQueries({ queryKey: queryKeys.ipd.bedMatrix })
+      queryClient.invalidateQueries({ queryKey: queryKeys.ipd.availableBeds() })
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to update bed status.")
+    },
+  })
+
   // Summary stats
-  const summary = bedMatrixData?.summary || {
+  const summary = (bedMatrixData as any)?.overview || bedMatrixData?.summary || {
     total_beds: 0,
     available_beds: 0,
     occupied_beds: 0,
+    cleaning_beds: 0,
     maintenance_beds: 0,
     occupancy_rate: 0,
+    occupancy_percentage: 0,
   }
 
   // Filter wards in Matrix view
@@ -382,7 +405,7 @@ export const IpdDeskPage: React.FC = () => {
 
       {/* ── Key Metrics Strip (Unified StatCardsRow) ── */}
       <StatCardsRow
-        columns={5}
+        columns={6}
         stats={[
           {
             title: "Total Beds",
@@ -403,6 +426,12 @@ export const IpdDeskPage: React.FC = () => {
             colorScheme: "rose",
           },
           {
+            title: "Needs Cleaning",
+            value: summary.cleaning_beds || 0,
+            icon: <Sparkles className="h-5 w-5" />,
+            colorScheme: "cyan",
+          },
+          {
             title: "Maintenance / Blocked",
             value: summary.maintenance_beds,
             icon: <AlertTriangle className="h-5 w-5" />,
@@ -410,7 +439,7 @@ export const IpdDeskPage: React.FC = () => {
           },
           {
             title: "Occupancy Rate",
-            value: `${Number(summary.occupancy_rate || 0).toFixed(1)}%`,
+            value: `${Number(summary.occupancy_rate ?? summary.occupancy_percentage ?? 0).toFixed(1)}%`,
             icon: <Activity className="h-5 w-5" />,
             colorScheme: "purple",
           },
@@ -508,6 +537,10 @@ export const IpdDeskPage: React.FC = () => {
                 Occupied
               </span>
               <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
+                Needs Cleaning
+              </span>
+              <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
                 Maintenance
               </span>
@@ -534,6 +567,10 @@ export const IpdDeskPage: React.FC = () => {
                     setAdmitModalOpen(true)
                   }}
                   onViewAdmission={(admId) => navigate(`/ipd/admissions/${admId}`)}
+                  onUpdateBedStatus={(bedId, status) =>
+                    updateBedStatusMutation.mutate({ bedId, status })
+                  }
+                  isUpdatingBed={updateBedStatusMutation.isPending}
                 />
               ))}
             </div>
@@ -809,17 +846,23 @@ interface WardSectionCardProps {
   ward: BedMatrixWard
   onAdmitBed: (bed: BedMatrixBed) => void
   onViewAdmission: (admissionId: number) => void
+  onUpdateBedStatus: (bedId: number, status: BedStatus) => void
+  isUpdatingBed?: boolean
 }
 
 const WardSectionCard: React.FC<WardSectionCardProps> = ({
   ward,
   onAdmitBed,
   onViewAdmission,
+  onUpdateBedStatus,
+  isUpdatingBed = false,
 }) => {
+  const cleaningBedsCount = ward.beds.filter((b) => b.status === "cleaning").length
+
   return (
-    <Card className="shadow-xs overflow-hidden border border-border">
+    <Card className="shadow-xs border border-border">
       {/* Ward Header Banner */}
-      <div className="p-4 bg-muted/40 border-b border-border flex flex-wrap items-center justify-between gap-3">
+      <div className="p-4 bg-muted/40 border-b border-border flex flex-wrap items-center justify-between gap-3 rounded-t-xl">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
             {ward.code || "W"}
@@ -845,6 +888,11 @@ const WardSectionCard: React.FC<WardSectionCardProps> = ({
           <Badge variant="outline" className="text-xs bg-rose-500/10 text-rose-600 border-rose-300">
             {ward.occupied_beds} Occupied
           </Badge>
+          {cleaningBedsCount > 0 && (
+            <Badge variant="outline" className="text-xs bg-cyan-500/10 text-cyan-600 border-cyan-300">
+              {cleaningBedsCount} Cleaning
+            </Badge>
+          )}
           <Badge variant="secondary" className="text-xs font-mono">
             Total: {ward.total_beds}
           </Badge>
@@ -857,18 +905,118 @@ const WardSectionCard: React.FC<WardSectionCardProps> = ({
           {ward.beds.map((bed) => {
             const isAvailable = bed.status === "available"
             const isOccupied = bed.status === "occupied"
+            const isCleaning = bed.status === "cleaning"
+            const isMaintenance = bed.status === "maintenance"
 
             return (
               <div
                 key={bed.id}
-                className={`relative rounded-xl border p-3.5 transition-all flex flex-col justify-between min-h-[140px] ${
+                className={`group relative rounded-xl border p-3.5 transition-all flex flex-col justify-between min-h-[145px] ${
                   isAvailable
                     ? "border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500 hover:shadow-xs"
                     : isOccupied
                     ? "border-rose-500/30 bg-rose-500/5 shadow-2xs hover:border-rose-500"
-                    : "border-amber-500/30 bg-amber-500/5 opacity-70"
+                    : isCleaning
+                    ? "border-cyan-500/40 bg-cyan-500/10 shadow-2xs hover:border-cyan-500"
+                    : "border-amber-500/30 bg-amber-500/5 opacity-80"
                 }`}
               >
+                {/* ── Hover 360° Inpatient Quick Preview Tooltip ── */}
+                {isOccupied && bed.admission && (
+                  <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 delay-75 absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-72 p-3 bg-popover/95 backdrop-blur-md text-popover-foreground border border-border shadow-xl rounded-xl z-50 pointer-events-none">
+                    {/* Tooltip Arrow */}
+                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-popover rotate-45 border-b border-r border-border" />
+
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-2 border-b border-border/50 pb-2 mb-2">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-sm text-foreground">
+                            {bed.admission.patient?.name || "Patient"}
+                          </span>
+                          {bed.admission.is_mlc && (
+                            <Badge variant="destructive" className="text-[8px] px-1 py-0 h-3.5">
+                              MLC
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground font-mono">
+                          {bed.admission.patient?.uhid} • {bed.admission.patient?.gender || "M"}/{bed.admission.patient?.age ?? "—"} yrs
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] font-mono shrink-0 bg-primary/5 text-primary border-primary/20">
+                        {bed.admission.ipd_number}
+                      </Badge>
+                    </div>
+
+                    {/* Content Grid */}
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Stethoscope className="h-3 w-3 text-primary" /> Doctor:
+                        </span>
+                        <span className="font-medium text-foreground text-right truncate max-w-[140px]">
+                          {bed.admission.doctor?.name || "Attending Doctor"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-amber-500" /> Stay Duration:
+                        </span>
+                        <span className="font-medium font-mono text-foreground">
+                          {bed.admission.elapsed_days}d {bed.admission.elapsed_hours % 24}h
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-primary/5 rounded-md p-1.5 border border-primary/10">
+                        <span className="flex items-center gap-1 font-semibold text-primary text-[11px]">
+                          <DollarSign className="h-3.5 w-3.5" /> Running Bill:
+                        </span>
+                        <span className="font-bold font-mono text-foreground text-xs">
+                          ₹{Number(bed.admission.running_bill || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+
+                      {bed.admission.latest_vital && (
+                        <div className="pt-1 border-t border-border/40">
+                          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
+                            Latest Vitals:
+                          </span>
+                          <div className="grid grid-cols-4 gap-1 text-[10px] text-center font-mono">
+                            {bed.admission.latest_vital.bp_systolic ? (
+                              <div className="bg-muted/50 rounded p-1">
+                                <span className="text-muted-foreground block text-[9px]">BP</span>
+                                <span className="font-bold text-foreground">
+                                  {bed.admission.latest_vital.bp_systolic}/{bed.admission.latest_vital.bp_diastolic || "—"}
+                                </span>
+                              </div>
+                            ) : null}
+                            {bed.admission.latest_vital.pulse ? (
+                              <div className="bg-muted/50 rounded p-1">
+                                <span className="text-muted-foreground block text-[9px]">Pulse</span>
+                                <span className="font-bold text-foreground">{bed.admission.latest_vital.pulse}</span>
+                              </div>
+                            ) : null}
+                            {bed.admission.latest_vital.spo2 ? (
+                              <div className="bg-muted/50 rounded p-1">
+                                <span className="text-muted-foreground block text-[9px]">SpO2</span>
+                                <span className="font-bold text-foreground">{bed.admission.latest_vital.spo2}%</span>
+                              </div>
+                            ) : null}
+                            {bed.admission.latest_vital.temperature ? (
+                              <div className="bg-muted/50 rounded p-1">
+                                <span className="text-muted-foreground block text-[9px]">Temp</span>
+                                <span className="font-bold text-foreground">{bed.admission.latest_vital.temperature}°F</span>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Bed Top Bar */}
                 <div className="flex items-center justify-between pb-2 border-b border-border/50">
                   <div className="flex items-center gap-1.5 font-bold font-mono text-sm text-foreground">
@@ -881,8 +1029,19 @@ const WardSectionCard: React.FC<WardSectionCardProps> = ({
                         ? "bg-emerald-500"
                         : isOccupied
                         ? "bg-rose-500 animate-pulse"
+                        : isCleaning
+                        ? "bg-cyan-500 animate-pulse"
                         : "bg-amber-500"
                     }`}
+                    title={
+                      isAvailable
+                        ? "Vacant / Available"
+                        : isOccupied
+                        ? "Occupied"
+                        : isCleaning
+                        ? "Needs Cleaning / Housekeeping"
+                        : "Under Maintenance"
+                    }
                   />
                 </div>
 
@@ -917,7 +1076,17 @@ const WardSectionCard: React.FC<WardSectionCardProps> = ({
                     </div>
                   )}
 
-                  {!isAvailable && !isOccupied && (
+                  {isCleaning && (
+                    <div className="text-center py-2 space-y-0.5">
+                      <div className="inline-flex items-center gap-1 text-xs font-bold text-cyan-700 dark:text-cyan-400">
+                        <Sparkles className="h-3.5 w-3.5 text-cyan-500" />
+                        Needs Cleaning
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Housekeeping Pending</p>
+                    </div>
+                  )}
+
+                  {isMaintenance && (
                     <div className="text-center py-2 text-xs text-amber-600 font-medium">
                       Under Maintenance
                     </div>
@@ -927,14 +1096,26 @@ const WardSectionCard: React.FC<WardSectionCardProps> = ({
                 {/* Bed Bottom Action */}
                 <div className="pt-2 border-t border-border/40">
                   {isAvailable ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full h-7 text-xs border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
-                      onClick={() => onAdmitBed(bed)}
-                    >
-                      <Plus className="h-3 w-3 mr-1" /> Admit Here
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-7 text-xs border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
+                        onClick={() => onAdmitBed(bed)}
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Admit Here
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-cyan-600 hover:bg-cyan-500/10 text-xs"
+                        title="Mark for Cleaning"
+                        onClick={() => onUpdateBedStatus(bed.id, "cleaning")}
+                        disabled={isUpdatingBed}
+                      >
+                        <Sparkles className="h-3 w-3" />
+                      </Button>
+                    </div>
                   ) : isOccupied && bed.admission ? (
                     <Button
                       size="sm"
@@ -943,10 +1124,25 @@ const WardSectionCard: React.FC<WardSectionCardProps> = ({
                     >
                       <Eye className="h-3 w-3 mr-1" /> Chart
                     </Button>
+                  ) : isCleaning ? (
+                    <Button
+                      size="sm"
+                      className="w-full h-7 text-xs bg-cyan-600 hover:bg-cyan-700 text-white font-medium shadow-xs"
+                      onClick={() => onUpdateBedStatus(bed.id, "available")}
+                      disabled={isUpdatingBed}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Mark Cleaned
+                    </Button>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground block text-center">
-                      Blocked
-                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full h-7 text-xs border-amber-500/40 text-amber-700 hover:bg-amber-500/10"
+                      onClick={() => onUpdateBedStatus(bed.id, "available")}
+                      disabled={isUpdatingBed}
+                    >
+                      Mark Available
+                    </Button>
                   )}
                 </div>
               </div>

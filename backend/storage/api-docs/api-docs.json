@@ -2509,7 +2509,7 @@
                 "tags": [
                     "8. Super Admin (Platform)"
                 ],
-                "summary": "Get specific Hospital details",
+                "summary": "Get single Hospital details",
                 "operationId": "978f234bf487cdc9c878ce520ce5917c",
                 "parameters": [
                     {
@@ -2563,7 +2563,7 @@
                 "tags": [
                     "8. Super Admin (Platform)"
                 ],
-                "summary": "Delete a Hospital",
+                "summary": "Delete / Deactivate Hospital",
                 "operationId": "1813cf095b22d4aaab318814a11f973a",
                 "parameters": [
                     {
@@ -2915,6 +2915,713 @@
                 "responses": {
                     "200": {
                         "description": "Settings saved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/dashboard": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Insurance Desk KPI Dashboard",
+                "description": "Returns active pre-auths, pending claims, AR outstanding by aging bucket, expiring pre-auth alerts, pending TPA queries, and live cashless IPD admissions.",
+                "operationId": "6bcac0d1a894734d8c1be7563a02b9a1",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard data"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/payers": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "List all insurance payers/TPAs",
+                "operationId": "ab119d2ad605bbcd23a921ddb3aaa7ac",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Create insurance payer/TPA",
+                "operationId": "2c32151621f8f713d53dc9ea291d7ff9",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/payers/{id}": {
+            "put": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Update insurance payer",
+                "operationId": "3dbc8b7c17ac7e987956a777d4c4537c",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Deactivate payer",
+                "operationId": "63550a1212cb79fb7abe85090ce24694",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/payers/{id}/tariffs": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Get payer tariff packages",
+                "operationId": "76a5733b7a35e153d0e3ad6059485415",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Save tariff package for payer",
+                "operationId": "db89e2fc4f7c1b431ed192be5a790217",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/payers/{id}/tariffs/{tariffId}": {
+            "delete": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Delete tariff package",
+                "operationId": "86b830f7dcb741635c3cdb0030fcfced",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/patients/{patientId}/policies": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Get patient insurance policies",
+                "operationId": "bed43116985a6ac1c2fe82e2a425c6e0",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Add insurance policy to patient",
+                "operationId": "90a24713dfc1cf223cde031f3900a6a5",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/policies/{id}": {
+            "put": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Update patient insurance policy",
+                "operationId": "c0b60f2b67ed27f72aae5a251f1353eb",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/policies/{id}/verify": {
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Verify patient insurance eligibility",
+                "operationId": "1f76613558b95faee7af8387b5a72a4a",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/preauth": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "List all pre-authorizations",
+                "operationId": "562f9e71ee99b2f8fc0eaeb6f142424c",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Create pre-authorization request",
+                "operationId": "1112437ed57603ee043b7b3a785f47bb",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/preauth/{id}": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Get pre-auth details",
+                "operationId": "5794849e4524959faccec28318877d67",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/preauth/{id}/status": {
+            "put": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Update pre-auth status (Approved/Denied/Queried)",
+                "operationId": "13b69cf3584672b9ecf2c46ffc8b4437",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/preauth/{id}/respond-query": {
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Respond to TPA shortfall query",
+                "operationId": "d32980e641c3832e40d503fc351399be",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/preauth/{id}/enhancement": {
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Raise enhancement request",
+                "operationId": "f858985915c41aa7e565a0ce971e0a20",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/preauth/expiring": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Get pre-auths expiring soon",
+                "operationId": "4f596c41d695c0364950e181199fdc00",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/preauth/{id}/followup": {
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Log call/followup communication for pre-auth",
+                "operationId": "fd3fa1b5b7fd2e9cd0b55625c091b9e3",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/claims": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "List all insurance claims",
+                "operationId": "16f28802f6d47e0dc0853cca55a55b95",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Create insurance claim",
+                "operationId": "51d44f971b8577095405ac5365e2c6f2",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/claims/{id}": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Get claim details with AR ledger",
+                "operationId": "1d94b1db505f8159f96004ec5458526c",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/claims/{id}/status": {
+            "put": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Update claim status",
+                "operationId": "3525b5f8f97bc1a587ec55f4720a813e",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/claims/{id}/settle": {
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Record claim settlement",
+                "operationId": "99404862c529fa58bc96210ca813c023",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/claims/{id}/resubmit": {
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Resubmit rejected claim",
+                "operationId": "a0418553eb09f6caa4447523b713e87a",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/claims/{id}/grievance": {
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Raise grievance on claim",
+                "operationId": "aa534de525dbc679e13748674fff981a",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/claims/{id}/dossier": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Get claim dossier completeness",
+                "operationId": "a2d49f1a96f9dab58e8c26aeef6b22e9",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/claims/{id}/followup": {
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Log call/followup communication for claim",
+                "operationId": "52e8db9751958307adbd93f84c23a5fc",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/non-payables": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Get IRDAI non-payable items",
+                "operationId": "a0cc0edf2937661ae2ae8687e1cdb01a",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Save non-payable item",
+                "operationId": "073daa45cc9f6afac78d43557f1eac8b",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/non-payables/{id}": {
+            "delete": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Delete non-payable item",
+                "operationId": "a82f9583198e4d18fde43c5ecd22c46d",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/detect-non-payables/{admissionId}": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Auto-detect non-payable items in admission bill",
+                "operationId": "2d21ca4c128ad9e1449374a5509faac3",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/ar-ledger": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "AR Aging Ledger",
+                "operationId": "d73b708b6fbbb3ddf22bb1e3c684bd9b",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/ar-summary": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "AR Aging Summary by bucket",
+                "operationId": "ac2501e0c10fbb7760c24217ffd4947c",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/implants": {
+            "get": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "List implant/device prior approvals",
+                "operationId": "b5ee88d39e797ddb07f61f665fcac935",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Create implant prior approval request",
+                "operationId": "09848097f04f85a1bb1856e6f4729228",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/insurance/implants/{id}": {
+            "put": {
+                "tags": [
+                    "13. Insurance, TPA & Ayushman Bharat"
+                ],
+                "summary": "Update implant approval status",
+                "operationId": "86a1ec3666f282f8adf32cd32554ee1b",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
                     }
                 },
                 "security": [
@@ -4001,6 +4708,94 @@
                 ]
             }
         },
+        "/api/v1/ipd/admissions/{id}/discharge-summary": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get or auto-prefill Clinical Discharge Summary",
+                "description": "Returns existing discharge summary or generates a prefilled draft from admission SOAP rounds, lab investigations, and vitals.",
+                "operationId": "4f57d1874ce27a53e797e1a67846d82c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Discharge summary retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Create or update Clinical Discharge Summary (Draft or Finalize)",
+                "description": "Saves clinical narrative, diagnoses, take-home Rx medication list, follow-up plan, and optionally finalizes & discharges patient.",
+                "operationId": "9550c68e8a97f33384823e38ecc17b2d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Discharge summary saved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ipd/admissions/{id}/discharge-summary/print": {
+            "get": {
+                "tags": [
+                    "11. IPD (Inpatient Admissions)"
+                ],
+                "summary": "Get complete printable NABH Discharge Card Data",
+                "description": "Returns hospital letterhead details, patient demographic info, summary, medications, and digital sign-off blocks.",
+                "operationId": "8a133f99d7fc64d629504f76ee2a9657",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Discharge print data retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/lab/orders": {
             "get": {
                 "tags": [
@@ -4191,6 +4986,26 @@
                 ]
             }
         },
+        "/api/v1/lab/orders/ipd-requisition": {
+            "post": {
+                "tags": [
+                    "13. Lab — Orders & Billing"
+                ],
+                "summary": "Create inpatient bedside lab requisition with auto-billing to IPD ledger",
+                "description": "Creates lab order requested by doctor/nurse at bedside for an admitted patient and adds charges to IPD billing ledger.",
+                "operationId": "173c508ec4f09c27fbfe54e6481decd4",
+                "responses": {
+                    "201": {
+                        "description": "Bedside lab requisition created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/lab/orders/{id}/direct-booking": {
             "put": {
                 "tags": [
@@ -4312,6 +5127,162 @@
                 "responses": {
                     "200": {
                         "description": "Lab billing & invoices history retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/outsource/vendors": {
+            "get": {
+                "tags": [
+                    "16. Lab — Outsource Management"
+                ],
+                "summary": "List all partner reference labs",
+                "description": "Retrieves all external reference laboratories with sample counts",
+                "operationId": "3b8085f92dbbc6dc150ab5ce5321a3b7",
+                "responses": {
+                    "200": {
+                        "description": "Vendors retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "16. Lab — Outsource Management"
+                ],
+                "summary": "Create or update reference lab partner",
+                "description": "Registers a partner diagnostic lab (e.g. Dr Lal PathLabs, Thyrocare)",
+                "operationId": "86bb88b2d90c1ba61675449191d5097c",
+                "responses": {
+                    "200": {
+                        "description": "Vendor saved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/outsource/pending-dispatch": {
+            "get": {
+                "tags": [
+                    "16. Lab — Outsource Management"
+                ],
+                "summary": "List collected samples awaiting outsource dispatch",
+                "description": "Returns samples from collected orders marked for outsource fulfillment awaiting batch dispatch",
+                "operationId": "26c4a336496475163fa6c6e807d35692",
+                "responses": {
+                    "200": {
+                        "description": "Pending dispatch samples retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/outsource/manifests": {
+            "get": {
+                "tags": [
+                    "16. Lab — Outsource Management"
+                ],
+                "summary": "List all outsource manifests",
+                "description": "Retrieves all dispatch manifests with vendor, sample count, and status",
+                "operationId": "ed1729225f06b385bdd851f71717dca9",
+                "responses": {
+                    "200": {
+                        "description": "Manifests retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "16. Lab — Outsource Management"
+                ],
+                "summary": "Create sample dispatch manifest (Sent to Lab)",
+                "description": "Batches selected collected samples, assigns manifest number, records courier & temperature, marks samples dispatched",
+                "operationId": "613c066fd61552e17588ada13586c018",
+                "responses": {
+                    "200": {
+                        "description": "Manifest created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/outsource/manifests/{id}": {
+            "get": {
+                "tags": [
+                    "16. Lab — Outsource Management"
+                ],
+                "summary": "Get single manifest details with all samples",
+                "description": "Retrieves dispatch manifest details, patient UHIDs, test names, and barcodes for TRF challan print",
+                "operationId": "37a3f1fc2d5ce0784cb75b6755bea0c0",
+                "responses": {
+                    "200": {
+                        "description": "Manifest details retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/outsource/receive-sample": {
+            "post": {
+                "tags": [
+                    "16. Lab — Outsource Management"
+                ],
+                "summary": "Record sample receipt / report from external lab (Received)",
+                "description": "Marks outsourced sample report received from reference lab, records external accession ID, and attaches external PDF report",
+                "operationId": "b00afa7a376bc653be4e6d3ff265f5ed",
+                "responses": {
+                    "200": {
+                        "description": "Sample report received recorded successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/outsource/reconciliation": {
+            "get": {
+                "tags": [
+                    "16. Lab — Outsource Management"
+                ],
+                "summary": "Monthly vendor billing reconciliation report",
+                "description": "Reconciles dispatched samples against expected B2B payouts per reference lab partner",
+                "operationId": "84be5dbf53b8a1d364c698e4d0714a38",
+                "responses": {
+                    "200": {
+                        "description": "Reconciliation report retrieved"
                     }
                 },
                 "security": [
@@ -4515,6 +5486,86 @@
                 "responses": {
                     "200": {
                         "description": "Recollection token raised with STAT priority"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/rate-list": {
+            "get": {
+                "tags": [
+                    "16. Lab — Rate List & Pricing"
+                ],
+                "summary": "Get laboratory rate list spreadsheet matrix",
+                "description": "Retrieves all tests with Patient MRP, Outsource B2B Cost, Reagent Cost, and calculated Gross Profit & Margin %",
+                "operationId": "c135b5a1ae92b8c61d2a70dcc3d4f949",
+                "responses": {
+                    "200": {
+                        "description": "Rate list matrix retrieved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/rate-list/bulk-update": {
+            "put": {
+                "tags": [
+                    "16. Lab — Rate List & Pricing"
+                ],
+                "summary": "Direct bulk update rates and costs (Spreadsheet save)",
+                "description": "Updates patient MRP, B2B outsource costs, reagent costs, and fulfillment modes in one batch transaction",
+                "operationId": "85f02870be36d168fff2cba3591e1007",
+                "responses": {
+                    "200": {
+                        "description": "Rates updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/rate-list/apply-percentage": {
+            "post": {
+                "tags": [
+                    "16. Lab — Rate List & Pricing"
+                ],
+                "summary": "Apply bulk percentage markup or discount",
+                "description": "Applies percentage modifier across categories or fulfillment types",
+                "operationId": "9e1bb21b6bdc896bbeb224c8b7681b05",
+                "responses": {
+                    "200": {
+                        "description": "Percentage adjustments applied"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/lab/analytics/profitability": {
+            "get": {
+                "tags": [
+                    "16. Lab — Rate List & Pricing"
+                ],
+                "summary": "Lab Profit & Loss (P&L) and Margin Analytics",
+                "description": "Computes total revenue, outsource B2B payables, reagent costs, and gross margins",
+                "operationId": "0e69bb39795e9bcec0061a0bd427f9ea",
+                "responses": {
+                    "200": {
+                        "description": "Profitability metrics retrieved"
                     }
                 },
                 "security": [
@@ -5283,6 +6334,112 @@
                         "bearerAuth": []
                     }
                 ]
+            }
+        },
+        "/api/v1/ot/theatres": {
+            "get": {
+                "tags": [
+                    "12. Operation Theatre & Surgeries"
+                ],
+                "summary": "Get list of Operation Theatres and status",
+                "operationId": "66666d4781fa0569c1275efb0ad6730a",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            }
+        },
+        "/api/v1/ot/schedules": {
+            "get": {
+                "tags": [
+                    "12. Operation Theatre & Surgeries"
+                ],
+                "summary": "Get list of scheduled surgeries",
+                "operationId": "0a165cdaccfdea7ad80add844e2ccb48",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "12. Operation Theatre & Surgeries"
+                ],
+                "summary": "Book a new surgery schedule",
+                "operationId": "1d841f52bca3689051c10741fba49513",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                }
+            }
+        },
+        "/api/v1/ot/schedules/{id}": {
+            "get": {
+                "tags": [
+                    "12. Operation Theatre & Surgeries"
+                ],
+                "summary": "Get single OT schedule details",
+                "operationId": "3fab0ddebe9d4243aa24500561da25c3",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "12. Operation Theatre & Surgeries"
+                ],
+                "summary": "Update OT schedule details or status",
+                "operationId": "32a8b106238fad88e0b5916481b3fef0",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            }
+        },
+        "/api/v1/ot/schedules/{id}/checklist": {
+            "get": {
+                "tags": [
+                    "12. Operation Theatre & Surgeries"
+                ],
+                "summary": "Get WHO Surgical Safety Checklist for schedule",
+                "operationId": "e7993536f000f22c4453739fa504f72f",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "12. Operation Theatre & Surgeries"
+                ],
+                "summary": "Save WHO Surgical Safety Checklist (Sign In, Time Out, Sign Out)",
+                "operationId": "54dabfd3cb0e02de5f34e0b3b172d839",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                }
+            }
+        },
+        "/api/v1/ot/schedules/{id}/print": {
+            "get": {
+                "tags": [
+                    "12. Operation Theatre & Surgeries"
+                ],
+                "summary": "Get complete printable WHO Surgical Safety Checklist Dossier",
+                "operationId": "5d8d16f49e4e9d7f8808f73e47797382",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
             }
         },
         "/api/v1/patients": {
@@ -6083,6 +7240,762 @@
                 "responses": {
                     "200": {
                         "description": "Field configuration deleted successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/dashboard-stats": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Pharmacy KPI & Dashboard Overview",
+                "description": "Dashboard Statistics",
+                "operationId": "6a47284ab1aeabeda6c4d7a6100d2157",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/formulary/search-master": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Search 200k+ National Master Drugs",
+                "description": "Search 200,000+ National Medicine Master",
+                "operationId": "9b49e968c5c4c9ef9bf62a728615ca08",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/formulary": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Hospital Active Medicine Formulary Catalog",
+                "description": "Hospital Active Formulary List",
+                "operationId": "fdfdae66958dd9862b33efeb1950cf8a",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/formulary/import": {
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "1-Click Import Drug from National Master",
+                "description": "Import Medicine from National Master into Hospital Catalog",
+                "operationId": "2066d0c16e391f4bea49252c10b64fad",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/formulary/custom": {
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Create Custom Hospital Formulation or Consumable",
+                "description": "Create 100% Custom Hospital Medicine",
+                "operationId": "f2c3958d5247a77a235564f6c23233f0",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/formulary/{id}": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Hospital Medicine by ID with Stock & Batches",
+                "description": "Get Single Hospital Medicine Details",
+                "operationId": "c92d4a2c866cc1bbe0077abaa9d7d1c3",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Update Hospital Medicine Catalog Details",
+                "description": "Update Hospital Medicine",
+                "operationId": "4c6502ef5d929b7b680407afac1a5fba",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/suppliers": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "List Pharmacy Suppliers & Distributors",
+                "description": "Suppliers / Vendor Master List",
+                "operationId": "c4de1bbc2d6013856bac678e7a4b5ec5",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Create New Medicine Supplier / Vendor",
+                "description": "Create Supplier",
+                "operationId": "91e7a09ec89db4fce6cef33be04970e0",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/suppliers/{id}": {
+            "put": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Update Medicine Supplier Details",
+                "description": "Update Supplier",
+                "operationId": "b7eeacb48054363cceffcf1605821b52",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/suppliers/{id}/ledger": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Complete Supplier Ledger: Orders History & Payment Vouchers",
+                "description": "Get Complete Supplier Ledger (Purchases/Orders history + Payment Vouchers)",
+                "operationId": "2964d685aecf4de2baa9c2886417f410",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/suppliers/{id}/payments": {
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Record Payment Voucher to Supplier & Settle Invoices",
+                "description": "Record Supplier Payment Voucher",
+                "operationId": "f91286f4ab6eaa25bc0a4c72bcfaba19",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/supplier-payments": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "List All Supplier Payment Vouchers",
+                "description": "List All Supplier Payment Vouchers",
+                "operationId": "1b27fbf095942006870b0360198c9855",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/purchases": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "List Inward Purchase Orders (GRNs)",
+                "operationId": "0700c5cc97a945335df815e671bd3e6d",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Inward Medicine Purchase (GRN)",
+                "description": "Inward Purchase GRN (Goods Receipt Note)",
+                "operationId": "d0e7e64f24e6bcb0367204c5deaf3e63",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/purchases/{id}": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Purchase GRN Details by ID",
+                "operationId": "d54361bdbedea4fc12a3193b509552cd",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/batches": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Live Batch Stock Inventory (FEFO)",
+                "description": "Batch Stock Inventory & Surveillance",
+                "operationId": "6a03e5258d6b2824046d0b49b3308bf0",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/batches/near-expiry": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Near-Expiry Batches (<90 Days)",
+                "operationId": "8aa1ccd52056232269563c6ca8573d24",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/batches/medicine/{id}": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Active FEFO Batches for Specific Medicine",
+                "operationId": "973d77abab80c7fac2b68f7bd78d43e1",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/substitutes": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Find In-Stock Generic Salt Substitutes & Equivalent Formulations",
+                "operationId": "87d4cf165730daf4ce0f91be74fdba5f",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/batches/{id}/adjust": {
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Adjust Batch Stock (Breakage, Spoilage, Recount)",
+                "operationId": "3916f4cbe356f212cb76f28fed69628c",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/prescriptions/pending": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "List Active Prescriptions Ready for Dispensing",
+                "description": "OPD/IPD Prescription Dispense Queue",
+                "operationId": "758c4f513cb8024fe7069f3db728a7f4",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/prescriptions/{id}/dispense-details": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Load Prescription Items Matched with Shelf Batches",
+                "operationId": "7dcb6bb6937fc3ac8893946cf34d1735",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/sales": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "List Pharmacy Sales Invoices",
+                "operationId": "07549d03bd2e0dbe7124341f91cdca38",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Point of Sale (POS) Checkout & Medicine Dispensing",
+                "description": "Omni-Channel Sales / POS Billing",
+                "operationId": "893d464a61d71dcb7e70419feb61cac4",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/sales/{id}": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Formatted Pharmacy Tax Invoice by ID",
+                "operationId": "2b83bddfd8da9e85c3a09afeb8e0d3a4",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/patients/{id}/medication-history": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Patient Past Medication History & 1-Click Refill Availability",
+                "operationId": "39ebbc23441878bbffaa1a9af5742b65",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/returns": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "List Customer Returns & Credit Notes",
+                "operationId": "9a5425de6a32602705198b56b3740217",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Customer Sales Return & Restock",
+                "description": "Customer Returns & Credit Notes",
+                "operationId": "a8d0b76a79d7c6eb4be141d57c1262fb",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/returns/{id}": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Return Credit Note Details by ID",
+                "operationId": "9e6d56a8112ad62b07424c0c688f11d2",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/stock-transactions": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Immutable Stock Transactions Audit Trail",
+                "description": "Stock Movements Audit Ledger",
+                "operationId": "f4ffa02bf78a68b286d17d82a81c571a",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/supplier-returns": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "List Supplier Returns to Vendor (RTV)",
+                "description": "Supplier Returns (RTV) List",
+                "operationId": "15e31d10ef64950003961a32e3705c65",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Create Supplier Return to Vendor (RTV) Challan",
+                "description": "Create Supplier Return (RTV)",
+                "operationId": "47a6ede9e45954c54502b8b3e165d11d",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/supplier-returns/{id}": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Supplier Return Details by ID",
+                "description": "Show Supplier Return Details",
+                "operationId": "63962c81f2023828326fb057c2391b02",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/supplier-returns/{id}/status": {
+            "patch": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Update Supplier Return Status / Issue Debit Note",
+                "description": "Update Supplier Return Status (e.g., Issue Debit Note)",
+                "operationId": "b82aef4c41c687919ad25633785a04fe",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/expiry-dashboard": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Expiry Intelligence Dashboard Categories (Critical, Near-Expiry, Expired)",
+                "description": "Expiry Intelligence Dashboard",
+                "operationId": "9c2b245e67c9b1c23934a7a50af32137",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/batches/{id}/quarantine": {
+            "post": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Quarantine a batch from active dispensing",
+                "description": "Quarantine Batch",
+                "operationId": "9cd4eb535237672a6857e1898075cae4",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/regulatory-register": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get CDSCO Schedule H / H1 & Narcotic Regulatory Audit Register (FDA Inspection Compliance)",
+                "description": "Statutory Compliance: CDSCO Schedule H / H1 & Narcotic Regulatory Register",
+                "operationId": "0e7b924d9126d74dc39f253738a25a34",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pharmacy/gst-report": {
+            "get": {
+                "tags": [
+                    "13. Pharmacy & Inventory"
+                ],
+                "summary": "Get Pharmacy GST Input Tax Credit vs Output Liability Report (GSTR-3B Compliant)",
+                "description": "Statutory GST Tax Intelligence & Filing Report (GSTR-3B & Input/Output Tax Ledger)",
+                "operationId": "574d32034f6cfbe4f5a8e2b38c0db5f5",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
                     }
                 },
                 "security": [
@@ -8319,8 +10232,20 @@
             "description": "Fast-track 5-second casualty admissions, ESI triage (Red/Yellow/Green), unknown patient handling, MLC intimation, and post-stabilization identity linking"
         },
         {
+            "name": "13. Insurance, TPA & Ayushman Bharat",
+            "description": "Enterprise Insurance Desk: Multi-payer management (Private TPA, CGHS, ESIC, AB-PMJAY, Corporate), Pre-Authorization lifecycle, Cashless Claims, COB Dual Insurance, AR Aging Ledger, IRDAI Non-payable detection, Implant Prior Approvals"
+        },
+        {
             "name": "11. IPD (Inpatient Admissions)",
             "description": "Inpatient Management — Wards, Beds, IPD Parcha (Admission Slip), Transfers & Discharges"
+        },
+        {
+            "name": "12. Operation Theatre & Surgeries",
+            "description": "OT Management — Theatre Status, Surgical Scheduling, and WHO/NABH Surgical Safety Checklist"
+        },
+        {
+            "name": "13. Pharmacy & Inventory",
+            "description": "Enterprise Hospital Pharmacy, Active Formulary, Suppliers, Purchases GRN, FEFO Stock, POS Dispensing & Sales Returns"
         },
         {
             "name": "13. E-Prescription & Master Catalogs",
@@ -8337,6 +10262,14 @@
         {
             "name": "12. Billing & Invoices",
             "description": "12. Billing & Invoices"
+        },
+        {
+            "name": "16. Lab — Outsource Management",
+            "description": "16. Lab — Outsource Management"
+        },
+        {
+            "name": "16. Lab — Rate List & Pricing",
+            "description": "16. Lab — Rate List & Pricing"
         }
     ]
 }

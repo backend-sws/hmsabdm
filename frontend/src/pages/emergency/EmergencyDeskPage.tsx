@@ -275,12 +275,12 @@ export const EmergencyDeskPage: React.FC = () => {
           {/* Emergency OT Surgery Requisition */}
           <Button
             size="sm"
-            variant="outline"
-            className="h-7 px-1.5 text-[10px] gap-1 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            variant="default"
+            className="h-7 px-2 text-[11px] font-bold gap-1 bg-purple-700 hover:bg-purple-800 text-white shadow-xs"
             onClick={() => setSelectedTriageForOt(row)}
-            title="Book Emergency Surgery in OT"
+            title="Rush Patient to Operation Theatre & Book STAT Emergency Surgery"
           >
-            <Scissors className="h-3 w-3" /> OT
+            <Scissors className="h-3.5 w-3.5" /> ⚡ Rush to OT
           </Button>
 
           {/* Bedside STAT Lab Requisition */}
@@ -603,6 +603,7 @@ export const EmergencyDeskPage: React.FC = () => {
         open={detailModalOpen}
         onOpenChange={setDetailModalOpen}
         selectedTriage={selectedTriage}
+        onRushToOt={(triage) => setSelectedTriageForOt(triage)}
       />
 
       {/* ─── Emergency Surgery Booking in OT ─── */}
@@ -615,7 +616,10 @@ export const EmergencyDeskPage: React.FC = () => {
           prefillUhid={selectedTriageForOt.uhid || selectedTriageForOt.patient?.uhid}
           prefillAdmissionId={selectedTriageForOt.ipd_admission_id || undefined}
           prefillDoctorId={selectedTriageForOt.doctor_id ? Number(selectedTriageForOt.doctor_id) : undefined}
+          prefillPriority="emergency"
+          prefillProcedureName={selectedTriageForOt.chief_complaint || "Emergency Surgical Procedure"}
           onSuccess={() => {
+            toast.success("Emergency surgery scheduled in Operation Theatre!")
             refetchTriages()
           }}
         />

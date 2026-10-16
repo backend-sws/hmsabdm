@@ -103,7 +103,7 @@ export const AppLayout: React.FC = () => {
           )}
 
         {/* Route Outlet Main Area */}
-        <main className="custom-scrollbar relative z-10 w-full min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-7">
+        <main className="custom-scrollbar relative w-full min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-7">
           <div className="w-full min-w-0 max-w-full">
             <Outlet />
           </div>

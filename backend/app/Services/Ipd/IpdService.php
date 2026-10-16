@@ -264,8 +264,12 @@ class IpdService implements IpdServiceInterface
 
             // Release bed
             if ($admission->bed_id) {
+                $statusAfter = !empty($data['mark_bed_cleaning']) || ($data['bed_status_after_discharge'] ?? '') === 'cleaning'
+                    ? 'cleaning'
+                    : 'available';
+
                 Bed::where('id', $admission->bed_id)->update([
-                    'status'               => 'available',
+                    'status'               => $statusAfter,
                     'current_admission_id' => null,
                 ]);
             }
@@ -320,6 +324,7 @@ class IpdService implements IpdServiceInterface
         $totalBeds = 0;
         $availableBeds = 0;
         $occupiedBeds = 0;
+        $cleaningBeds = 0;
         $maintenanceBeds = 0;
 
         $matrixWards = [];
@@ -369,6 +374,8 @@ class IpdService implements IpdServiceInterface
                 } elseif ($bed->status === 'available') {
                     $wardAvailable++;
                     $availableBeds++;
+                } elseif ($bed->status === 'cleaning') {
+                    $cleaningBeds++;
                 } else {
                     $maintenanceBeds++;
                 }
@@ -376,7 +383,7 @@ class IpdService implements IpdServiceInterface
                 $wardBedList[] = [
                     'id'            => $bed->id,
                     'bed_number'    => $bed->bed_number,
-                    'status'        => $bed->status, // available, occupied, maintenance
+                    'status'        => $bed->status, // available, occupied, cleaning, maintenance
                     'daily_charge'  => (float) ($bed->daily_charge ?? $ward->daily_charge ?? 0),
                     'admission'     => $admissionData,
                 ];
@@ -402,6 +409,7 @@ class IpdService implements IpdServiceInterface
                 'total_beds'           => $totalBeds,
                 'available_beds'       => $availableBeds,
                 'occupied_beds'        => $occupiedBeds,
+                'cleaning_beds'        => $cleaningBeds,
                 'maintenance_beds'     => $maintenanceBeds,
                 'occupancy_percentage' => $occupancyRate,
             ],
@@ -651,6 +659,7 @@ class IpdService implements IpdServiceInterface
                 'admission_date'     => $admDate?->toIso8601String(),
                 'discharge_date'     => $admission->discharge_date?->toIso8601String(),
                 'elapsed_days'       => $admDate ? (int) abs(now()->diffInDays($admDate)) : 0,
+                'elapsed_hours'      => $admDate ? (int) abs(now()->diffInHours($admDate)) : 0,
                 'is_mlc'             => (bool) $admission->is_mlc,
                 'ward'               => $admission->ward,
                 'bed'                => $admission->bed,
