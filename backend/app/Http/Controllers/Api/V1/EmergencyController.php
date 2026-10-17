@@ -263,4 +263,140 @@ class EmergencyController extends Controller
             return $this->errorResponse($e->getMessage(), null, 400);
         }
     }
+
+    #[OA\Get(
+        path: "/api/v1/emergency/triages/{id}/discharge-slip",
+        summary: "Generate Emergency Discharge / Referral Summary Slip",
+        description: "Generates formatted clinical discharge and transfer referral slip with arrival/discharge times, diagnosis, interventions, and doctor signature block.",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Emergency & Triage Desk"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Discharge slip generated successfully")]
+    public function dischargeSlip(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+
+        try {
+            $slip = $this->emergencyService->getDischargeSlip($hospitalId, (int) $id);
+            return $this->successResponse($slip, 'Discharge slip generated successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Post(
+        path: "/api/v1/emergency/triages/{id}/vitals",
+        summary: "Record continuous bedside vitals for casualty triage",
+        description: "Logs repeat vital signs (BP, Pulse, SpO2, Temp, Resp, GCS, Pain score) during patient emergency stabilization.",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Emergency & Triage Desk"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 201, description: "Vitals recorded successfully")]
+    public function recordVitals(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'blood_pressure_sys'   => 'nullable|numeric',
+            'bp_systolic'          => 'nullable|numeric',
+            'blood_pressure_dia'   => 'nullable|numeric',
+            'bp_diastolic'         => 'nullable|numeric',
+            'pulse_rate'           => 'nullable|numeric',
+            'pulse'                => 'nullable|numeric',
+            'temperature'          => 'nullable|numeric',
+            'oxygen_saturation'    => 'nullable|numeric',
+            'spo2'                 => 'nullable|numeric',
+            'respiratory_rate'     => 'nullable|numeric',
+            'blood_glucose'        => 'nullable|numeric',
+            'gcs_score'            => 'nullable|integer|min:3|max:15',
+            'consciousness_level'  => 'nullable|string|in:alert,voice,pain,unresponsive',
+            'pain_score'           => 'nullable|integer|min:0|max:10',
+            'notes'                => 'nullable|string|max:500',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 1;
+
+        try {
+            $vital = $this->emergencyService->recordVitals($hospitalId, (int) $id, $validated, $userId);
+            return $this->createdResponse($vital, 'Emergency vitals logged successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/emergency/triages/{id}/vitals",
+        summary: "Get continuous vitals history for casualty triage",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Emergency & Triage Desk"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Vitals history retrieved")]
+    public function getVitals(Request $request, $id)
+    {
+        $hospitalId = $this->getHospitalId($request);
+
+        try {
+            $history = $this->emergencyService->getVitals($hospitalId, (int) $id);
+            return $this->successResponse($history, 'Vitals history retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Post(
+        path: "/api/v1/emergency/triages/{id}/clinical-notes",
+        summary: "Add provisional diagnosis and emergency clinical doctor notes",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Emergency & Triage Desk"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Clinical notes updated")]
+    public function addClinicalNotes(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'provisional_diagnosis' => 'nullable|string|max:255',
+            'treatment_given'       => 'nullable',
+            'doctor_notes'          => 'nullable|string',
+            'doctor_id'             => 'nullable|integer|exists:doctors,id',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 1;
+
+        try {
+            $triage = $this->emergencyService->addClinicalNotes($hospitalId, (int) $id, $validated, $userId);
+            return $this->successResponse($triage, 'Emergency clinical notes saved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
+
+    #[OA\Post(
+        path: "/api/v1/emergency/triages/{id}/deposit",
+        summary: "Collect emergency advance deposit and generate receipt",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Emergency & Triage Desk"]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 201, description: "Advance deposit collected")]
+    public function collectDeposit(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'amount'          => 'required|numeric|min:1',
+            'payment_method'  => 'nullable|string|in:cash,upi,card,net_banking,cheque',
+            'transaction_ref' => 'nullable|string|max:100',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 1;
+
+        try {
+            $receipt = $this->emergencyService->collectDeposit($hospitalId, (int) $id, $validated, $userId);
+            return $this->createdResponse($receipt, 'Emergency advance deposit collected successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
+        }
+    }
 }

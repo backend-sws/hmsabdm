@@ -252,7 +252,20 @@ Route::prefix('v1')->group(function () {
             Route::post('/ledger/charge', [\App\Http\Controllers\Api\V1\ChargeController::class, 'postLedger']);
             Route::get('/ledger/patient/{patientId}', [\App\Http\Controllers\Api\V1\ChargeController::class, 'getPatientLedger']);
             Route::post('/ledger/{id}/cancel', [\App\Http\Controllers\Api\V1\ChargeController::class, 'cancelLedgerItem']);
+
+            // Central Cashier Day-End Closing & Shift Handover
+            Route::get('/day-end-summary', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'dayEndSummary']);
+
+            // Central Advance Deposit Collection & Printable Receipt Voucher
+            Route::post('/deposits', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'collectDeposit']);
+
+            // Cashier Pending Discharge Settlement Queue
+            Route::get('/pending-discharges', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'pendingDischarges']);
+
+            // Patient Refund / Credit Note Voucher Generation
+            Route::post('/refunds', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'issueRefund']);
         });
+
 
         // Emergency & Triage Desk (Casualty Fast-Track)
         Route::prefix('emergency')->group(function () {
@@ -262,6 +275,11 @@ Route::prefix('v1')->group(function () {
             Route::put('/triages/{id}/link-patient', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'linkPatient']);
             Route::get('/triages/{id}/mlc-slip', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'mlcSlip']);
             Route::put('/triages/{id}/status', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'updateStatus']);
+            Route::get('/triages/{id}/discharge-slip', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'dischargeSlip']);
+            Route::post('/triages/{id}/vitals', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'recordVitals']);
+            Route::get('/triages/{id}/vitals', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'getVitals']);
+            Route::post('/triages/{id}/clinical-notes', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'addClinicalNotes']);
+            Route::post('/triages/{id}/deposit', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'collectDeposit']);
         });
 
         // ── Insurance / TPA / Ayushman Bharat Enterprise Desk ─────────────────
@@ -323,6 +341,7 @@ Route::prefix('v1')->group(function () {
 
         // Final Tax Invoices
         Route::prefix('invoices')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'index']);
             Route::get('/{id}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'show']);
             Route::get('/patient/{patientId}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'patientInvoices']);
         });

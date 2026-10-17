@@ -293,4 +293,113 @@ class EmergencyTriageApiTest extends TestCase
             ->assertJsonPath('data.counters.mlc_cases', 1)
             ->assertJsonPath('data.counters.active_in_er', 3);
     }
+
+    public function test_can_generate_emergency_discharge_and_transfer_slip()
+    {
+        $createRes = $this->postJson('/api/v1/emergency/triage', [
+            'patient_name'    => 'Ramesh Verma',
+            'gender'          => 'M',
+            'approximate_age' => 42,
+            'priority_level'  => 'yellow',
+            'chief_complaint' => 'Acute chest pain radiating to left arm',
+            'doctor_id'       => $this->doctor->id,
+        ]);
+        $triageId = $createRes->json('data.id');
+
+        // Update status to stabilized
+        $this->putJson("/api/v1/emergency/triages/{$triageId}/status", [
+            'status' => 'stabilized',
+            'notes'  => 'ECG shows sinus rhythm, pain relieved with Sorbitrate sublingual.',
+        ]);
+
+        $slipRes = $this->getJson("/api/v1/emergency/triages/{$triageId}/discharge-slip");
+
+        $slipRes->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.patient.name', 'Ramesh Verma')
+            ->assertJsonPath('data.triage.status', 'stabilized')
+            ->assertJsonPath('data.doctor.name', 'Dr. Sanjay Verma');
+    }
+
+    public function test_can_record_and_fetch_continuous_bedside_vitals()
+    {
+        $createRes = $this->postJson('/api/v1/emergency/triage', [
+            'patient_name'   => 'Suresh Patel',
+            'priority_level' => 'red',
+        ]);
+        $triageId = $createRes->json('data.id');
+
+        // Log repeat vitals after 15 minutes
+        $vitalRes = $this->postJson("/api/v1/emergency/triages/{$triageId}/vitals", [
+            'bp_systolic'         => 110,
+            'bp_diastolic'        => 75,
+            'pulse'               => 88,
+            'spo2'                => 97,
+            'temperature'         => 98.4,
+            'respiratory_rate'    => 18,
+            'gcs_score'           => 14,
+            'consciousness_level' => 'alert',
+            'pain_score'          => 4,
+            'notes'               => 'Patient responding well to oxygen mask',
+        ]);
+
+        $vitalRes->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.blood_pressure_sys', 110)
+            ->assertJsonPath('data.pulse_rate', 88);
+
+        // Fetch vitals history
+        $historyRes = $this->getJson("/api/v1/emergency/triages/{$triageId}/vitals");
+        $historyRes->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'data.history');
+    }
+
+    public function test_can_add_clinical_notes_and_provisional_diagnosis()
+    {
+        $createRes = $this->postJson('/api/v1/emergency/triage', [
+            'patient_name'   => 'Anita Devi',
+            'priority_level' => 'yellow',
+        ]);
+        $triageId = $createRes->json('data.id');
+
+        $notesRes = $this->postJson("/api/v1/emergency/triages/{$triageId}/clinical-notes", [
+            'provisional_diagnosis' => 'Acute Appendicitis with Localized Peritonitis',
+            'treatment_given'       => 'Inj. Ceftriaxone 1g IV STAT, Inj. Pantocid 40mg IV',
+            'doctor_notes'          => 'USG Abdomen requested urgently. Keep NPO for possible emergency surgery.',
+        ]);
+
+        $notesRes->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $this->assertStringContainsString('Acute Appendicitis', $notesRes->json('data.clinical_notes'));
+    }
+
+    public function test_can_collect_advance_deposit_and_generate_receipt()
+    {
+        $createRes = $this->postJson('/api/v1/emergency/triage', [
+            'patient_name'   => 'Deepak Sharma',
+            'priority_level' => 'red',
+        ]);
+        $triageId = $createRes->json('data.id');
+
+        $depRes = $this->postJson("/api/v1/emergency/triages/{$triageId}/deposit", [
+            'amount'          => 5000,
+            'payment_method'  => 'upi',
+            'transaction_ref' => 'UPI/2026/889900',
+        ]);
+
+        $depRes->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.amount', 5000)
+            ->assertJsonPath('data.payment_method', 'upi');
+
+        $this->assertNotEmpty($depRes->json('data.receipt_number'));
+
+        $this->assertDatabaseHas('billing_ledger_items', [
+            'encounter_type' => 'emergency',
+            'category'       => 'payment_deposit',
+            'unit_price'     => -5000,
+        ]);
+    }
 }

@@ -15,6 +15,7 @@ export const queryKeys = {
   patients: {
     all: ["patients"] as const,
     list: (filter?: Record<string, any>) => ["patients", "list", filter || {}] as const,
+    detail: (id: string | number) => ["patients", "detail", id] as const,
   },
   reception: {
     queue: ["reception", "queue"] as const,
@@ -34,6 +35,7 @@ export const queryKeys = {
     search: (mobile: string) => ["abha", "search", mobile] as const,
   },
   ipd: {
+    all: ["ipd"] as const,
     wards: ["ipd", "wards"] as const,
     availableBeds: (wardId?: number) => ["ipd", "beds", "available", wardId ?? "all"] as const,
     bedMatrix: ["ipd", "bed-matrix"] as const,
@@ -58,12 +60,16 @@ export const queryKeys = {
     all: ["billing"] as const,
     categories: ["billing", "categories"] as const,
     charges: (filter?: Record<string, any>) => ["billing", "charges", filter || {}] as const,
+    bedConfig: ["billing", "bedConfig"] as const,
     patientLedger: (patientId: number, filter?: Record<string, any>) =>
       ["billing", "patientLedger", patientId, filter || {}] as const,
-    bedConfig: ["billing", "bedConfig"] as const,
     invoice: (id: number) => ["billing", "invoice", id] as const,
     patientInvoices: (patientId: number) => ["billing", "patientInvoices", patientId] as const,
+    invoices: (filter?: Record<string, any>) => ["billing", "invoices", filter || {}] as const,
+    dayEndSummary: (date?: string) => ["billing", "dayEndSummary", date || "today"] as const,
+    pendingDischarges: (filter?: Record<string, any>) => ["billing", "pendingDischarges", filter || {}] as const,
   },
+
   settings: {
     hospital: (id: number) => ["settings", "hospital", id] as const,
     numbering: ["settings", "numbering"] as const,

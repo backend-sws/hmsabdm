@@ -28,4 +28,30 @@ interface DischargeBillingServiceInterface
      * Get invoices for a patient.
      */
     public function getPatientInvoices(int $hospitalId, int $patientId): array;
+
+    /**
+     * Get paginated global invoices list with filters, search, and revenue KPI totals.
+     */
+    public function getInvoices(int $hospitalId, array $filters): array;
+
+    /**
+     * Get Cashier Day-End closing reconciliation summary with mode-wise, department-wise, and user-wise collections.
+     */
+    public function getDayEndSummary(int $hospitalId, string $date, ?int $userId): array;
+
+    /**
+     * Collect advance deposit for IPD/OPD/Emergency encounter and generate printable deposit voucher.
+     */
+    public function collectAdvanceDeposit(int $hospitalId, array $data, int $userId): array;
+
+    /**
+     * Get queue of admitted IPD patients awaiting final discharge settlement.
+     */
+    public function getPendingDischargeAdmissions(int $hospitalId, array $filters): array;
+
+    /**
+     * Issue refund / credit note voucher for patient overpayment or cancellation.
+     */
+    public function issueRefund(int $hospitalId, array $data, int $userId): array;
 }
+

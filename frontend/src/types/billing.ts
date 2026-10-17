@@ -109,22 +109,39 @@ export interface Invoice {
   hospital_id: number
   patient_id: number
   ipd_admission_id?: number | null
+  encounter_type?: EncounterType | string
   invoice_number: string
+  invoice_date?: string
   total_amount: number
+  gross_amount?: number
   discount_amount: number
+  discount_reason?: string
   net_amount: number
   advance_adjusted: number
-  insurance_amount: number
+  insurance_amount?: number
+  insurance_approved_amount?: number
+  tpa_claim_number?: string
+  insurance_company_name?: string
   patient_payable: number
   amount_paid: number
   balance_due: number
   payment_status: "paid" | "partial" | "unpaid"
   payment_method: string
+  gate_pass_number?: string
+  gate_pass_issued_at?: string
   issued_at: string
   discharge_summary?: string
   discharge_advice?: string
   final_diagnosis?: string
   items?: InvoiceItem[]
+  ledger_items?: BillingLedgerItem[]
+  hospital?: {
+    id: number
+    name: string
+    address?: string
+    phone?: string
+    abdm_hip_id?: string
+  }
   patient?: {
     id: number
     uhid: string
@@ -132,6 +149,31 @@ export interface Invoice {
     gender?: string
     mobile?: string
     address?: string
+    abha_number?: string
+    abha_address?: string
+  }
+  admission?: {
+    id: number
+    ipd_number: string
+    admission_date?: string
+    discharge_date?: string
+    ward?: {
+      id: number
+      name: string
+    }
+    bed?: {
+      id: number
+      bed_number: string
+    }
+    doctor?: {
+      id: number
+      name: string
+    }
+  }
+  created_by_user?: {
+    id: number
+    name: string
+    email?: string
   }
 }
 
@@ -333,5 +375,220 @@ export interface OpdAdmissionReferral {
   disposition_notes?: string
   diagnoses: Array<{ code?: string; name?: string }>
   referred_at: string
+}
+
+// ─── Global Invoices Register & Audit ────────────────────────────────
+export interface InvoiceFilterParams {
+  search?: string
+  payment_status?: "all" | "paid" | "partially_paid" | "pending"
+  encounter_type?: "all" | "ipd" | "opd" | "emergency" | "lab" | "pharmacy"
+  date_from?: string
+  date_to?: string
+  page?: number
+  per_page?: number
+}
+
+export interface InvoiceSummaryKpis {
+  total_invoices_count: number
+  total_gross_amount: number
+  total_discount_amount: number
+  total_net_amount: number
+  total_advance_adjusted: number
+  total_insurance_approved: number
+  total_amount_paid: number
+  total_balance_due: number
+}
+
+export interface InvoicesResponse {
+  data: Array<Invoice & {
+    invoice_date?: string
+    gross_amount?: number
+    gate_pass_number?: string
+    encounter_type?: string
+    created_by_user?: { id: number; name: string }
+    admission?: {
+      id: number
+      ipd_number: string
+      ward?: { name: string }
+      bed?: { bed_number: string }
+      doctor?: { name: string }
+    }
+  }>
+  summary: InvoiceSummaryKpis
+  pagination: {
+    current_page: number
+    per_page: number
+    total: number
+    last_page: number
+  }
+}
+
+// ─── Cashier Day-End Closing & Shift Handover ────────────────────────
+export interface DayEndSummaryData {
+  date: string
+  hospital: {
+    name: string
+    code: string
+    abdm_hip_id: string
+    address?: string
+    city?: string
+    state?: string
+    pincode?: string
+  }
+  financial_totals: {
+    total_invoices: number
+    gross_billed: number
+    discounts_given: number
+    tax_total: number
+    net_billed: number
+    advance_adjusted: number
+    insurance_credit: number
+    total_collections: number
+    balance_outstanding: number
+    advance_deposits_day: number
+    grand_total_cash_drawer: number
+    grand_total_digital: number
+  }
+  payment_mode_breakdown: {
+    cash: number
+    upi: number
+    card: number
+    bank_transfer: number
+    insurance: number
+    other: number
+  }
+  department_breakdown: Array<{
+    encounter_type: string
+    count: number
+    net_amount: number
+    amount_paid: number
+  }>
+  cashier_breakdown: Array<{
+    user_id: number
+    user_name: string
+    invoices: number
+    net_billed: number
+    amount_paid: number
+  }>
+  recent_deposits: Array<{
+    id: number
+    patient_name: string
+    uhid: string
+    amount: number
+    voucher_title: string
+    charged_at: string
+    collected_by: string
+  }>
+  generated_at: string
+}
+
+// ─── Advance Deposit Collection ──────────────────────────────────────
+export interface AdvanceDepositPayload {
+  patient_id: number
+  amount: number
+  encounter_type?: "ipd" | "emergency" | "opd"
+  encounter_id?: number
+  payment_method: "cash" | "upi" | "card" | "cheque" | "bank_transfer"
+  transaction_reference?: string
+  notes?: string
+}
+
+export interface AdvanceDepositReceiptData {
+  voucher_number: string
+  ledger_item_id: number
+  receipt_date: string
+  amount: number
+  amount_in_words: string
+  payment_method: string
+  transaction_reference?: string
+  encounter_type: string
+  encounter_id?: number
+  ipd_number?: string
+  ward_name?: string
+  bed_number?: string
+  total_advance_balance: number
+  notes?: string
+  patient: {
+    id: number
+    name: string
+    uhid: string
+    mobile?: string
+    gender?: string
+    age?: string | number
+    abha_number?: string
+    abha_address?: string
+  }
+  hospital: {
+    name: string
+    code: string
+    abdm_hip_id: string
+    address?: string
+    phone?: string
+  }
+  cashier: {
+    id: number
+    name: string
+  }
+}
+
+// ─── Pending Inpatient Discharge Settlement Queue ────────────────────
+export interface PendingDischargeItem {
+  id: number
+  ipd_number: string
+  status: string
+  admission_date: string
+  days_admitted: number
+  patient: {
+    id: number
+    name: string
+    uhid: string
+    mobile?: string
+    gender?: string
+    blood_group?: string
+    abha_number?: string
+    abha_address?: string
+  }
+  ward?: { id: number; name: string }
+  bed?: { id: number; bed_number: string }
+  doctor?: { id: number; name: string; specialization?: string }
+  unbilled_items_count: number
+  gross_amount: number
+  tax_amount: number
+  advance_deposit_paid: number
+  estimated_due: number
+  discharge_ready: boolean
+}
+
+// ─── Patient Refund / Credit Note ────────────────────────────────────
+export interface RefundPayload {
+  patient_id: number
+  amount: number
+  reason?: string
+  refund_method: "cash" | "upi" | "bank_transfer"
+  transaction_reference?: string
+  encounter_type?: "ipd" | "opd" | "emergency"
+  encounter_id?: number
+}
+
+export interface CreditNoteReceiptData {
+  credit_note_number: string
+  refund_date: string
+  amount_refunded: number
+  amount_in_words: string
+  reason: string
+  refund_method: string
+  transaction_reference?: string
+  patient: {
+    name: string
+    uhid: string
+    mobile?: string
+    abha_number?: string
+    abha_address?: string
+  }
+  hospital: {
+    name: string
+    abdm_hip_id: string
+  }
+  authorized_by: string
 }
 

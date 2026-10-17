@@ -81,4 +81,48 @@ export const emergencyService = {
       body: JSON.stringify(payload),
     })
   },
+
+  /**
+   * Generate official Emergency Discharge & Transfer / Referral Summary Slip.
+   */
+  async getDischargeSlip(id: number): Promise<import("@/types/emergency").EmergencyDischargeSlipData> {
+    return apiClient<import("@/types/emergency").EmergencyDischargeSlipData>(`/emergency/triages/${id}/discharge-slip`)
+  },
+
+  /**
+   * Record continuous bedside vitals for casualty triage.
+   */
+  async recordVitals(id: number, payload: import("@/types/emergency").RecordEmergencyVitalPayload): Promise<any> {
+    return apiClient<any>(`/emergency/triages/${id}/vitals`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  /**
+   * Get continuous vitals history for casualty triage.
+   */
+  async getVitals(id: number): Promise<import("@/types/emergency").EmergencyVitalsResponse> {
+    return apiClient<import("@/types/emergency").EmergencyVitalsResponse>(`/emergency/triages/${id}/vitals`)
+  },
+
+  /**
+   * Add provisional diagnosis and emergency clinical doctor notes.
+   */
+  async addClinicalNotes(id: number, payload: import("@/types/emergency").EmergencyClinicalNotesPayload): Promise<EmergencyTriage> {
+    return apiClient<EmergencyTriage>(`/emergency/triages/${id}/clinical-notes`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  /**
+   * Collect emergency advance deposit and generate receipt.
+   */
+  async collectDeposit(id: number, payload: import("@/types/emergency").EmergencyDepositPayload): Promise<import("@/types/emergency").EmergencyDepositReceiptData> {
+    return apiClient<import("@/types/emergency").EmergencyDepositReceiptData>(`/emergency/triages/${id}/deposit`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
 }
