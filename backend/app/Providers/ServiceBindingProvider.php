@@ -97,6 +97,11 @@ class ServiceBindingProvider extends ServiceProvider
         );
 
         $this->app->bind(
+            \App\Services\BloodBank\BloodBankServiceInterface::class,
+            \App\Services\BloodBank\BloodBankService::class
+        );
+
+        $this->app->bind(
             \App\Services\Lab\LabServiceInterface::class,
             \App\Services\Lab\LabService::class
         );

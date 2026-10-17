@@ -346,6 +346,27 @@ Route::prefix('v1')->group(function () {
             Route::get('/patient/{patientId}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'patientInvoices']);
         });
 
+        // ── Blood Bank & Transfusion Medicine Enterprise Desk ─────────────
+        Route::prefix('blood-bank')->group(function () {
+            Route::get('/dashboard', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'dashboard']);
+            Route::get('/donors', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getDonors']);
+            Route::post('/donors', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'registerDonor']);
+            Route::post('/donors/{id}/screen', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'screenDonor']);
+            Route::get('/units', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getBloodUnits']);
+            Route::post('/units/{id}/tti-test', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'recordTtiTest']);
+            Route::post('/units/{id}/separate', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'separateComponents']);
+            Route::post('/requisitions', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'createRequisition']);
+            Route::get('/requisitions', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getRequisitions']);
+            Route::post('/requisitions/{id}/crossmatch', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'performCrossmatch']);
+            Route::post('/crossmatches/{id}/issue', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'issueBlood']);
+            Route::post('/reactions', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'recordReaction']);
+            Route::get('/camps', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getCamps']);
+            Route::post('/camps', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'createCamp']);
+            Route::get('/screening-config', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getScreeningConfig']);
+            Route::put('/screening-config', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'updateScreeningConfig']);
+            Route::post('/screening-config/reset', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'resetScreeningConfig']);
+        });
+
         // Laboratory Information System (LIS / Pathology Desk)
         Route::prefix('lab')->group(function () {
             // 1. Worklist, Orders & Billing (LabOrderController)

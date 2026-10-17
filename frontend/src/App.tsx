@@ -29,6 +29,7 @@ import { SettingsPage } from "@/pages/settings/SettingsPage"
 import { PharmacyDeskPage } from "@/pages/pharmacy/PharmacyDeskPage"
 import { OperationTheatrePage } from "@/pages/ot/OperationTheatrePage"
 import { InsuranceDeskPage } from "@/pages/insurance/InsuranceDeskPage"
+import { BloodBankDeskPage } from "@/pages/bloodBank/BloodBankDeskPage"
 import InputHelperDemoPage from "@/pages/demo/InputHelperDemoPage"
 
 const queryClient = new QueryClient({
@@ -62,12 +63,12 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster
-        richColors
         position="top-right"
         closeButton
         gap={12}
         toastOptions={{
-          duration: 4500,
+          duration: 5000,
+          className: "!rounded-none",
         }}
       />
       <AuthProvider>
@@ -212,6 +213,14 @@ export default function App() {
                 element={
                   <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "PHARMACIST", "RECEPTIONIST"]}>
                     <PharmacyDeskPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/blood-bank"
+                element={
+                  <ProtectedRoute allowedRoles={["HOSPITAL_ADMIN", "DOCTOR", "LAB_TECHNICIAN", "PATHOLOGIST", "RECEPTIONIST"]}>
+                    <BloodBankDeskPage />
                   </ProtectedRoute>
                 }
               />

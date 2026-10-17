@@ -19,6 +19,7 @@ import {
   FlaskConical,
   Pill,
   Scissors,
+  Droplet,
   LogOut,
 } from "lucide-react"
 
@@ -182,6 +183,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       path: "/insurance",
       icon: ShieldCheck,
       roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
+    },
+    {
+      title: "BLOOD BANK & TRANSFUSION",
+      path: "/blood-bank",
+      icon: Droplet,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "LAB_TECHNICIAN", "PATHOLOGIST", "RECEPTIONIST"],
     },
   ]
 

@@ -77,5 +77,17 @@ export const queryKeys = {
     vitals: ["settings", "vitals"] as const,
     patientFields: ["settings", "patientFields"] as const,
   },
+
+  bloodBank: {
+    all: ["bloodBank"] as const,
+    dashboard: ["bloodBank", "dashboard"] as const,
+    donors: (filter?: Record<string, any>) => ["bloodBank", "donors", filter || {}] as const,
+    units: (filter?: Record<string, any>) => ["bloodBank", "units", filter || {}] as const,
+    requisitions: (filter?: Record<string, any>) => ["bloodBank", "requisitions", filter || {}] as const,
+    camps: (filter?: Record<string, any>) => ["bloodBank", "camps", filter || {}] as const,
+    screeningConfig: ["bloodBank", "screeningConfig"] as const,
+  },
 }
+
+export const bloodBankKeys = queryKeys.bloodBank
 
