@@ -10,11 +10,13 @@ class DoctorFactory extends Factory
 {
     public function definition(): array
     {
+        $hasFaker = class_exists(\Faker\Generator::class);
+
         return [
             'hospital_id' => Hospital::factory(),
             'department_id' => Department::factory(),
-            'name' => 'Dr. ' . $this->faker->name(),
-            'specialization' => $this->faker->word(),
+            'name' => 'Dr. ' . ($hasFaker ? $this->faker->name() : 'Consultant ' . rand(10, 99)),
+            'specialization' => $hasFaker ? $this->faker->word() : 'General Medicine',
             'is_active' => true,
         ];
     }
