@@ -11,11 +11,11 @@ class DoctorScheduleFactory extends Factory
     {
         return [
             'doctor_id' => Doctor::factory(),
-            'day_of_week' => fake()->numberBetween(0, 6),
+            'day_of_week' => $this->faker->numberBetween(0, 6),
             'start_time' => '09:00:00',
             'end_time' => '17:00:00',
             'max_patients' => 30,
-            'opd_fee' => fake()->numberBetween(100, 1000),
+            'opd_fee' => $this->faker->numberBetween(100, 1000),
             'is_active' => true,
         ];
     }

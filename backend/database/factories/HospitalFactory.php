@@ -9,10 +9,10 @@ class HospitalFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->company(),
-            'email' => fake()->unique()->safeEmail(),
-            'phone' => fake()->numerify('##########'),
-            'address' => fake()->address(),
+            'name' => $this->faker->company(),
+            'email' => $this->faker->unique()->safeEmail(),
+            'phone' => $this->faker->numerify('98########'),
+            'address' => $this->faker->address(),
         ];
     }
 }

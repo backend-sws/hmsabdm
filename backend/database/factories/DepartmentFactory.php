@@ -11,8 +11,8 @@ class DepartmentFactory extends Factory
     {
         return [
             'hospital_id' => Hospital::factory(),
-            'name' => fake()->word(),
-            'code' => fake()->unique()->word(),
+            'name' => $this->faker->word(),
+            'code' => $this->faker->unique()->word(),
             'is_active' => true,
         ];
     }
