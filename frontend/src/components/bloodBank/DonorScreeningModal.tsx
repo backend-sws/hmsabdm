@@ -39,6 +39,7 @@ export const DonorScreeningModal: React.FC<DonorScreeningModalProps> = ({
 
   // State to open configuration modal
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
+  const [configTab, setConfigTab] = useState<"questions" | "vitals">("questions")
 
   // Vitals
   const [weight, setWeight] = useState<number>(65)
@@ -256,7 +257,10 @@ export const DonorScreeningModal: React.FC<DonorScreeningModalProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setIsConfigModalOpen(true)}
+                onClick={() => {
+                  setConfigTab("vitals")
+                  setIsConfigModalOpen(true)
+                }}
                 className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
                 title="Configure vital boundaries"
               >
@@ -350,7 +354,10 @@ export const DonorScreeningModal: React.FC<DonorScreeningModalProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setIsConfigModalOpen(true)}
+                onClick={() => {
+                  setConfigTab("questions")
+                  setIsConfigModalOpen(true)
+                }}
                 className="px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-md border border-indigo-200 dark:border-indigo-900 hover:bg-indigo-100 flex items-center gap-1 transition"
               >
                 <SlidersHorizontal className="w-3 h-3" />
@@ -486,6 +493,7 @@ export const DonorScreeningModal: React.FC<DonorScreeningModalProps> = ({
       {/* Protocol & Questionnaire Configuration Modal */}
       <ScreeningConfigModal
         isOpen={isConfigModalOpen}
+        initialTab={configTab}
         onClose={() => setIsConfigModalOpen(false)}
       />
     </>

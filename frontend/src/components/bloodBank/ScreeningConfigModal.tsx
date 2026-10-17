@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   X,
@@ -27,16 +28,24 @@ import type {
 interface ScreeningConfigModalProps {
   isOpen: boolean
   onClose: () => void
+  initialTab?: "questions" | "vitals"
 }
 
 export const ScreeningConfigModal: React.FC<ScreeningConfigModalProps> = ({
   isOpen,
   onClose,
+  initialTab = "questions",
 }) => {
   const queryClient = useQueryClient()
 
   // Active tab: 'questions' | 'vitals'
-  const [activeTab, setActiveTab] = useState<"questions" | "vitals">("questions")
+  const [activeTab, setActiveTab] = useState<"questions" | "vitals">(initialTab)
+
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab)
+    }
+  }, [isOpen, initialTab])
 
   // Form State
   const [questions, setQuestions] = useState<ScreeningQuestionItem[]>([])
@@ -153,9 +162,19 @@ export const ScreeningConfigModal: React.FC<ScreeningConfigModalProps> = ({
     })
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+    >
+      <div
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden relative z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shadow-md">
           <div className="flex items-center gap-3">
@@ -606,6 +625,7 @@ export const ScreeningConfigModal: React.FC<ScreeningConfigModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
