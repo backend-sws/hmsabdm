@@ -415,4 +415,256 @@ class EmergencyService implements EmergencyServiceInterface
             return $triage->fresh(['patient', 'doctor', 'ward', 'bed', 'ipdAdmission'])->toArray();
         });
     }
+
+    /**
+     * Generate official Emergency Discharge & Transfer / Referral Summary Slip.
+     */
+    public function getDischargeSlip(int $hospitalId, int $triageId): array
+    {
+        $triage = EmergencyTriage::where('hospital_id', $hospitalId)
+            ->with(['patient', 'doctor', 'ward', 'bed'])
+            ->findOrFail($triageId);
+
+        $hospital = Hospital::find($hospitalId);
+
+        // Fetch latest vitals for discharge summary
+        $latestVital = Vital::where('hospital_id', $hospitalId)
+            ->where('patient_id', $triage->patient_id)
+            ->where('encounter_type', 'emergency')
+            ->orderByDesc('recorded_at')
+            ->first();
+
+        return [
+            'hospital' => [
+                'name'         => $hospital->name,
+                'code'         => $hospital->code,
+                'abdm_hip_id'  => $hospital->abdm_hip_id,
+                'address'      => $hospital->address ?? 'Emergency & Trauma Department',
+            ],
+            'triage' => [
+                'id'                   => $triage->id,
+                'triage_number'        => $triage->triage_number,
+                'priority_level'       => $triage->priority_level,
+                'triage_category'      => $triage->triage_category,
+                'status'               => $triage->status,
+                'arrival_time'         => $triage->arrival_time?->toIso8601String(),
+                'stabilized_at'        => $triage->stabilized_at?->toIso8601String(),
+                'discharged_at'        => $triage->discharged_at?->toIso8601String() ?? now()->toIso8601String(),
+                'chief_complaint'      => $triage->chief_complaint,
+                'clinical_notes'       => $triage->clinical_notes,
+                'is_mlc'               => $triage->is_mlc,
+                'mlc_number'           => $triage->mlc_number,
+            ],
+            'patient' => [
+                'id'              => $triage->patient_id,
+                'uhid'            => $triage->patient?->uhid,
+                'name'            => $triage->patient_name,
+                'gender'          => $triage->gender,
+                'approximate_age' => $triage->approximate_age,
+                'mobile'          => $triage->patient?->mobile,
+                'address'         => $triage->patient?->address,
+                'brought_by'      => $triage->brought_by,
+                'brought_by_phone'=> $triage->brought_by_contact,
+            ],
+            'discharge_vitals' => $latestVital ? [
+                'bp'          => "{$latestVital->blood_pressure_sys}/{$latestVital->blood_pressure_dia}",
+                'pulse'       => $latestVital->pulse_rate,
+                'spo2'        => $latestVital->oxygen_saturation,
+                'temperature' => $latestVital->temperature,
+                'resp_rate'   => $latestVital->respiratory_rate,
+            ] : ($triage->initial_vitals ?? null),
+            'doctor' => [
+                'name'           => $triage->doctor?->name ?? 'Casualty Medical Officer (CMO)',
+                'specialization' => $triage->doctor?->specialization ?? 'Emergency Medicine',
+                'hpr_id'         => $triage->doctor?->hpr_id,
+            ],
+            'generated_at' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Record new continuous bedside vitals for an active casualty triage.
+     */
+    public function recordVitals(int $hospitalId, int $triageId, array $data, int $userId): array
+    {
+        return DB::transaction(function () use ($hospitalId, $triageId, $data, $userId) {
+            $triage = EmergencyTriage::where('hospital_id', $hospitalId)->findOrFail($triageId);
+
+            $vital = Vital::create([
+                'hospital_id'        => $hospitalId,
+                'patient_id'         => $triage->patient_id,
+                'encounter_type'     => 'emergency',
+                'encounter_id'       => $triage->id,
+                'ipd_admission_id'   => $triage->ipd_admission_id,
+                'recorded_by'        => $userId ?: 1,
+                'blood_pressure_sys' => $data['blood_pressure_sys'] ?? ($data['bp_systolic'] ?? null),
+                'blood_pressure_dia' => $data['blood_pressure_dia'] ?? ($data['bp_diastolic'] ?? null),
+                'pulse_rate'         => $data['pulse_rate'] ?? ($data['pulse'] ?? null),
+                'temperature'        => $data['temperature'] ?? null,
+                'oxygen_saturation'  => $data['oxygen_saturation'] ?? ($data['spo2'] ?? null),
+                'respiratory_rate'   => $data['respiratory_rate'] ?? null,
+                'blood_glucose'      => $data['blood_glucose'] ?? null,
+                'custom_vitals'      => [
+                    'gcs_score'  => $data['gcs_score'] ?? null,
+                    'pain_score' => $data['pain_score'] ?? null,
+                    'notes'      => $data['notes'] ?? null,
+                ],
+                'recorded_at'        => now(),
+            ]);
+
+            // Update latest vitals on triage record as well
+            $updatedVitals = array_merge($triage->initial_vitals ?? [], [
+                'bp_systolic'      => $vital->blood_pressure_sys,
+                'bp_diastolic'     => $vital->blood_pressure_dia,
+                'pulse'            => $vital->pulse_rate,
+                'spo2'             => $vital->oxygen_saturation,
+                'temperature'      => $vital->temperature,
+                'respiratory_rate' => $vital->respiratory_rate,
+                'last_updated_at'  => now()->toIso8601String(),
+            ]);
+
+            $updatePayload = ['initial_vitals' => $updatedVitals];
+            if (!empty($data['gcs_score'])) {
+                $updatePayload['gcs_score'] = (int) $data['gcs_score'];
+            }
+            if (!empty($data['consciousness_level'])) {
+                $updatePayload['consciousness_level'] = $data['consciousness_level'];
+            }
+
+            $triage->update($updatePayload);
+
+            return $vital->toArray();
+        });
+    }
+
+    /**
+     * Get historical sequence of vitals recorded for this emergency encounter.
+     */
+    public function getVitals(int $hospitalId, int $triageId): array
+    {
+        $triage = EmergencyTriage::where('hospital_id', $hospitalId)->findOrFail($triageId);
+
+        $vitals = Vital::where('hospital_id', $hospitalId)
+            ->where('patient_id', $triage->patient_id)
+            ->where('encounter_type', 'emergency')
+            ->orderByDesc('recorded_at')
+            ->get();
+
+        return [
+            'triage_id'      => $triage->id,
+            'triage_number'  => $triage->triage_number,
+            'initial_vitals' => $triage->initial_vitals,
+            'history'        => $vitals->toArray(),
+        ];
+    }
+
+    /**
+     * Add CMO / Doctor's provisional diagnosis and emergency clinical notes.
+     */
+    public function addClinicalNotes(int $hospitalId, int $triageId, array $data, int $userId): array
+    {
+        return DB::transaction(function () use ($hospitalId, $triageId, $data, $userId) {
+            $triage = EmergencyTriage::where('hospital_id', $hospitalId)->findOrFail($triageId);
+
+            $timestamp = now()->format('Y-m-d H:i');
+            $user = \App\Models\User::find($userId);
+            $userName = $user ? $user->name : "Staff #{$userId}";
+
+            $noteLines = [];
+            if (!empty($data['provisional_diagnosis'])) {
+                $noteLines[] = "PROVISIONAL DIAGNOSIS: " . trim($data['provisional_diagnosis']);
+            }
+            if (!empty($data['treatment_given'])) {
+                $treatmentText = is_array($data['treatment_given']) ? implode(', ', $data['treatment_given']) : $data['treatment_given'];
+                $noteLines[] = "INTERVENTIONS: " . trim($treatmentText);
+            }
+            if (!empty($data['doctor_notes'])) {
+                $noteLines[] = "DOCTOR NOTES: " . trim($data['doctor_notes']);
+            }
+
+            $entry = "[{$timestamp} by {$userName}]\n" . implode("\n", $noteLines);
+            $newClinicalNotes = $triage->clinical_notes ? ($triage->clinical_notes . "\n\n" . $entry) : $entry;
+
+            $updateData = ['clinical_notes' => $newClinicalNotes];
+            if (!empty($data['doctor_id'])) {
+                $updateData['doctor_id'] = $data['doctor_id'];
+            }
+
+            $triage->update($updateData);
+
+            return $triage->fresh(['patient', 'doctor', 'ward', 'bed'])->toArray();
+        });
+    }
+
+    /**
+     * Collect and record an emergency advance deposit with receipt generation.
+     */
+    public function collectDeposit(int $hospitalId, int $triageId, array $data, int $userId): array
+    {
+        return DB::transaction(function () use ($hospitalId, $triageId, $data, $userId) {
+            $triage = EmergencyTriage::where('hospital_id', $hospitalId)->findOrFail($triageId);
+            $amount = (float) ($data['amount'] ?? 0);
+            if ($amount <= 0) {
+                throw new \InvalidArgumentException('Deposit amount must be greater than zero.');
+            }
+
+            $year = date('Y');
+            $lastRec = BillingLedgerItem::where('hospital_id', $hospitalId)
+                ->where('notes', 'like', "EMG-DEP-{$year}-%")
+                ->count();
+            $recSeq = str_pad($lastRec + 1, 5, '0', STR_PAD_LEFT);
+            $receiptNumber = "EMG-DEP-{$year}-{$recSeq}";
+
+            $paymentMethod = $data['payment_method'] ?? 'cash';
+            $transactionRef = $data['transaction_ref'] ?? null;
+
+            // Record into ledger as credit / advance payment
+            $ledgerItem = BillingLedgerItem::create([
+                'hospital_id'        => $hospitalId,
+                'patient_id'         => $triage->patient_id,
+                'encounter_type'     => 'emergency',
+                'encounter_id'       => $triage->id,
+                'category'           => 'payment_deposit',
+                'item_name'          => 'Emergency Advance Deposit',
+                'unit_price'         => -$amount,
+                'quantity'           => 1.0,
+                'total_amount'       => -$amount,
+                'charged_at'         => now(),
+                'charged_by_user_id' => $userId,
+                'auto_generated'     => false,
+                'notes'              => "{$receiptNumber} | Mode: " . strtoupper($paymentMethod) . ($transactionRef ? " (Ref: {$transactionRef})" : ""),
+                'status'             => 'paid',
+            ]);
+
+            // Update triage advance deposit if IPD admission exists or update record
+            if ($triage->ipd_admission_id) {
+                $admission = IpdAdmission::find($triage->ipd_admission_id);
+                if ($admission) {
+                    $admission->increment('advance_deposit', $amount);
+                }
+            }
+
+            $hospital = Hospital::find($hospitalId);
+
+            return [
+                'receipt_number' => $receiptNumber,
+                'hospital'       => [
+                    'name'    => $hospital->name,
+                    'code'    => $hospital->code,
+                    'address' => $hospital->address ?? 'Emergency & Trauma Department',
+                ],
+                'patient' => [
+                    'name' => $triage->patient_name,
+                    'uhid' => $triage->patient?->uhid,
+                ],
+                'triage_number'  => $triage->triage_number,
+                'amount'         => $amount,
+                'payment_method' => $paymentMethod,
+                'transaction_ref'=> $transactionRef,
+                'collected_by'   => \App\Models\User::find($userId)?->name ?? "Staff #{$userId}",
+                'collected_at'   => now()->toIso8601String(),
+                'ledger_item_id' => $ledgerItem->id,
+            ];
+        });
+    }
 }

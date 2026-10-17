@@ -44,6 +44,7 @@ class Patient extends Model
 
     protected $appends = [
         'age',
+        'age_display',
         'first_name',
         'last_name',
         'phone',
@@ -78,6 +79,29 @@ class Patient extends Model
             }
         }
         return null;
+    }
+
+    public function getAgeDisplayAttribute(): string
+    {
+        if (!$this->dob) {
+            return $this->age !== null ? "{$this->age} Y" : 'N/A';
+        }
+        try {
+            $dob = $this->dob instanceof \Carbon\Carbon ? $this->dob : \Carbon\Carbon::parse($this->dob);
+            $now = \Carbon\Carbon::now();
+            $diffInDays = max(0, (int) $dob->diffInDays($now));
+            if ($diffInDays < 31) {
+                return $diffInDays === 0 ? 'Newborn (0 Days)' : "{$diffInDays} " . ($diffInDays === 1 ? 'Day' : 'Days');
+            }
+            $diffInMonths = (int) $dob->diffInMonths($now);
+            if ($diffInMonths < 24) {
+                return "{$diffInMonths} " . ($diffInMonths === 1 ? 'Month' : 'Months');
+            }
+            $years = (int) $dob->diffInYears($now);
+            return "{$years} " . ($years === 1 ? 'Year' : 'Years');
+        } catch (\Exception $e) {
+            return $this->age !== null ? "{$this->age} Y" : 'N/A';
+        }
     }
 
     protected static function booted()

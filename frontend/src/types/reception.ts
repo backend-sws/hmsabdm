@@ -125,6 +125,12 @@ export interface CreateVisitResponse {
   payment_status?: string
 }
 
+export interface PaymentBreakdownItem {
+  method: "cash" | "upi" | "card" | "cheque" | "insurance" | "waived" | string
+  amount: number
+  ref?: string
+}
+
 // ─── Quick Visit (Register + Visit in one step) ───────────────────────
 export interface QuickVisitPayload extends WalkInRegisterPayload {
   department_id: number
@@ -138,6 +144,8 @@ export interface QuickVisitPayload extends WalkInRegisterPayload {
   amount_paid?: number
   payment_method?: string
   payment_status?: string
+  payment_ref?: string
+  payment_breakdown?: PaymentBreakdownItem[]
 }
 
 // ─── Reception Department dropdown ───────────────────────────────────

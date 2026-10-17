@@ -46,6 +46,10 @@ export interface LabTestTemplate {
   method?: string | null
   tat_hours: number
   standard_price: number
+  b2b_cost?: number
+  reagent_cost?: number
+  fulfillment_type?: "in_house" | "outsourced" | "hybrid"
+  default_vendor_id?: number | null
   loinc_code?: string | null
   is_panel: boolean
   is_active: boolean
@@ -56,6 +60,7 @@ export interface LabTestTemplate {
     name: string
     code?: string
   }
+  default_vendor?: LabExternalVendor
 }
 
 export interface LabTestResult {
@@ -75,6 +80,47 @@ export interface LabTestResult {
   display_order: number
 }
 
+export interface LabExternalVendor {
+  id: number
+  hospital_id?: number | null
+  vendor_code: string
+  name: string
+  contact_person?: string | null
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  pickup_schedule?: string | null
+  default_courier?: string | null
+  account_number?: string | null
+  is_active: boolean
+  total_samples_sent?: number
+  pending_results?: number
+}
+
+export interface LabOutsourceManifest {
+  id: number
+  hospital_id?: number | null
+  vendor_id: number
+  manifest_number: string
+  status: "draft" | "dispatched" | "in_transit" | "delivered" | "completed"
+  temperature_condition: "ambient" | "cold_chain" | "frozen" | "formalin"
+  courier_name?: string | null
+  courier_phone?: string | null
+  courier_tracking_no?: string | null
+  total_samples: number
+  dispatched_at?: string | null
+  dispatched_by_user_id?: number | null
+  received_at_vendor_at?: string | null
+  notes?: string | null
+  vendor?: LabExternalVendor
+  dispatched_by?: {
+    id: number
+    name: string
+  }
+  order_items?: LabOrderItem[]
+  received_count?: number
+}
+
 export interface LabOrderItem {
   id: number
   order_id: number
@@ -84,11 +130,90 @@ export interface LabOrderItem {
   test_code?: string | null
   category?: string | null
   rate: number
+  b2b_cost?: number
+  fulfillment_type?: "in_house" | "outsourced" | "hybrid"
+  outsource_status?: "pending_dispatch" | "dispatched" | "in_transit" | "received" | "verified" | null
+  external_vendor_id?: number | null
+  outsource_manifest_id?: number | null
+  external_accession_no?: string | null
+  external_report_file?: string | null
+  outsourced_at?: string | null
+  outsource_received_at?: string | null
   status: "pending_sample" | "sample_collected" | "in_progress" | "result_entered" | "completed" | "authorized" | "cancelled"
   technician_remarks?: string | null
   pathologist_remarks?: string | null
   test_template?: LabTestTemplate
+  testTemplate?: LabTestTemplate
+  external_vendor?: LabExternalVendor
+  manifest?: LabOutsourceManifest
   results?: LabTestResult[]
+  order?: LabOrder
+}
+
+export interface LabRateListMatrixItem {
+  id: number
+  test_code: string
+  test_name: string
+  category: string
+  sample_type?: string | null
+  container_color?: string | null
+  tat_hours: number
+  standard_price: number
+  b2b_cost: number
+  reagent_cost: number
+  fulfillment_type: "in_house" | "outsourced" | "hybrid"
+  default_vendor_id?: number | null
+  default_vendor_name?: string | null
+  gross_profit: number
+  margin_percentage: number
+  is_active: boolean
+}
+
+export interface LabProfitabilityAnalytics {
+  total_tests_billed: number
+  total_revenue: number
+  total_cost: number
+  outsource_b2b_payable: number
+  internal_reagent_expense: number
+  net_gross_profit: number
+  gross_margin_percent: number
+  top_profitable_tests: Array<{
+    test_code: string
+    test_name: string
+    category: string
+    is_outsource: boolean
+    count: number
+    total_revenue: number
+    total_cost: number
+    total_profit: number
+    margin_percent: number
+  }>
+  make_vs_buy_advisor: Array<{
+    test_code: string
+    test_name: string
+    category: string
+    count: number
+    monthly_outsource_cost: number
+    estimated_inhouse_cost: number
+    potential_monthly_savings: number
+    recommendation: string
+  }>
+}
+
+export interface LabReconciliationVendorSummary {
+  vendor_id: number
+  vendor_code: string
+  vendor_name: string
+  account_number?: string | null
+  phone?: string | null
+  total_dispatched: number
+  received_count: number
+  pending_count: number
+  cancelled_count: number
+  total_b2b_payable: number
+  patient_revenue: number
+  gross_profit: number
+  margin_percent: number
 }
 
 export interface LabAuditLog {
@@ -197,6 +322,7 @@ export interface LabOrder {
     paid_amount?: number
     payment_status?: "paid" | "partial" | "pending"
     payment_method?: string
+    payment_breakdown?: Array<{ method: string; amount: number; ref?: string }>
     status?: string
     created_at?: string
   }

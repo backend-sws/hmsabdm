@@ -60,7 +60,7 @@ class BedController extends Controller
             'ward_id'      => 'required|integer|exists:wards,id',
             'bed_number'   => 'required|string|max:50',
             'daily_charge' => 'nullable|numeric|min:0',
-            'status'       => 'nullable|string|in:available,maintenance',
+            'status'       => 'nullable|string|in:available,cleaning,maintenance',
             'is_active'    => 'nullable|boolean',
         ]);
 
@@ -97,7 +97,7 @@ class BedController extends Controller
         $validated = $request->validate([
             'bed_number'   => 'sometimes|required|string|max:50',
             'daily_charge' => 'nullable|numeric|min:0',
-            'status'       => 'nullable|string|in:available,occupied,maintenance',
+            'status'       => 'nullable|string|in:available,occupied,cleaning,maintenance',
             'is_active'    => 'nullable|boolean',
         ]);
 

@@ -2,7 +2,7 @@ import type { Patient } from "./patient"
 import type { Doctor } from "./doctor"
 import type { Department } from "./department"
 
-export type BedStatus = "available" | "occupied" | "maintenance"
+export type BedStatus = "available" | "occupied" | "cleaning" | "maintenance"
 export type AdmissionStatus = "admitted" | "discharged" | "transferred" | "cancelled"
 export type AdmissionType = "planned" | "emergency" | "day_care" | "maternity" | "transfer"
 
@@ -133,6 +133,7 @@ export interface BedMatrixSummary {
   total_beds: number
   available_beds: number
   occupied_beds: number
+  cleaning_beds?: number
   maintenance_beds: number
   occupancy_rate: number
 }
@@ -173,6 +174,8 @@ export interface IpdAdmission {
     payment_breakdown?: Array<{ method: string; amount: number; ref?: string }>
   }
   latest_vital?: any
+  elapsed_days?: number
+  elapsed_hours?: number
   created_at?: string
 }
 
@@ -217,6 +220,8 @@ export interface TransferBedPayload {
 
 export interface DischargePayload {
   discharge_date?: string
+  mark_bed_cleaning?: boolean
+  bed_status_after_discharge?: "cleaning" | "available"
 }
 
 // Doctor SOAP Rounds
@@ -374,9 +379,35 @@ export interface ShiftHandoverItem {
 
 // Discharge Billing & Gate Pass
 export interface DischargeEstimate {
-  total_charges: number
-  advance_deposit_paid: number
-  net_balance_due: number
+  admission_id?: number
+  ipd_number?: string
+  status?: string
+  patient?: {
+    id: number
+    name: string
+    uhid: string
+    gender?: string
+    mobile?: string
+    blood_group?: string
+  }
+  doctor?: { id: number; name: string }
+  ward?: { id: number; name: string }
+  bed?: { id: number; bed_number: string }
+  financials?: {
+    gross_amount: number
+    tax_amount: number
+    advance_deposit_paid: number
+    estimated_balance_due: number
+  }
+  category_breakdown?: Array<{
+    category: string
+    count: number
+    total_amount: number
+  }>
+  total_charges?: number
+  advance_deposit_paid?: number
+  net_balance_due?: number
+  unbilled_items_count?: number
   unbilled_charges?: Array<{
     id: number
     category: string
@@ -401,28 +432,65 @@ export interface SettleDischargePayload {
   amount_paid?: number
   payment_method?: string
   discharge_date?: string
+  mark_bed_cleaning?: boolean
+  bed_status_after_discharge?: "cleaning" | "available"
   notes?: string
 }
 
 export interface GatePass {
   gate_pass_number: string
   issued_at: string
-  patient_name: string
-  uhid: string
-  ipd_number: string
-  ward_name: string
-  bed_number: string
-  doctor_name: string
-  admission_date: string
-  discharge_date: string
-  total_bill_amount: number
-  advance_deposit: number
-  discount_amount: number
-  net_paid: number
-  balance_due: number
-  clearance_status: string
-  issued_by: string
+  patient_name?: string
+  uhid?: string
+  ipd_number?: string
+  ward_name?: string
+  bed_number?: string
+  doctor_name?: string
+  admission_date?: string
+  discharge_date?: string
+  total_bill_amount?: number
+  advance_deposit?: number
+  discount_amount?: number
+  net_paid?: number
+  balance_due?: number
+  clearance_status?: string
+  issued_by?: string
+  patient?: {
+    name: string
+    uhid: string
+    mobile?: string
+    gender?: string
+    blood_group?: string
+  }
+  admission?: {
+    ipd_number: string
+    admission_date?: string
+    discharge_date?: string
+    discharge_type?: string
+    doctor_name?: string
+    ward_name?: string
+    bed_number?: string
+  }
+  financial_summary?: {
+    invoice_number: string
+    gross_amount?: number
+    discount?: number
+    advance?: number
+    insurance?: number
+    net_amount?: number
+    amount_paid: number
+    advance_adjusted?: number
+    balance_due?: number
+    payment_status?: string
+    payment_method?: string
+  }
+  security_clearance?: {
+    status: string
+    verified_by: string
+    gate_pass_status: string
+  }
 }
+
 
 export interface InpatientChart {
   admission: {
@@ -434,6 +502,7 @@ export interface InpatientChart {
     admission_date?: string
     discharge_date?: string
     elapsed_days: number
+    elapsed_hours?: number
     is_mlc: boolean
     ward?: IpdWard | null
     bed?: IpdBed | null

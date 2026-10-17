@@ -5,20 +5,21 @@ import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 import {
   LayoutDashboard,
-  Users,
-  UserCheck,
+  UserPlus,
+  CalendarClock,
   Stethoscope,
   Building2,
   Building,
-  QrCode,
-  Sparkles,
+  ClipboardList,
+  Settings,
   ShieldCheck,
   Bed,
-  Siren,
+  Ambulance,
   Receipt,
   FlaskConical,
   Pill,
   Scissors,
+  Droplet,
   LogOut,
 } from "lucide-react"
 
@@ -126,13 +127,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     {
       title: "RECEPTION & WALK-IN",
       path: "/reception",
-      icon: QrCode,
+      icon: ClipboardList,
       roles: ["HOSPITAL_ADMIN", "RECEPTIONIST"],
     },
     {
       title: "PATIENT REGISTRATION",
       path: "/patients",
-      icon: Users,
+      icon: UserPlus,
       roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
     {
@@ -156,7 +157,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     {
       title: "EMERGENCY & CASUALTY",
       path: "/emergency",
-      icon: Siren,
+      icon: Ambulance,
       roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST", "NURSE"],
     },
     {
@@ -183,13 +184,19 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       icon: ShieldCheck,
       roles: ["HOSPITAL_ADMIN", "DOCTOR", "RECEPTIONIST"],
     },
+    {
+      title: "BLOOD BANK & TRANSFUSION",
+      path: "/blood-bank",
+      icon: Droplet,
+      roles: ["HOSPITAL_ADMIN", "DOCTOR", "LAB_TECHNICIAN", "PATHOLOGIST", "RECEPTIONIST"],
+    },
   ]
 
   const managementNavItems = [
     {
       title: "DOCTORS & SCHEDULES",
       path: "/doctors",
-      icon: UserCheck,
+      icon: CalendarClock,
       roles: ["HOSPITAL_ADMIN"],
     },
     {
@@ -201,7 +208,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     {
       title: "HOSPITAL SETTINGS",
       path: "/settings",
-      icon: Sparkles,
+      icon: Settings,
       roles: ["HOSPITAL_ADMIN"],
     },
   ]

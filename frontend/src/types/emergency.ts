@@ -195,3 +195,125 @@ export interface EmergencyQueryParams {
   page?: number
   per_page?: number
 }
+
+export interface EmergencyDischargeSlipData {
+  hospital: {
+    name: string
+    code?: string
+    abdm_hip_id?: string
+    address?: string
+  }
+  triage: {
+    id: number
+    triage_number: string
+    priority_level: PriorityLevel
+    triage_category?: string
+    status: EmergencyStatus
+    arrival_time?: string
+    stabilized_at?: string
+    discharged_at?: string
+    chief_complaint?: string
+    clinical_notes?: string
+    is_mlc?: boolean
+    mlc_number?: string
+  }
+  patient: {
+    id?: number
+    uhid?: string
+    name: string
+    gender?: string
+    approximate_age?: number
+    mobile?: string
+    address?: string
+    brought_by?: string
+    brought_by_phone?: string
+  }
+  discharge_vitals?: {
+    bp?: string
+    bp_systolic?: number
+    bp_diastolic?: number
+    pulse?: number
+    spo2?: number
+    temperature?: number
+    resp_rate?: number
+    respiratory_rate?: number
+  } | null
+  doctor: {
+    name: string
+    specialization?: string
+    hpr_id?: string
+  }
+  generated_at: string
+}
+
+export interface EmergencyVitalHistoryItem {
+  id: number
+  blood_pressure_sys?: number
+  blood_pressure_dia?: number
+  pulse_rate?: number
+  temperature?: number
+  oxygen_saturation?: number
+  respiratory_rate?: number
+  blood_glucose?: number
+  custom_vitals?: {
+    gcs_score?: number
+    pain_score?: number
+    notes?: string
+  }
+  recorded_at: string
+  recorded_by?: number
+}
+
+export interface EmergencyVitalsResponse {
+  triage_id: number
+  triage_number: string
+  initial_vitals?: InitialVitals
+  history: EmergencyVitalHistoryItem[]
+}
+
+export interface RecordEmergencyVitalPayload {
+  bp_systolic?: number
+  bp_diastolic?: number
+  pulse?: number
+  temperature?: number
+  spo2?: number
+  respiratory_rate?: number
+  blood_glucose?: number
+  gcs_score?: number
+  consciousness_level?: ConsciousnessLevel
+  pain_score?: number
+  notes?: string
+}
+
+export interface EmergencyClinicalNotesPayload {
+  provisional_diagnosis?: string
+  treatment_given?: string
+  doctor_notes?: string
+  doctor_id?: number
+}
+
+export interface EmergencyDepositPayload {
+  amount: number
+  payment_method?: "cash" | "upi" | "card" | "net_banking" | "cheque"
+  transaction_ref?: string
+}
+
+export interface EmergencyDepositReceiptData {
+  receipt_number: string
+  hospital: {
+    name: string
+    code?: string
+    address?: string
+  }
+  patient: {
+    name: string
+    uhid?: string
+  }
+  triage_number: string
+  amount: number
+  payment_method: string
+  transaction_ref?: string
+  collected_by: string
+  collected_at: string
+  ledger_item_id?: number
+}

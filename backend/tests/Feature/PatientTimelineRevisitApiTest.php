@@ -272,6 +272,7 @@ class PatientTimelineRevisitApiTest extends TestCase
             'patient_id' => $this->patient->id,
             'doctor_id'  => $this->doctor->id,
         ]);
+        if ($response->status() !== 200) dump($response->json());
 
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
@@ -309,4 +310,26 @@ class PatientTimelineRevisitApiTest extends TestCase
             ->assertJsonPath('data.revisit_info.is_free_revisit', false)
             ->assertJsonPath('data.visit.fee_charged', 500);
     }
+
+    public function test_quick_revisit_supports_split_payment_with_breakdown()
+    {
+        $response = $this->postJson('/api/v1/reception/quick-visit', [
+            'patient_id'        => $this->patient->id,
+            'doctor_id'         => $this->doctor->id,
+            'fee_charged'       => 500,
+            'payment_method'    => 'split',
+            'payment_ref'       => 'UTR123456',
+            'payment_breakdown' => [
+                ['method' => 'cash', 'amount' => 250],
+                ['method' => 'upi', 'amount' => 250, 'ref' => 'UTR123456'],
+            ],
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.visit.payment_method', 'split')
+            ->assertJsonPath('data.visit.amount_paid', 500)
+            ->assertJsonPath('data.visit.payment_status', 'paid');
+    }
 }
+

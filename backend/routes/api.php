@@ -252,7 +252,20 @@ Route::prefix('v1')->group(function () {
             Route::post('/ledger/charge', [\App\Http\Controllers\Api\V1\ChargeController::class, 'postLedger']);
             Route::get('/ledger/patient/{patientId}', [\App\Http\Controllers\Api\V1\ChargeController::class, 'getPatientLedger']);
             Route::post('/ledger/{id}/cancel', [\App\Http\Controllers\Api\V1\ChargeController::class, 'cancelLedgerItem']);
+
+            // Central Cashier Day-End Closing & Shift Handover
+            Route::get('/day-end-summary', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'dayEndSummary']);
+
+            // Central Advance Deposit Collection & Printable Receipt Voucher
+            Route::post('/deposits', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'collectDeposit']);
+
+            // Cashier Pending Discharge Settlement Queue
+            Route::get('/pending-discharges', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'pendingDischarges']);
+
+            // Patient Refund / Credit Note Voucher Generation
+            Route::post('/refunds', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'issueRefund']);
         });
+
 
         // Emergency & Triage Desk (Casualty Fast-Track)
         Route::prefix('emergency')->group(function () {
@@ -262,6 +275,11 @@ Route::prefix('v1')->group(function () {
             Route::put('/triages/{id}/link-patient', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'linkPatient']);
             Route::get('/triages/{id}/mlc-slip', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'mlcSlip']);
             Route::put('/triages/{id}/status', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'updateStatus']);
+            Route::get('/triages/{id}/discharge-slip', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'dischargeSlip']);
+            Route::post('/triages/{id}/vitals', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'recordVitals']);
+            Route::get('/triages/{id}/vitals', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'getVitals']);
+            Route::post('/triages/{id}/clinical-notes', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'addClinicalNotes']);
+            Route::post('/triages/{id}/deposit', [\App\Http\Controllers\Api\V1\EmergencyController::class, 'collectDeposit']);
         });
 
         // ── Insurance / TPA / Ayushman Bharat Enterprise Desk ─────────────────
@@ -323,8 +341,30 @@ Route::prefix('v1')->group(function () {
 
         // Final Tax Invoices
         Route::prefix('invoices')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'index']);
             Route::get('/{id}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'show']);
             Route::get('/patient/{patientId}', [\App\Http\Controllers\Api\V1\InvoiceController::class, 'patientInvoices']);
+        });
+
+        // ── Blood Bank & Transfusion Medicine Enterprise Desk ─────────────
+        Route::prefix('blood-bank')->group(function () {
+            Route::get('/dashboard', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'dashboard']);
+            Route::get('/donors', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getDonors']);
+            Route::post('/donors', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'registerDonor']);
+            Route::post('/donors/{id}/screen', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'screenDonor']);
+            Route::get('/units', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getBloodUnits']);
+            Route::post('/units/{id}/tti-test', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'recordTtiTest']);
+            Route::post('/units/{id}/separate', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'separateComponents']);
+            Route::post('/requisitions', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'createRequisition']);
+            Route::get('/requisitions', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getRequisitions']);
+            Route::post('/requisitions/{id}/crossmatch', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'performCrossmatch']);
+            Route::post('/crossmatches/{id}/issue', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'issueBlood']);
+            Route::post('/reactions', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'recordReaction']);
+            Route::get('/camps', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getCamps']);
+            Route::post('/camps', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'createCamp']);
+            Route::get('/screening-config', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'getScreeningConfig']);
+            Route::put('/screening-config', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'updateScreeningConfig']);
+            Route::post('/screening-config/reset', [\App\Http\Controllers\Api\V1\BloodBankController::class, 'resetScreeningConfig']);
         });
 
         // Laboratory Information System (LIS / Pathology Desk)
@@ -364,6 +404,22 @@ Route::prefix('v1')->group(function () {
             Route::post('/templates', [\App\Http\Controllers\Api\V1\LabTestController::class, 'store']);
             Route::put('/templates/{id}', [\App\Http\Controllers\Api\V1\LabTestController::class, 'update']);
             Route::delete('/templates/{id}', [\App\Http\Controllers\Api\V1\LabTestController::class, 'destroy']);
+
+            // 6. Outsource Reference Lab Management (LabOutsourceController)
+            Route::get('/outsource/vendors', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'vendors']);
+            Route::post('/outsource/vendors', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'storeVendor']);
+            Route::get('/outsource/pending-dispatch', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'pendingDispatch']);
+            Route::post('/outsource/manifests', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'createManifest']);
+            Route::get('/outsource/manifests', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'manifests']);
+            Route::get('/outsource/manifests/{id}', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'showManifest']);
+            Route::post('/outsource/receive-sample', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'receiveSample']);
+            Route::get('/outsource/reconciliation', [\App\Http\Controllers\Api\V1\LabOutsourceController::class, 'reconciliation']);
+
+            // 7. Direct Rate List, Pricing Matrix & Profit Analytics (LabRateListController)
+            Route::get('/rate-list', [\App\Http\Controllers\Api\V1\LabRateListController::class, 'index']);
+            Route::put('/rate-list/bulk-update', [\App\Http\Controllers\Api\V1\LabRateListController::class, 'bulkUpdate']);
+            Route::post('/rate-list/apply-percentage', [\App\Http\Controllers\Api\V1\LabRateListController::class, 'applyPercentage']);
+            Route::get('/analytics/profitability', [\App\Http\Controllers\Api\V1\LabRateListController::class, 'profitabilityAnalytics']);
         });
 
         // Enterprise Hospital Pharmacy & Supply Chain Desk

@@ -238,7 +238,9 @@ class IpdController extends Controller
     public function discharge(Request $request, $id)
     {
         $validated = $request->validate([
-            'discharge_date' => 'nullable|date',
+            'discharge_date'             => 'nullable|date',
+            'mark_bed_cleaning'          => 'nullable|boolean',
+            'bed_status_after_discharge' => 'nullable|string|in:cleaning,available',
         ]);
 
         $hospitalId = $this->getHospitalId($request);

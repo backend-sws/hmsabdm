@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Models\Hospital;
 use App\Models\OperationTheatre;
 
 class OperationTheatreSeeder extends Seeder
@@ -16,11 +17,16 @@ class OperationTheatreSeeder extends Seeder
             ['name' => 'Day Care & Minor OT', 'code' => 'OT-04', 'floor' => 'Ground Floor', 'status' => 'available'],
         ];
 
-        foreach ([26] as $hospitalId) {
+        $hospitals = Hospital::all();
+        if ($hospitals->isEmpty()) {
+            return;
+        }
+
+        foreach ($hospitals as $hospital) {
             foreach ($theatres as $t) {
                 OperationTheatre::firstOrCreate(
-                    ['hospital_id' => $hospitalId, 'code' => $t['code']],
-                    array_merge($t, ['hospital_id' => $hospitalId, 'is_active' => true])
+                    ['hospital_id' => $hospital->id, 'code' => $t['code']],
+                    array_merge($t, ['hospital_id' => $hospital->id, 'is_active' => true])
                 );
             }
         }

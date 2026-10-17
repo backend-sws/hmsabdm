@@ -62,6 +62,8 @@ class InvoiceController extends Controller
             'payment_method'            => 'nullable|string|max:50',
             'payment_breakdown'         => 'nullable|array',
             'discharge_date'            => 'nullable|date',
+            'mark_bed_cleaning'         => 'nullable|boolean',
+            'bed_status_after_discharge'=> 'nullable|string|in:cleaning,available',
             'notes'                     => 'nullable|string',
         ]);
 
@@ -132,4 +134,134 @@ class InvoiceController extends Controller
         $invoices = $this->dischargeBillingService->getPatientInvoices($hospitalId, (int) $patientId);
         return $this->successResponse($invoices, 'Patient invoices retrieved successfully');
     }
+
+    #[OA\Get(
+        path: "/api/v1/invoices",
+        summary: "List All Global Invoices with Filters and KPI Totals",
+        description: "Returns paginated list of hospital invoices with revenue aggregates and filter support.",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Billing & Invoices"]
+    )]
+    public function index(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $filters = $request->only([
+            'search',
+            'payment_status',
+            'encounter_type',
+            'date_from',
+            'date_to',
+            'page',
+            'per_page',
+        ]);
+
+        try {
+            $result = $this->dischargeBillingService->getInvoices($hospitalId, $filters);
+            return $this->successResponse($result, 'Invoices retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/billing/day-end-summary",
+        summary: "Cashier Day-End Closing & Shift Handover Summary",
+        description: "Reconciles gross billing, discounts, payment mode breakdown (Cash, UPI, Card, Insurance), deposits, and staff collections.",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Billing & Invoices"]
+    )]
+    public function dayEndSummary(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $date = $request->query('date', now()->toDateString());
+        $userId = $request->query('user_id') ? (int) $request->query('user_id') : null;
+
+        try {
+            $summary = $this->dischargeBillingService->getDayEndSummary($hospitalId, $date, $userId);
+            return $this->successResponse($summary, 'Day-end closing summary retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    #[OA\Post(
+        path: "/api/v1/billing/deposits",
+        summary: "Collect Advance Deposit & Generate Printable Voucher",
+        description: "Posts advance payment credit to patient running ledger, updates admission advance balance, and outputs formal voucher.",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Billing & Invoices"]
+    )]
+    public function collectDeposit(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_id'            => 'required|integer',
+            'amount'                => 'required|numeric|min:1',
+            'encounter_type'        => 'nullable|string|in:ipd,emergency,opd',
+            'encounter_id'          => 'nullable|integer',
+            'payment_method'        => 'required|string|in:cash,upi,card,cheque,bank_transfer',
+            'transaction_reference' => 'nullable|string|max:100',
+            'notes'                 => 'nullable|string|max:500',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 0;
+
+        try {
+            $receipt = $this->dischargeBillingService->collectAdvanceDeposit($hospitalId, $validated, $userId);
+            return $this->successResponse($receipt, 'Advance deposit collected and voucher generated successfully', 201);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    #[OA\Get(
+        path: "/api/v1/billing/pending-discharges",
+        summary: "Get Inpatient Pending Discharge Settlement Queue",
+        description: "Returns admitted patients ready for cashier discharge clearance with unbilled estimates.",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Billing & Invoices"]
+    )]
+    public function pendingDischarges(Request $request)
+    {
+        $hospitalId = $this->getHospitalId($request);
+        $filters = $request->only(['search', 'ward_id']);
+
+        try {
+            $queue = $this->dischargeBillingService->getPendingDischargeAdmissions($hospitalId, $filters);
+            return $this->successResponse($queue, 'Pending discharge settlement queue retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    #[OA\Post(
+        path: "/api/v1/billing/refunds",
+        summary: "Issue Patient Refund / Credit Note",
+        description: "Generates official Credit Note voucher for excess advance deposit return or bill cancellation.",
+        security: [["bearerAuth" => []]],
+        tags: ["12. Billing & Invoices"]
+    )]
+    public function issueRefund(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_id'            => 'required|integer',
+            'amount'                => 'required|numeric|min:1',
+            'reason'                => 'nullable|string|max:255',
+            'refund_method'         => 'required|string|in:cash,upi,bank_transfer',
+            'transaction_reference' => 'nullable|string|max:100',
+            'encounter_type'        => 'nullable|string|in:ipd,opd,emergency',
+            'encounter_id'          => 'nullable|integer',
+        ]);
+
+        $hospitalId = $this->getHospitalId($request);
+        $userId = $request->user()?->id ?? 0;
+
+        try {
+            $voucher = $this->dischargeBillingService->issueRefund($hospitalId, $validated, $userId);
+            return $this->successResponse($voucher, 'Patient refund voucher generated successfully', 201);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
 }
+

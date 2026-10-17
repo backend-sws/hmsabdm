@@ -25,6 +25,7 @@ class OtController extends Controller
         summary: "Get list of Operation Theatres and status",
         tags: ["12. Operation Theatre & Surgeries"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function theatres(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -37,6 +38,7 @@ class OtController extends Controller
         summary: "Get list of scheduled surgeries",
         tags: ["12. Operation Theatre & Surgeries"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function schedules(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -50,6 +52,7 @@ class OtController extends Controller
         summary: "Get single OT schedule details",
         tags: ["12. Operation Theatre & Surgeries"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function show(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -66,6 +69,7 @@ class OtController extends Controller
         summary: "Book a new surgery schedule",
         tags: ["12. Operation Theatre & Surgeries"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function store(Request $request)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -108,6 +112,7 @@ class OtController extends Controller
         summary: "Update OT schedule details or status",
         tags: ["12. Operation Theatre & Surgeries"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function update(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -150,6 +155,7 @@ class OtController extends Controller
         summary: "Get WHO Surgical Safety Checklist for schedule",
         tags: ["12. Operation Theatre & Surgeries"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getChecklist(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -166,6 +172,7 @@ class OtController extends Controller
         summary: "Save WHO Surgical Safety Checklist (Sign In, Time Out, Sign Out)",
         tags: ["12. Operation Theatre & Surgeries"]
     )]
+    #[OA\Response(response: 201, description: "Created successfully")]
     public function saveChecklist(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);
@@ -195,6 +202,7 @@ class OtController extends Controller
         summary: "Get complete printable WHO Surgical Safety Checklist Dossier",
         tags: ["12. Operation Theatre & Surgeries"]
     )]
+    #[OA\Response(response: 200, description: "Successful operation")]
     public function getPrintData(Request $request, $id)
     {
         $hospitalId = $this->getHospitalId($request);

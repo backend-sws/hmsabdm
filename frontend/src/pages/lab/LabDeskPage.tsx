@@ -23,6 +23,8 @@ import {
   Edit3,
   Wallet,
   History,
+  Truck,
+  FileSpreadsheet,
 } from "lucide-react"
 
 import { PageHeader } from "@/components/common/PageHeader"
@@ -42,13 +44,17 @@ import { ThermalBarcodeStickerModal } from "@/components/lab/ThermalBarcodeStick
 import { SampleRejectionModal } from "@/components/lab/SampleRejectionModal"
 import { LabAuditLogModal } from "@/components/lab/LabAuditLogModal"
 import { CollectPaymentModal } from "@/components/lab/CollectPaymentModal"
+import { OutsourceManagementTab } from "@/components/lab/OutsourceManagementTab"
+import { LabRateListMatrixTab } from "@/components/lab/LabRateListMatrixTab"
 import type { LabOrder, LabTestTemplate } from "@/types/lab"
 
 export const LabDeskPage: React.FC = () => {
   const navigate = useNavigate()
 
   // Tab navigation
-  const [activeTab, setActiveTab] = useState<"worklist" | "phlebotomy" | "invoices" | "archive" | "catalog">("worklist")
+  const [activeTab, setActiveTab] = useState<
+    "worklist" | "phlebotomy" | "outsource" | "ratelist" | "invoices" | "archive" | "catalog"
+  >("worklist")
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState("")
@@ -517,12 +523,12 @@ export const LabDeskPage: React.FC = () => {
       />
 
       {/* View Switcher Tabs */}
-      <div className="flex border-b border-border text-xs sm:text-sm font-semibold overflow-x-auto scrollbar-none gap-1 pb-0.5">
+      <div className="flex border-b border-border text-xs sm:text-sm font-semibold overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40 gap-1 pb-0.5">
         <button
           onClick={() => setActiveTab("worklist")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap shrink-0 ${
             activeTab === "worklist"
-              ? "border-primary text-primary"
+              ? "border-primary text-primary font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -532,9 +538,9 @@ export const LabDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("phlebotomy")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap shrink-0 ${
             activeTab === "phlebotomy"
-              ? "border-primary text-primary"
+              ? "border-primary text-primary font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -543,10 +549,40 @@ export const LabDeskPage: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab("outsource")}
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap shrink-0 ${
+            activeTab === "outsource"
+              ? "border-amber-500 text-amber-600 dark:text-amber-400 font-bold bg-amber-500/5"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Truck className="h-4 w-4 text-amber-500" />
+          <span>Outsource Reference Lab Desk</span>
+          <span className="rounded-full bg-amber-100 dark:bg-amber-950 px-1.5 py-0.2 text-[10px] font-black text-amber-800 dark:text-amber-300">
+            Sent & Received
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("ratelist")}
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap shrink-0 ${
+            activeTab === "ratelist"
+              ? "border-emerald-600 text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/5"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+          <span>Direct Rate List & Pricing Matrix</span>
+          <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.2 text-[10px] font-black text-emerald-800 dark:text-emerald-300">
+            Margins
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab("invoices")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap shrink-0 ${
             activeTab === "invoices"
-              ? "border-primary text-primary"
+              ? "border-primary text-primary font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -556,9 +592,9 @@ export const LabDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("archive")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap shrink-0 ${
             activeTab === "archive"
-              ? "border-primary text-primary"
+              ? "border-primary text-primary font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -568,9 +604,9 @@ export const LabDeskPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("catalog")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors whitespace-nowrap shrink-0 ${
             activeTab === "catalog"
-              ? "border-primary text-primary"
+              ? "border-primary text-primary font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -582,7 +618,7 @@ export const LabDeskPage: React.FC = () => {
       {/* ─────────────────────────────────────────────────────────────
           TAB 1: LIVE ORDERS WORKLIST & TAB 2 / TAB 3
          ───────────────────────────────────────────────────────────── */}
-      {activeTab !== "catalog" && activeTab !== "invoices" && (
+      {activeTab !== "catalog" && activeTab !== "invoices" && activeTab !== "outsource" && activeTab !== "ratelist" && (
         <SectionCard
           title={
             activeTab === "worklist"
@@ -1460,6 +1496,16 @@ export const LabDeskPage: React.FC = () => {
           )}
         </SectionCard>
       )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          TAB 5: OUTSOURCE REFERENCE LAB DESK (SENT & RECEIVED)
+         ───────────────────────────────────────────────────────────── */}
+      {activeTab === "outsource" && <OutsourceManagementTab />}
+
+      {/* ─────────────────────────────────────────────────────────────
+          TAB 6: DIRECT RATE LIST & PRICING MATRIX (SPREADSHEET)
+         ───────────────────────────────────────────────────────────── */}
+      {activeTab === "ratelist" && <LabRateListMatrixTab />}
 
       {/* ─── MODALS ─── */}
       {/* 1. Sample Collection Modal */}

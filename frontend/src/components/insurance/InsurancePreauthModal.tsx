@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { createPortal } from "react-dom"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import {
@@ -26,6 +27,8 @@ import { PrintPreauthSanctionModal } from "./PrintPreauthSanctionModal"
 
 interface Props {
   embedded?: boolean
+  initialOpenCreate?: boolean
+  onResetOpenCreate?: () => void
   onClose?: () => void
   onRefresh?: () => void
   onFileClaim?: (preauth: InsurancePreauth) => void
@@ -42,12 +45,25 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   expired: { label: "Expired", color: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/25", icon: AlertCircle },
 }
 
-export const InsurancePreauthModal: React.FC<Props> = ({ embedded, onClose, onRefresh, onFileClaim }) => {
+export const InsurancePreauthModal: React.FC<Props> = ({
+  embedded,
+  initialOpenCreate = false,
+  onResetOpenCreate,
+  onClose,
+  onRefresh,
+  onFileClaim,
+}) => {
   const [statusFilter, setStatusFilter] = useState("all")
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<any>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+
+  React.useEffect(() => {
+    if (initialOpenCreate) {
+      setShowCreateModal(true)
+    }
+  }, [initialOpenCreate])
   const [enhancementTarget, setEnhancementTarget] = useState<any>(null)
   const [sanctionPrintTarget, setSanctionPrintTarget] = useState<any>(null)
   const [activeFollowupPa, setActiveFollowupPa] = useState<number | null>(null)
@@ -166,6 +182,7 @@ export const InsurancePreauthModal: React.FC<Props> = ({ embedded, onClose, onRe
     onSuccess: () => {
       toast.success("Pre-authorization created successfully")
       setShowCreateModal(false)
+      onResetOpenCreate?.()
       refetch()
       onRefresh?.()
     },
@@ -890,8 +907,9 @@ export const InsurancePreauthModal: React.FC<Props> = ({ embedded, onClose, onRe
       </div>
 
       {/* ── CREATE PRE-AUTH MODAL ───────────────────────────────────── */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
+      {showCreateModal &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-4 max-h-[92vh] overflow-y-auto border border-border animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
@@ -907,6 +925,7 @@ export const InsurancePreauthModal: React.FC<Props> = ({ embedded, onClose, onRe
                 onClick={() => {
                   setShowCreateModal(false)
                   setShowDiagResults(false)
+                  onResetOpenCreate?.()
                 }}
                 className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground"
               >
@@ -1174,12 +1193,14 @@ export const InsurancePreauthModal: React.FC<Props> = ({ embedded, onClose, onRe
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── RAISE ENHANCEMENT MODAL ─────────────────────────────────── */}
-      {enhancementTarget && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      {enhancementTarget &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <h3 className="font-semibold text-base flex items-center gap-2 text-blue-700">
               <TrendingUp className="h-4 w-4" /> Request Cashless Enhancement
@@ -1239,12 +1260,14 @@ export const InsurancePreauthModal: React.FC<Props> = ({ embedded, onClose, onRe
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── STATUS ACTION MODAL (Replaces prompt()) ────────────────── */}
-      {statusActionModal.isOpen && statusActionModal.preauth && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+      {statusActionModal.isOpen && statusActionModal.preauth &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 border border-border animate-in fade-in zoom-in-95 duration-150">
             {/* APPROVE */}
             {statusActionModal.type === "approve" && (
@@ -1390,7 +1413,8 @@ export const InsurancePreauthModal: React.FC<Props> = ({ embedded, onClose, onRe
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── PRINT PRE-AUTH SANCTION LETTER MODAL ── */}

@@ -32,7 +32,18 @@ export const ThermalBarcodeStickerModal: React.FC<ThermalBarcodeStickerModalProp
   if (!isOpen) return null
   const accession = order.sample_accession_number || `SMP-${order.order_number}`
   const patient = order.patient
-  const testsList = order.items?.map((i) => i.test_code || i.test_name).join(", ") || "General Panel"
+  const formatTestCode = (i: any) => {
+    const raw = i.test_template?.test_code || i.test_code || ""
+    const clean = raw.replace(/^(LAB|RAD|PATH)-/i, "").trim()
+    if (clean) return clean
+    const match = (i.test_name || "").match(/\(([^)]+)\)/)
+    if (match && match[1] && match[1].length <= 8) {
+      return match[1].trim()
+    }
+    return i.test_name || "TEST"
+  }
+
+  const testsList = order.items?.map(formatTestCode).join(", ") || "General Panel"
   const collectionDate = order.sample_collected_at
     ? new Date(order.sample_collected_at).toLocaleDateString("en-GB")
     : new Date().toLocaleDateString("en-GB")

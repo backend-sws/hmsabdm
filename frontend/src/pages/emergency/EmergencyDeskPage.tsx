@@ -36,6 +36,10 @@ import {
   EmergencyPatientLinkModal,
   EmergencyMlcModal,
   EmergencyDetailModal,
+  EmergencyVitalsModal,
+  EmergencyClinicalNotesModal,
+  EmergencyDischargeSlipModal,
+  EmergencyDepositModal,
 } from "@/components/emergency"
 import { ScheduleSurgeryModal } from "@/components/ot/ScheduleSurgeryModal"
 import { CreateIpdLabOrderModal } from "@/components/lab/CreateIpdLabOrderModal"
@@ -70,6 +74,10 @@ export const EmergencyDeskPage: React.FC = () => {
   const [selectedTriageForOt, setSelectedTriageForOt] = useState<EmergencyTriage | null>(null)
   const [selectedTriageForLab, setSelectedTriageForLab] = useState<EmergencyTriage | null>(null)
   const [selectedTriageForIndent, setSelectedTriageForIndent] = useState<EmergencyTriage | null>(null)
+  const [selectedTriageForVitals, setSelectedTriageForVitals] = useState<EmergencyTriage | null>(null)
+  const [selectedTriageForNotes, setSelectedTriageForNotes] = useState<EmergencyTriage | null>(null)
+  const [selectedTriageForDischargeSlip, setSelectedTriageForDischargeSlip] = useState<EmergencyTriage | null>(null)
+  const [selectedTriageForDeposit, setSelectedTriageForDeposit] = useState<EmergencyTriage | null>(null)
   const [mlcSlipData, setMlcSlipData] = useState<MlcSlipData | null>(null)
 
   // ─── Queries ────────────────────────────────────────────────────────
@@ -269,32 +277,63 @@ export const EmergencyDeskPage: React.FC = () => {
     {
       key: "actions",
       header: "Actions",
-      className: "w-[240px] text-right",
+      className: "w-[280px] text-right",
       cell: (row) => (
         <div className="flex items-center justify-end gap-1 flex-wrap">
           {/* Emergency OT Surgery Requisition */}
           <Button
             size="sm"
-            variant="outline"
-            className="h-7 px-1.5 text-[10px] gap-1 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            variant="default"
+            className="h-7 px-2 text-[11px] font-bold gap-1 bg-purple-700 hover:bg-purple-800 text-white shadow-xs"
             onClick={() => setSelectedTriageForOt(row)}
-            title="Book Emergency Surgery in OT"
+            title="Rush Patient to Operation Theatre & Book STAT Emergency Surgery"
           >
-            <Scissors className="h-3 w-3" /> OT
+            <Scissors className="h-3.5 w-3.5" /> ⚡ OT
+          </Button>
+
+          {/* Bedside Vitals Monitoring & Repeat Logging */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-1.5 text-[10px] gap-1 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/40"
+            onClick={() => setSelectedTriageForVitals(row)}
+            title="Bedside Vitals Observation & Repeat Logging"
+          >
+            <HeartPulse className="h-3 w-3 text-teal-600" /> Vitals
+          </Button>
+
+          {/* CMO Provisional Diagnosis & Clinical Orders */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-1.5 text-[10px] gap-1 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            onClick={() => setSelectedTriageForNotes(row)}
+            title="Provisional Diagnosis & Emergency Clinical Orders"
+          >
+            <FileText className="h-3 w-3 text-blue-600" /> Notes
+          </Button>
+
+          {/* Emergency Advance Deposit Collection & Receipt */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-1.5 text-[10px] gap-1 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+            onClick={() => setSelectedTriageForDeposit(row)}
+            title="Collect Emergency Advance Deposit & Print Receipt"
+          >
+            ₹ Deposit
           </Button>
 
           {/* Bedside STAT Lab Requisition */}
-          {row.ipd_admission_id && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-1.5 text-[10px] gap-1 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-900/60 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-              onClick={() => setSelectedTriageForLab(row)}
-              title="Order STAT Bedside Lab Investigations"
-            >
-              <FlaskConical className="h-3 w-3" /> Lab
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-1.5 text-[10px] gap-1 text-cyan-700 dark:text-cyan-300 border-cyan-300 dark:border-cyan-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/40"
+            onClick={() => setSelectedTriageForLab(row)}
+            title="Order STAT Bedside Lab Investigations"
+          >
+            <FlaskConical className="h-3 w-3" /> Lab
+          </Button>
 
           {/* Crash Cart / STAT Pharmacy Requisition */}
           {row.ipd_admission_id && (
@@ -309,6 +348,17 @@ export const EmergencyDeskPage: React.FC = () => {
             </Button>
           )}
 
+          {/* Printable Emergency Discharge & Transfer Slip */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-1.5 text-[10px] gap-1 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={() => setSelectedTriageForDischargeSlip(row)}
+            title="Print Official Emergency Discharge & Referral Summary"
+          >
+            Slip
+          </Button>
+
           {/* MLC Slip Button if Medico-Legal */}
           {row.is_mlc && (
             <Button
@@ -318,7 +368,7 @@ export const EmergencyDeskPage: React.FC = () => {
               onClick={() => handleOpenMlcSlip(row)}
               title="Print Police Intimation Memo"
             >
-              <FileText className="h-3 w-3" /> Memo
+              ⚖️ MLC
             </Button>
           )}
 
@@ -342,7 +392,7 @@ export const EmergencyDeskPage: React.FC = () => {
           <Button
             size="sm"
             variant="default"
-            className="h-7 px-2 text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90"
+            className="h-7 px-2 text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 font-semibold"
             onClick={() => {
               setSelectedTriage(row)
               setStatusModalOpen(true)
@@ -402,6 +452,34 @@ export const EmergencyDeskPage: React.FC = () => {
           </div>
         }
       />
+
+      {/* Code Red / Critical Resuscitation Pulsating Alert Banner */}
+      {counters && counters.red_priority > 0 && (
+        <div className="flex items-center justify-between p-3.5 rounded-xl border border-rose-500/40 bg-gradient-to-r from-rose-500/15 via-rose-500/10 to-transparent text-rose-800 dark:text-rose-200 animate-in fade-in-50">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-rose-600" />
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-extrabold text-xs uppercase tracking-wider bg-rose-600 text-white px-2 py-0.5 rounded">
+                CODE RED ACTIVE
+              </span>
+              <span className="text-xs font-semibold">
+                {counters.red_priority} patient(s) requiring STAT resuscitation & casualty trauma care.
+              </span>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs font-bold border-rose-400 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+            onClick={() => setPriorityFilter("red")}
+          >
+            Show Red Priority
+          </Button>
+        </div>
+      )}
 
       {/* ────────────────────────────────────────────────────────────────
           EMERGENCY PRIORITY COUNTERS (UNIFIED STATCARDSROW)
@@ -603,6 +681,7 @@ export const EmergencyDeskPage: React.FC = () => {
         open={detailModalOpen}
         onOpenChange={setDetailModalOpen}
         selectedTriage={selectedTriage}
+        onRushToOt={(triage) => setSelectedTriageForOt(triage)}
       />
 
       {/* ─── Emergency Surgery Booking in OT ─── */}
@@ -615,7 +694,10 @@ export const EmergencyDeskPage: React.FC = () => {
           prefillUhid={selectedTriageForOt.uhid || selectedTriageForOt.patient?.uhid}
           prefillAdmissionId={selectedTriageForOt.ipd_admission_id || undefined}
           prefillDoctorId={selectedTriageForOt.doctor_id ? Number(selectedTriageForOt.doctor_id) : undefined}
+          prefillPriority="emergency"
+          prefillProcedureName={selectedTriageForOt.chief_complaint || "Emergency Surgical Procedure"}
           onSuccess={() => {
+            toast.success("Emergency surgery scheduled in Operation Theatre!")
             refetchTriages()
           }}
         />
@@ -652,6 +734,44 @@ export const EmergencyDeskPage: React.FC = () => {
           prefillBedNumber={selectedTriageForIndent.bed?.bed_number || "ER-Bay"}
           prefillPatientName={selectedTriageForIndent.patient_name || selectedTriageForIndent.patient?.name}
           prefillUhid={selectedTriageForIndent.uhid || selectedTriageForIndent.patient?.uhid}
+        />
+      )}
+
+      {/* ─── Continuous Bedside Vitals Monitoring Modal ─── */}
+      {selectedTriageForVitals && (
+        <EmergencyVitalsModal
+          open={!!selectedTriageForVitals}
+          onOpenChange={(open) => !open && setSelectedTriageForVitals(null)}
+          selectedTriage={selectedTriageForVitals}
+        />
+      )}
+
+      {/* ─── CMO Provisional Diagnosis & Emergency Orders Modal ─── */}
+      {selectedTriageForNotes && (
+        <EmergencyClinicalNotesModal
+          open={!!selectedTriageForNotes}
+          onOpenChange={(open) => !open && setSelectedTriageForNotes(null)}
+          selectedTriage={selectedTriageForNotes}
+          onSuccess={() => refetchTriages()}
+        />
+      )}
+
+      {/* ─── Official Emergency Discharge & Referral Transfer Slip Modal ─── */}
+      {selectedTriageForDischargeSlip && (
+        <EmergencyDischargeSlipModal
+          open={!!selectedTriageForDischargeSlip}
+          onOpenChange={(open) => !open && setSelectedTriageForDischargeSlip(null)}
+          selectedTriage={selectedTriageForDischargeSlip}
+        />
+      )}
+
+      {/* ─── Emergency Advance Deposit & Receipt Modal ─── */}
+      {selectedTriageForDeposit && (
+        <EmergencyDepositModal
+          open={!!selectedTriageForDeposit}
+          onOpenChange={(open) => !open && setSelectedTriageForDeposit(null)}
+          selectedTriage={selectedTriageForDeposit}
+          onSuccess={() => refetchTriages()}
         />
       )}
     </div>

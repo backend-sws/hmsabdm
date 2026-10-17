@@ -14,10 +14,16 @@ class CollectLabPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount'          => 'required|numeric|min:0.01',
-            'payment_method'  => 'required|string|in:cash,card,upi,bank_transfer,insurance,cheque',
-            'transaction_ref' => 'nullable|string|max:255',
-            'notes'           => 'nullable|string|max:500',
+            'amount'                => 'required|numeric|min:0.01',
+            'payment_method'        => 'required|string|in:cash,card,upi,split,bank_transfer,insurance,cheque,neft',
+            'transaction_ref'       => 'nullable|string|max:255',
+            'transaction_reference' => 'nullable|string|max:255',
+            'utr_number'            => 'nullable|string|max:255',
+            'payment_breakdown'     => 'nullable|array',
+            'payment_breakdown.*.method' => 'nullable|string',
+            'payment_breakdown.*.amount' => 'nullable|numeric|min:0',
+            'payment_breakdown.*.ref'    => 'nullable|string|max:255',
+            'notes'                 => 'nullable|string|max:500',
         ];
     }
 

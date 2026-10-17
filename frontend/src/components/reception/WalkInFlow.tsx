@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -98,6 +98,35 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
   })
   const [customFields, setCustomFields] = useState<Record<string, any>>({})
 
+  const currentFee = watch("fee_charged") || 0
+  const currentPaymentMethod = watch("payment_method")
+
+  const [upiUtr, setUpiUtr] = useState<string>("")
+  const [splitCashAmount, setSplitCashAmount] = useState<number>(0)
+  const [splitUpiAmount, setSplitUpiAmount] = useState<number>(0)
+  const [splitUpiUtr, setSplitUpiUtr] = useState<string>("")
+
+  // Auto-sync split amounts when fee changes or split is selected
+  useEffect(() => {
+    if (currentPaymentMethod === "split") {
+      const half = Math.floor(currentFee / 2)
+      setSplitCashAmount(half)
+      setSplitUpiAmount(currentFee - half)
+    }
+  }, [currentPaymentMethod, currentFee])
+
+  const handleCashChange = (val: number) => {
+    const cash = Math.max(0, val)
+    setSplitCashAmount(cash)
+    setSplitUpiAmount(Math.max(0, currentFee - cash))
+  }
+
+  const handleUpiChange = (val: number) => {
+    const upi = Math.max(0, val)
+    setSplitUpiAmount(upi)
+    setSplitCashAmount(Math.max(0, currentFee - upi))
+  }
+
   const selectedDeptId = watch("department_id")
   const selectedDoctorId = watch("doctor_id")
   const selectedSlotTime = watch("slot_time")
@@ -177,6 +206,20 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
       }
     }
 
+    const finalPaymentMethod = data.payment_method
+    let paymentBreakdown: any[] | undefined = undefined
+    let paymentRef: string | undefined = undefined
+
+    if (finalPaymentMethod === "split") {
+      paymentBreakdown = [
+        { method: "cash", amount: Number(splitCashAmount) || 0 },
+        { method: "upi", amount: Number(splitUpiAmount) || 0, ref: splitUpiUtr.trim() || undefined },
+      ]
+      paymentRef = splitUpiUtr.trim() || undefined
+    } else if (finalPaymentMethod === "upi") {
+      paymentRef = upiUtr.trim() || undefined
+    }
+
     const payload: QuickVisitPayload = {
       name: data.name,
       mobile: data.mobile || undefined,
@@ -197,8 +240,10 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
       pincode: data.pincode || undefined,
       fee_charged: data.fee_charged,
       amount_paid: data.fee_charged,
-      payment_method: data.payment_method,
+      payment_method: finalPaymentMethod,
       payment_status: data.payment_status,
+      payment_ref: paymentRef,
+      payment_breakdown: paymentBreakdown,
       custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
     }
     onSubmit(payload)
@@ -535,11 +580,82 @@ export const WalkInFlow: React.FC<WalkInFlowProps> = ({ departments, isSubmittin
               >
                 <option value="cash">Cash</option>
                 <option value="upi">UPI / QR</option>
+                <option value="split">Split (Cash + UPI)</option>
                 <option value="card">Card</option>
                 <option value="insurance">Insurance / Ayushman</option>
                 <option value="waived">Waived / Free</option>
               </select>
             </div>
+
+            {/* Optional UTR for single UPI */}
+            {currentPaymentMethod === "upi" && (
+              <div className="sm:col-span-2 lg:col-span-4 animate-in fade-in duration-200">
+                <Label className="text-xs font-semibold flex items-center justify-between">
+                  <span>UPI / Bank Reference (UTR) Number</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">Optional</span>
+                </Label>
+                <Input
+                  placeholder="e.g. 423456789012 or UPI txn ID"
+                  value={upiUtr}
+                  onChange={(e) => setUpiUtr(e.target.value)}
+                  className="mt-1 text-xs font-mono"
+                />
+              </div>
+            )}
+
+            {/* Split Payment Breakdown Box */}
+            {currentPaymentMethod === "split" && (
+              <div className="sm:col-span-2 lg:col-span-4 rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                    ⚡ Split Payment Breakdown (Fee: ₹{currentFee})
+                  </span>
+                  <span
+                    className={`text-[11px] font-mono font-semibold ${
+                      Number(splitCashAmount) + Number(splitUpiAmount) === Number(currentFee)
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-rose-600 dark:text-rose-400"
+                    }`}
+                  >
+                    Sum: ₹{Number(splitCashAmount) + Number(splitUpiAmount)} / ₹{currentFee}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-[11px] font-medium text-muted-foreground">Cash Amount (₹)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={splitCashAmount}
+                      onChange={(e) => handleCashChange(Number(e.target.value))}
+                      className="mt-1 text-xs font-mono font-bold bg-background"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-[11px] font-medium text-muted-foreground">UPI Amount (₹)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={splitUpiAmount}
+                      onChange={(e) => handleUpiChange(Number(e.target.value))}
+                      className="mt-1 text-xs font-mono font-bold bg-background"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-[11px] font-medium text-muted-foreground">UPI UTR # (Optional)</Label>
+                    <Input
+                      placeholder="e.g. 4291823901"
+                      value={splitUpiUtr}
+                      onChange={(e) => setSplitUpiUtr(e.target.value)}
+                      className="mt-1 text-xs font-mono bg-background"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

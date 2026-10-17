@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { createPortal } from "react-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import {
@@ -236,8 +237,8 @@ export const InsuranceTariffModal: React.FC<Props> = ({ payer, onClose }) => {
     return matchesCat && matchesSearch
   })
 
-  return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
       <div className="bg-background rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-muted/20">
@@ -602,6 +603,7 @@ export const InsuranceTariffModal: React.FC<Props> = ({ payer, onClose }) => {
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

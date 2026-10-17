@@ -158,6 +158,8 @@ export const receptionService = {
     amount_paid?: number
     payment_status?: string
     payment_method?: string
+    payment_ref?: string
+    payment_breakdown?: any[]
     notes?: string
   }): Promise<CreateVisitResponse> => {
     return apiClient<CreateVisitResponse>("/reception/quick-revisit", {

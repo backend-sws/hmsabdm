@@ -1,4 +1,5 @@
 import React from "react"
+import { createPortal } from "react-dom"
 import { Printer, X, ShieldCheck, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -29,8 +30,8 @@ export const PrintPreauthSanctionModal: React.FC<Props> = ({ preauth, onClose })
     }).format(Number(amount))
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
       <div className="bg-background rounded-2xl shadow-2xl w-full max-w-3xl max-h-[94vh] flex flex-col border border-border animate-in fade-in zoom-in-95 duration-200">
         
         {/* Modal Controls Header (Hidden in Print) */}
@@ -214,6 +215,7 @@ export const PrintPreauthSanctionModal: React.FC<Props> = ({ preauth, onClose })
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

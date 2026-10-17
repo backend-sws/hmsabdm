@@ -1,4 +1,5 @@
 import React from "react"
+import { Scissors } from "lucide-react"
 
 import { FormContainer } from "@/components/formContainer"
 import { Button } from "@/components/ui/button"
@@ -9,12 +10,14 @@ export interface EmergencyDetailModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   selectedTriage: EmergencyTriage | null
+  onRushToOt?: (triage: EmergencyTriage) => void
 }
 
 export const EmergencyDetailModal: React.FC<EmergencyDetailModalProps> = ({
   open,
   onOpenChange,
   selectedTriage,
+  onRushToOt,
 }) => {
   return (
     <FormContainer
@@ -24,9 +27,23 @@ export const EmergencyDetailModal: React.FC<EmergencyDetailModalProps> = ({
       description={`Triage #${selectedTriage?.triage_number}`}
       size="md"
       footer={
-        <Button onClick={() => onOpenChange(false)} className="w-full">
-          Close Case File
-        </Button>
+        <div className="flex items-center justify-between gap-2 w-full">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          {selectedTriage && onRushToOt && (
+            <Button
+              size="sm"
+              className="bg-purple-700 hover:bg-purple-800 text-white font-bold gap-1 text-xs"
+              onClick={() => {
+                onOpenChange(false)
+                onRushToOt(selectedTriage)
+              }}
+            >
+              <Scissors className="h-3.5 w-3.5" /> ⚡ Rush to OT
+            </Button>
+          )}
+        </div>
       }
     >
       {selectedTriage && (

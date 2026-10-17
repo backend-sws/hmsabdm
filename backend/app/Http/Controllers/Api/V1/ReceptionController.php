@@ -557,28 +557,14 @@ class ReceptionController extends Controller
             $validated['doctor_id'] = $doctorId;
             $validated['department_id'] = $departmentId;
 
-            // If existing patient and fee_charged not explicitly provided, check 15-day free follow-up
-            if (!isset($validated['fee_charged'])) {
-                $validityDays = (int) \App\Models\HospitalSetting::get($hospitalId, 'revisit_validity_days', 15);
-                $cutoffDate = now()->subDays($validityDays)->toDateString();
-                $recentVisit = OpdVisit::where('hospital_id', $hospitalId)
-                    ->where('patient_id', $patient->id)
-                    ->where(function ($q) use ($doctorId, $departmentId) {
-                        $q->where('doctor_id', $doctorId)->orWhere('department_id', $departmentId);
-                    })
-                    ->where('visit_date', '>=', $cutoffDate)
-                    ->where('visit_date', '<=', now()->toDateString())
-                    ->orderByDesc('visit_date')
-                    ->first();
-                if ($recentVisit) {
-                    $validated['fee_charged'] = 0.00;
-                    $validated['amount_paid'] = 0.00;
-                    $validated['payment_status'] = 'waived';
-                    $validated['notes'] = "Free Follow-up Re-visit within {$validityDays} days (Previous visit: {$recentVisit->opd_number})";
-                }
-            }
-
-            $visit = $this->receptionService->createOpdVisit($hospitalId, $validated);
+            $result = $this->receptionService->quickRevisit($hospitalId, $validated);
+            $visit = $result['visit'] ?? $result;
+            $revisitInfo = $result['revisit_info'] ?? [
+                'is_revisit'            => true,
+                'is_free_revisit'       => false,
+                'days_since_last_visit' => null,
+                'previous_visit_id'     => null,
+            ];
 
             $formattedResponse = [
                 'id'                    => $visit['id'],
@@ -607,6 +593,8 @@ class ReceptionController extends Controller
                 'chief_complaint'       => $visit['chief_complaint'] ?? ($validated['chief_complaint'] ?? null),
                 'status'                => $visit['status'] ?? 'waiting',
                 'visit'                 => $visit,
+                'requires_selection'    => false,
+                'revisit_info'          => $revisitInfo,
             ];
 
             return $this->successResponse($formattedResponse, 'Patient Registered & OPD Visit Created Successfully');
@@ -694,6 +682,10 @@ class ReceptionController extends Controller
             'payment_status'      => 'nullable|string|in:pending,paid,partial,waived',
             'payment_method'      => 'nullable|string|in:cash,card,upi,insurance,split,cheque,other',
             'payment_ref'         => 'nullable|string|max:255',
+            'payment_breakdown'   => 'nullable|array',
+            'payment_breakdown.*.method' => 'required_with:payment_breakdown|string',
+            'payment_breakdown.*.amount' => 'required_with:payment_breakdown|numeric|min:0.01',
+            'payment_breakdown.*.ref'    => 'nullable|string',
             'slot_time'           => 'nullable|string|max:100',
             'notes'               => 'nullable|string',
         ]);

@@ -119,8 +119,8 @@ export const billingService = {
   },
 
   // ─── 5. Invoices ────────────────────────────────────────────────────
-  async getInvoice(id: number): Promise<Invoice> {
-    return apiClient<Invoice>(`/invoices/${id}`)
+  async getInvoice(id: number): Promise<{ invoice: Invoice; category_breakdown: Array<{ category: string; count: number; total_amount: number }> }> {
+    return apiClient<{ invoice: Invoice; category_breakdown: Array<{ category: string; count: number; total_amount: number }> }>(`/invoices/${id}`)
   },
 
   async getPatientInvoices(patientId: number): Promise<Invoice[]> {
@@ -154,4 +154,55 @@ export const billingService = {
     const res = await apiClient<any>("/ipd/opd-referrals")
     return Array.isArray(res) ? res : res?.data || []
   },
+
+  // ─── 7. Global Invoices Register & Audit ──────────────────────────────
+  async getInvoices(params?: import("@/types/billing").InvoiceFilterParams): Promise<import("@/types/billing").InvoicesResponse> {
+    const query = new URLSearchParams()
+    if (params) {
+      if (params.search) query.set("search", params.search)
+      if (params.payment_status && params.payment_status !== "all") query.set("payment_status", params.payment_status)
+      if (params.encounter_type && params.encounter_type !== "all") query.set("encounter_type", params.encounter_type)
+      if (params.date_from) query.set("date_from", params.date_from)
+      if (params.date_to) query.set("date_to", params.date_to)
+      if (params.page) query.set("page", String(params.page))
+      if (params.per_page) query.set("per_page", String(params.per_page))
+    }
+    const queryString = query.toString() ? `?${query.toString()}` : ""
+    return apiClient<import("@/types/billing").InvoicesResponse>(`/invoices${queryString}`)
+  },
+
+  // ─── 8. Cashier Day-End Closing & Shift Handover ──────────────────────
+  async getDayEndSummary(params?: { date?: string; user_id?: number }): Promise<import("@/types/billing").DayEndSummaryData> {
+    const query = new URLSearchParams()
+    if (params?.date) query.set("date", params.date)
+    if (params?.user_id) query.set("user_id", String(params.user_id))
+    const queryString = query.toString() ? `?${query.toString()}` : ""
+    return apiClient<import("@/types/billing").DayEndSummaryData>(`/billing/day-end-summary${queryString}`)
+  },
+
+  // ─── 9. Central Advance Deposit Collection ───────────────────────────
+  async collectDeposit(payload: import("@/types/billing").AdvanceDepositPayload): Promise<import("@/types/billing").AdvanceDepositReceiptData> {
+    return apiClient<import("@/types/billing").AdvanceDepositReceiptData>("/billing/deposits", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  // ─── 10. Pending Inpatient Discharge Settlement Queue ────────────────
+  async getPendingDischarges(params?: { search?: string; ward_id?: number }): Promise<import("@/types/billing").PendingDischargeItem[]> {
+    const query = new URLSearchParams()
+    if (params?.search) query.set("search", params.search)
+    if (params?.ward_id) query.set("ward_id", String(params.ward_id))
+    const queryString = query.toString() ? `?${query.toString()}` : ""
+    return apiClient<import("@/types/billing").PendingDischargeItem[]>(`/billing/pending-discharges${queryString}`)
+  },
+
+  // ─── 11. Patient Refund / Credit Note ────────────────────────────────
+  async issueRefund(payload: import("@/types/billing").RefundPayload): Promise<import("@/types/billing").CreditNoteReceiptData> {
+    return apiClient<import("@/types/billing").CreditNoteReceiptData>("/billing/refunds", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
 }
+

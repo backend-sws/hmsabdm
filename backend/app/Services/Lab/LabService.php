@@ -163,13 +163,21 @@ class LabService implements LabServiceInterface
                 ]);
 
                 foreach ($group as $inv) {
+                    $rawCode = $inv->test_code ? trim($inv->test_code) : null;
+                    $cleanCode = $rawCode ? preg_replace('/^(LAB|RAD|PATH)-/i', '', $rawCode) : null;
+
                     // Try to match LabTestTemplate
-                    $template = LabTestTemplate::where(function ($tq) use ($inv) {
-                        if ($inv->test_code) {
-                            $tq->where('test_code', $inv->test_code);
+                    $template = LabTestTemplate::where(function ($tq) use ($inv, $rawCode, $cleanCode) {
+                        if ($rawCode) {
+                            $tq->where('test_code', $rawCode);
+                            if ($cleanCode && $cleanCode !== $rawCode) {
+                                $tq->orWhere('test_code', $cleanCode);
+                            }
                         }
                         $tq->orWhere('test_name', 'ilike', trim($inv->test_name));
                     })->first();
+
+                    $testCode = $template?->test_code ?? ($cleanCode ?: ($rawCode ?? 'TEST'));
 
                     LabOrderItem::create([
                         'hospital_id'                  => $hospitalId,
@@ -177,7 +185,7 @@ class LabService implements LabServiceInterface
                         'prescription_investigation_id' => $inv->id,
                         'test_template_id'             => $template?->id,
                         'test_name'                    => $inv->test_name,
-                        'test_code'                    => $inv->test_code ?? $template?->test_code,
+                        'test_code'                    => $testCode,
                         'category'                     => $inv->category ?? $template?->category,
                         'rate'                         => $inv->standard_rate ?? $template?->standard_price ?? 0.00,
                         'status'                       => 'pending_sample',
@@ -346,8 +354,17 @@ class LabService implements LabServiceInterface
                 throw new \InvalidArgumentException("Selected test items do not belong to this order.");
             }
 
-            // Update item statuses to authorized
+            // Update item statuses to authorized (Only if results are entered!)
             foreach ($selectedItems as $item) {
+                $hasResults = LabTestResult::where('order_item_id', $item->id)
+                    ->whereNotNull('observed_value')
+                    ->where('observed_value', '!=', '')
+                    ->exists();
+
+                if (!$hasResults) {
+                    throw new \InvalidArgumentException("Cannot approve '{$item->test_name}' because results have not been entered yet. Please record observed results before approving.");
+                }
+
                 $item->update(['status' => 'authorized']);
 
                 // If linked to prescription investigation, mark as completed
@@ -438,7 +455,11 @@ class LabService implements LabServiceInterface
                 ->firstOrFail();
 
             $patientGender = $order->patient?->gender === 'M' ? 'Male' : ($order->patient?->gender === 'F' ? 'Female' : 'Both');
-            $patientAgeYears = $order->patient?->dob ? (int) \Carbon\Carbon::parse($order->patient->dob)->age : 30;
+            $dobCarbon = $order->patient?->dob ? \Carbon\Carbon::parse($order->patient->dob) : null;
+            $now = \Carbon\Carbon::now();
+            $patientAgeYears = $dobCarbon ? (int) $dobCarbon->diffInYears($now) : ($order->patient?->age ?? 30);
+            $patientAgeMonths = $dobCarbon ? (int) $dobCarbon->diffInMonths($now) : ($patientAgeYears * 12);
+            $patientAgeDays = $dobCarbon ? max(0, (int) $dobCarbon->diffInDays($now)) : ($patientAgeYears * 365);
 
             $incomingResults = $data['results'] ?? [];
 
@@ -508,9 +529,18 @@ class LabService implements LabServiceInterface
                     $flag = 'normal';
 
                     if ($param && $param->referenceRanges->isNotEmpty()) {
-                        $range = $param->referenceRanges->first(function ($rg) use ($patientGender, $patientAgeYears) {
-                            return ($rg->gender === 'Both' || $rg->gender === $patientGender) &&
-                                   ($patientAgeYears >= $rg->age_min && $patientAgeYears <= $rg->age_max);
+                        $range = $param->referenceRanges->first(function ($rg) use ($patientGender, $patientAgeYears, $patientAgeMonths, $patientAgeDays) {
+                            if ($rg->gender !== 'Both' && $rg->gender !== $patientGender) {
+                                return false;
+                            }
+                            $unit = strtolower($rg->age_unit ?? 'years');
+                            if ($unit === 'days' || $unit === 'day') {
+                                return $patientAgeDays >= $rg->age_min && $patientAgeDays <= $rg->age_max;
+                            } elseif ($unit === 'months' || $unit === 'month') {
+                                return $patientAgeMonths >= $rg->age_min && $patientAgeMonths <= $rg->age_max;
+                            } else {
+                                return $patientAgeYears >= $rg->age_min && $patientAgeYears <= $rg->age_max;
+                            }
                         }) ?? $param->referenceRanges->first();
 
                         if ($range) {
@@ -579,7 +609,9 @@ class LabService implements LabServiceInterface
                     ?? ($data['technician_remarks'] ?? $item->technician_remarks);
 
                 // Determine item status
+                $hasEnteredResults = count($resultsList) > 0;
                 $isItemApproved = false;
+
                 if (!empty($data['action']) && $data['action'] === 'approve') {
                     if (isset($data['approved_item_ids']) && is_array($data['approved_item_ids'])) {
                         $isItemApproved = in_array($item->id, $data['approved_item_ids']);
@@ -590,7 +622,17 @@ class LabService implements LabServiceInterface
                     $isItemApproved = true;
                 }
 
-                $newItemStatus = $isItemApproved ? 'authorized' : 'completed';
+                // Prevent approval if no results were entered for this item!
+                if ($isItemApproved && !$hasEnteredResults && $priorItemResults->isEmpty()) {
+                    if (!empty($data['approved_item_ids']) && in_array($item->id, $data['approved_item_ids'])) {
+                        throw new \InvalidArgumentException("Cannot approve '{$item->test_name}' because no parameter results have been entered yet. Please enter observed results first.");
+                    }
+                    $isItemApproved = false;
+                }
+
+                $newItemStatus = $isItemApproved 
+                    ? 'authorized' 
+                    : ($hasEnteredResults || $priorItemResults->isNotEmpty() ? 'result_entered' : ($item->status ?? 'sample_collected'));
 
                 $item->update([
                     'status'              => $newItemStatus,
@@ -1041,18 +1083,41 @@ class LabService implements LabServiceInterface
             // 1. Resolve Patient (Existing OR Quick Walk-in Registration)
             if (!empty($data['patient_id'])) {
                 $patient = Patient::where('hospital_id', $hospitalId)->findOrFail($data['patient_id']);
-            } elseif (!empty($data['walkin_patient'])) {
-                $wp = $data['walkin_patient'];
+            } elseif (!empty($data['walkin_patient']) || !empty($data['patient_name'])) {
+                $wp = $data['walkin_patient'] ?? [];
+                if (empty($wp)) {
+                    $wp = [
+                        'name'     => $data['patient_name'] ?? 'Walk-In Patient',
+                        'gender'   => $data['patient_gender'] ?? 'M',
+                        'age'      => $data['patient_age'] ?? 30,
+                        'age_unit' => $data['patient_age_unit'] ?? 'Years',
+                        'dob'      => $data['patient_dob'] ?? null,
+                        'mobile'   => $data['patient_phone'] ?? null,
+                        'address'  => $data['patient_address'] ?? null,
+                    ];
+                }
+
                 $dob = null;
+                $ageUnit = strtolower($wp['age_unit'] ?? 'years');
+                $ageVal = isset($wp['age']) && $wp['age'] !== '' ? (int)$wp['age'] : 30;
+
                 if (!empty($wp['dob'])) {
                     $dob = $wp['dob'];
-                } elseif (!empty($wp['age'])) {
-                    $dob = now()->subYears((int)$wp['age'])->format('Y-01-01');
+                } elseif ($ageUnit === 'days' || $ageUnit === 'day') {
+                    $dob = now()->subDays(max(0, $ageVal))->format('Y-m-d');
+                } elseif ($ageUnit === 'months' || $ageUnit === 'month') {
+                    $dob = now()->subMonths(max(0, $ageVal))->format('Y-m-d');
+                } else {
+                    $dob = now()->subYears(max(0, $ageVal))->format('Y-m-d');
                 }
+
+                $genderRaw = strtoupper(trim($wp['gender'] ?? 'M'));
+                $gender = in_array($genderRaw, ['M', 'MALE']) ? 'M' : (in_array($genderRaw, ['F', 'FEMALE']) ? 'F' : 'O');
+
                 $patient = Patient::create([
                     'hospital_id' => $hospitalId,
                     'name'        => trim($wp['name']),
-                    'gender'      => $wp['gender'] ?? 'M',
+                    'gender'      => $gender,
                     'dob'         => $dob,
                     'mobile'      => $wp['mobile'] ?? null,
                     'address'     => $wp['address'] ?? null,
@@ -1088,6 +1153,27 @@ class LabService implements LabServiceInterface
             $discountAmount = min($grossAmount, max(0, (float)($data['discount_amount'] ?? 0.00)));
             $netAmount = max(0, $grossAmount - $discountAmount);
             $paymentMethod = $data['payment_method'] ?? 'cash';
+            $paymentBreakdown = $data['payment_breakdown'] ?? null;
+            $utrNumber = $data['utr_number'] ?? ($data['transaction_reference'] ?? ($data['transaction_ref'] ?? null));
+
+            if ($paymentMethod === 'split' && !empty($paymentBreakdown) && is_array($paymentBreakdown)) {
+                // Keep provided breakdown
+            } elseif ($paymentMethod === 'upi' && !empty($utrNumber)) {
+                $paymentBreakdown = [
+                    ['method' => 'upi', 'amount' => $netAmount, 'ref' => $utrNumber],
+                ];
+            }
+
+            $noteSuffix = "";
+            if ($paymentMethod === 'split' && !empty($paymentBreakdown) && is_array($paymentBreakdown)) {
+                $parts = [];
+                foreach ($paymentBreakdown as $b) {
+                    $parts[] = strtoupper($b['method'] ?? 'OTHER') . ": ₹" . ($b['amount'] ?? 0) . (!empty($b['ref']) ? " (Ref: {$b['ref']})" : "");
+                }
+                $noteSuffix = " [Split: " . implode(', ', $parts) . "]";
+            } elseif ($utrNumber) {
+                $noteSuffix = " (UTR: {$utrNumber})";
+            }
 
             // 3. Create Tax Invoice
             $invoice = Invoice::create([
@@ -1101,10 +1187,11 @@ class LabService implements LabServiceInterface
                 'amount_paid'        => $netAmount,
                 'balance_due'        => 0.00,
                 'payment_method'     => $paymentMethod,
+                'payment_breakdown'  => $paymentBreakdown,
                 'payment_status'     => 'paid',
                 'status'             => 'final',
                 'created_by_user_id' => $userId,
-                'notes'              => "Direct Lab Booking: " . $templates->pluck('test_name')->join(', '),
+                'notes'              => "Direct Lab Booking: " . $templates->pluck('test_name')->join(', ') . $noteSuffix,
             ]);
 
             // 4. Create Ledger Items
@@ -1481,14 +1568,53 @@ class LabService implements LabServiceInterface
                 ->findOrFail($orderId);
 
             // Update Patient details if provided
-            if (!empty($data['walkin_patient']) && $order->patient) {
-                $wp = $data['walkin_patient'];
-                $order->patient->update(array_filter([
-                    'name'    => $wp['name'] ?? null,
-                    'gender'  => $wp['gender'] ?? null,
+            if ((!empty($data['walkin_patient']) || !empty($data['patient_name'])) && $order->patient) {
+                $wp = $data['walkin_patient'] ?? [];
+                if (empty($wp)) {
+                    $wp = [
+                        'name'     => $data['patient_name'] ?? null,
+                        'gender'   => $data['patient_gender'] ?? null,
+                        'age'      => $data['patient_age'] ?? null,
+                        'age_unit' => $data['patient_age_unit'] ?? null,
+                        'dob'      => $data['patient_dob'] ?? null,
+                        'mobile'   => $data['patient_phone'] ?? null,
+                        'address'  => $data['patient_address'] ?? null,
+                    ];
+                }
+
+                $dob = null;
+                $ageUnit = strtolower($wp['age_unit'] ?? 'years');
+                $ageVal = isset($wp['age']) && $wp['age'] !== '' ? (int)$wp['age'] : null;
+
+                if (!empty($wp['dob'])) {
+                    $dob = $wp['dob'];
+                } elseif ($ageVal !== null) {
+                    if ($ageUnit === 'days' || $ageUnit === 'day') {
+                        $dob = now()->subDays(max(0, $ageVal))->format('Y-m-d');
+                    } elseif ($ageUnit === 'months' || $ageUnit === 'month') {
+                        $dob = now()->subMonths(max(0, $ageVal))->format('Y-m-d');
+                    } else {
+                        $dob = now()->subYears(max(0, $ageVal))->format('Y-m-d');
+                    }
+                }
+
+                $gender = null;
+                if (!empty($wp['gender'])) {
+                    $genderRaw = strtoupper(trim($wp['gender']));
+                    $gender = in_array($genderRaw, ['M', 'MALE']) ? 'M' : (in_array($genderRaw, ['F', 'FEMALE']) ? 'F' : 'O');
+                }
+
+                $updateData = array_filter([
+                    'name'    => !empty($wp['name']) ? trim($wp['name']) : null,
+                    'gender'  => $gender,
+                    'dob'     => $dob,
                     'mobile'  => $wp['mobile'] ?? null,
                     'address' => $wp['address'] ?? null,
-                ]));
+                ], fn($val) => $val !== null);
+
+                if (!empty($updateData)) {
+                    $order->patient->update($updateData);
+                }
             }
 
             if (!empty($data['doctor_id'])) {
@@ -1592,16 +1718,40 @@ class LabService implements LabServiceInterface
                         $paymentStatus = 'pending';
                     }
 
+                    $paymentMethod = $data['payment_method'] ?? $order->invoice->payment_method ?? 'cash';
+                    $paymentBreakdown = $data['payment_breakdown'] ?? $order->invoice->payment_breakdown;
+                    $utrNumber = $data['utr_number'] ?? ($data['transaction_reference'] ?? ($data['transaction_ref'] ?? null));
+
+                    if ($paymentMethod === 'split' && !empty($paymentBreakdown) && is_array($paymentBreakdown)) {
+                        // Keep provided split breakdown
+                    } elseif ($paymentMethod === 'upi' && !empty($utrNumber)) {
+                        $paymentBreakdown = [
+                            ['method' => 'upi', 'amount' => $amountPaid, 'ref' => $utrNumber],
+                        ];
+                    }
+
+                    $noteSuffix = "";
+                    if ($paymentMethod === 'split' && !empty($paymentBreakdown) && is_array($paymentBreakdown)) {
+                        $parts = [];
+                        foreach ($paymentBreakdown as $b) {
+                            $parts[] = strtoupper($b['method'] ?? 'OTHER') . ": ₹" . ($b['amount'] ?? 0) . (!empty($b['ref']) ? " (Ref: {$b['ref']})" : "");
+                        }
+                        $noteSuffix = " [Split: " . implode(', ', $parts) . "]";
+                    } elseif ($utrNumber) {
+                        $noteSuffix = " (UTR: {$utrNumber})";
+                    }
+
                     $order->invoice->update([
-                        'gross_amount'    => $grossAmount,
-                        'discount_amount' => $discountAmount,
-                        'discount_reason' => $discountAmount > 0 ? ($data['discount_reason'] ?? $order->invoice->discount_reason) : null,
-                        'net_amount'      => $netAmount,
-                        'amount_paid'     => $amountPaid,
-                        'balance_due'     => $balanceDue,
-                        'payment_status'  => $paymentStatus,
-                        'payment_method'  => $data['payment_method'] ?? $order->invoice->payment_method ?? 'cash',
-                        'notes'           => "Direct Lab Booking: " . $templates->pluck('test_name')->join(', '),
+                        'gross_amount'      => $grossAmount,
+                        'discount_amount'   => $discountAmount,
+                        'discount_reason'   => $discountAmount > 0 ? ($data['discount_reason'] ?? $order->invoice->discount_reason) : null,
+                        'net_amount'        => $netAmount,
+                        'amount_paid'       => $amountPaid,
+                        'balance_due'       => $balanceDue,
+                        'payment_status'    => $paymentStatus,
+                        'payment_method'    => $paymentMethod,
+                        'payment_breakdown' => $paymentBreakdown,
+                        'notes'             => "Direct Lab Booking: " . $templates->pluck('test_name')->join(', ') . $noteSuffix,
                     ]);
                 }
             }
@@ -1630,14 +1780,60 @@ class LabService implements LabServiceInterface
                 throw new \InvalidArgumentException("Payment amount must be greater than zero.");
             }
 
-            $newPaid = $order->invoice->amount_paid + $payingAmount;
-            $newDue = max(0, $order->invoice->net_amount - $newPaid);
+            $newPaid = round($order->invoice->amount_paid + $payingAmount, 2);
+            $newDue = max(0, round($order->invoice->net_amount - $newPaid, 2));
             $newPaymentStatus = $newDue <= 0 ? 'paid' : 'partial';
 
+            $newPaymentMethod = $data['payment_method'] ?? 'cash';
+            $inputBreakdown = $data['payment_breakdown'] ?? null;
+            $utrNumber = $data['utr_number'] ?? ($data['transaction_reference'] ?? ($data['transaction_ref'] ?? null));
+
+            // Merge or record breakdown
+            $existingBreakdown = $order->invoice->payment_breakdown ?? [];
+            if (!is_array($existingBreakdown)) {
+                $existingBreakdown = [];
+            }
+
+            $addedBreakdown = [];
+            if ($newPaymentMethod === 'split' && !empty($inputBreakdown) && is_array($inputBreakdown)) {
+                $addedBreakdown = $inputBreakdown;
+            } elseif ($newPaymentMethod === 'upi') {
+                $addedBreakdown = [
+                    ['method' => 'upi', 'amount' => $payingAmount, 'ref' => $utrNumber],
+                ];
+            } elseif ($newPaymentMethod === 'card') {
+                $addedBreakdown = [
+                    ['method' => 'card', 'amount' => $payingAmount, 'ref' => $utrNumber],
+                ];
+            } else {
+                $addedBreakdown = [
+                    ['method' => $newPaymentMethod, 'amount' => $payingAmount, 'ref' => $utrNumber],
+                ];
+            }
+
+            $finalBreakdown = array_merge($existingBreakdown, $addedBreakdown);
+            $uniqueMethods = array_unique(array_filter(array_column($finalBreakdown, 'method')));
+            $resolvedPaymentMethod = count($uniqueMethods) > 1 ? 'split' : ($newPaymentMethod === 'split' ? 'split' : ($uniqueMethods[0] ?? $newPaymentMethod));
+
+            $notesSuffix = "";
+            if (!empty($addedBreakdown)) {
+                $parts = [];
+                foreach ($addedBreakdown as $b) {
+                    $parts[] = strtoupper($b['method'] ?? 'OTHER') . ": ₹" . ($b['amount'] ?? 0) . (!empty($b['ref']) ? " (Ref: {$b['ref']})" : "");
+                }
+                $notesSuffix = " | Due Collected: " . implode(', ', $parts);
+            }
+
+            $currentNotes = $order->invoice->notes ?? "";
+            $updatedNotes = trim($currentNotes . $notesSuffix);
+
             $order->invoice->update([
-                'amount_paid'    => $newPaid,
-                'balance_due'    => $newDue,
-                'payment_status' => $newPaymentStatus,
+                'amount_paid'       => $newPaid,
+                'balance_due'       => $newDue,
+                'payment_status'    => $newPaymentStatus,
+                'payment_method'    => $resolvedPaymentMethod,
+                'payment_breakdown' => $finalBreakdown,
+                'notes'             => $updatedNotes,
             ]);
 
             return $this->getOrder($hospitalId, $order->id);

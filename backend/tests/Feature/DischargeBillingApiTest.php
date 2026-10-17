@@ -359,4 +359,219 @@ class DischargeBillingApiTest extends TestCase
             ->assertJsonPath('data.patient.name', 'Vikram Singhania')
             ->assertJsonPath('data.admission.bed_number', 'DELUXE-101');
     }
+
+    /**
+     * Test global invoices list with filters, search, and revenue KPI totals.
+     */
+    public function test_can_fetch_global_invoices_list_with_filters_and_kpis(): void
+    {
+        Sanctum::actingAs($this->cashierUser);
+
+        // Generate an invoice
+        $this->admission->update(['status' => 'admitted']);
+        BillingLedgerItem::create([
+            'hospital_id'        => $this->hospital->id,
+            'patient_id'         => $this->patient->id,
+            'encounter_type'     => 'ipd',
+            'encounter_id'       => $this->admission->id,
+            'category'           => 'consultation',
+            'item_name'          => 'Surgeon Visit Fee',
+            'unit_price'         => 3000.00,
+            'quantity'           => 1.0,
+            'total_amount'       => 3000.00,
+            'status'             => 'unbilled',
+            'charged_by_user_id' => $this->cashierUser->id,
+        ]);
+
+        $this->postJson("/api/v1/ipd/admissions/{$this->admission->id}/settle-discharge", [
+            'amount_paid'    => 3000.00,
+            'payment_method' => 'upi',
+        ]);
+
+        // Query global invoices
+        $response = $this->getJson("/api/v1/invoices?search=Vikram&payment_status=paid");
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'data' => [
+                        '*' => [
+                            'id',
+                            'invoice_number',
+                            'gross_amount',
+                            'net_amount',
+                            'amount_paid',
+                            'payment_status',
+                            'patient',
+                        ],
+                    ],
+                    'summary' => [
+                        'total_invoices_count',
+                        'total_gross_amount',
+                        'total_net_amount',
+                        'total_amount_paid',
+                    ],
+                    'pagination',
+                ],
+            ]);
+
+        $this->assertGreaterThanOrEqual(1, $response->json('data.summary.total_invoices_count'));
+    }
+
+    /**
+     * Test Cashier Day-End closing reconciliation summary.
+     */
+    public function test_can_get_cashier_day_end_summary_and_mode_wise_collections(): void
+    {
+        Sanctum::actingAs($this->cashierUser);
+
+        $today = now()->toDateString();
+        $response = $this->getJson("/api/v1/billing/day-end-summary?date={$today}");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'date',
+                    'hospital' => [
+                        'name',
+                        'abdm_hip_id',
+                    ],
+                    'financial_totals' => [
+                        'total_invoices',
+                        'gross_billed',
+                        'net_billed',
+                        'total_collections',
+                        'grand_total_cash_drawer',
+                        'grand_total_digital',
+                    ],
+                    'payment_mode_breakdown',
+                    'department_breakdown',
+                    'cashier_breakdown',
+                ],
+            ]);
+    }
+
+    /**
+     * Test central advance deposit collection and printable voucher receipt.
+     */
+    public function test_can_collect_central_advance_deposit_and_generate_voucher(): void
+    {
+        Sanctum::actingAs($this->cashierUser);
+
+        $payload = [
+            'patient_id'            => $this->patient->id,
+            'amount'                => 15000.00,
+            'encounter_type'        => 'ipd',
+            'encounter_id'          => $this->admission->id,
+            'payment_method'        => 'upi',
+            'transaction_reference' => 'UPI-TXN-889900',
+            'notes'                 => 'ICU admission advance',
+        ];
+
+        $response = $this->postJson("/api/v1/billing/deposits", $payload);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'voucher_number',
+                    'ledger_item_id',
+                    'amount',
+                    'amount_in_words',
+                    'payment_method',
+                    'patient' => [
+                        'name',
+                        'uhid',
+                    ],
+                    'hospital' => [
+                        'name',
+                        'abdm_hip_id',
+                    ],
+                    'cashier',
+                ],
+            ]);
+
+        $this->assertStringStartsWith('DEP-', $response->json('data.voucher_number'));
+        $this->assertEquals(15000.00, $response->json('data.amount'));
+
+        // Verify credit ledger item was created with negative amount
+        $this->assertDatabaseHas('billing_ledger_items', [
+            'hospital_id'    => $this->hospital->id,
+            'patient_id'     => $this->patient->id,
+            'category'       => 'payment_deposit',
+            'encounter_type' => 'ipd',
+            'unit_price'     => -15000.00,
+        ]);
+    }
+
+    /**
+     * Test pending discharge settlement queue.
+     */
+    public function test_can_fetch_pending_discharge_queue(): void
+    {
+        Sanctum::actingAs($this->cashierUser);
+
+        $this->admission->update(['status' => 'discharge_planned']);
+
+        $response = $this->getJson("/api/v1/billing/pending-discharges");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'id',
+                        'ipd_number',
+                        'status',
+                        'patient',
+                        'ward',
+                        'bed',
+                        'unbilled_items_count',
+                        'gross_amount',
+                        'advance_deposit_paid',
+                        'estimated_due',
+                    ],
+                ],
+            ]);
+    }
+
+    /**
+     * Test patient refund voucher with credit note.
+     */
+    public function test_can_issue_patient_refund_credit_note(): void
+    {
+        Sanctum::actingAs($this->cashierUser);
+
+        $payload = [
+            'patient_id'            => $this->patient->id,
+            'amount'                => 2500.00,
+            'reason'                => 'Excess deposit refund upon bill settlement',
+            'refund_method'         => 'cash',
+            'transaction_reference' => 'CASH-REFUND-001',
+            'encounter_type'        => 'ipd',
+            'encounter_id'          => $this->admission->id,
+        ];
+
+        $response = $this->postJson("/api/v1/billing/refunds", $payload);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'credit_note_number',
+                    'refund_date',
+                    'amount_refunded',
+                    'amount_in_words',
+                    'reason',
+                    'refund_method',
+                    'patient',
+                    'hospital',
+                ],
+            ]);
+
+        $this->assertStringStartsWith('CRN-', $response->json('data.credit_note_number'));
+        $this->assertEquals(2500.00, $response->json('data.amount_refunded'));
+    }
 }
+

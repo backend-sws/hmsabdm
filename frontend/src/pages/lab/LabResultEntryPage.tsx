@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useParams, useNavigate, Link } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -16,6 +16,7 @@ import {
   RotateCcw,
   AlertTriangle,
   History,
+  Loader2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -60,6 +61,17 @@ export const LabResultEntryPage: React.FC = () => {
   const [selectedForApprovalIds, setSelectedForApprovalIds] = useState<number[]>([])
   const [activeTestTab, setActiveTestTab] = useState<string>("all")
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false)
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup auto-save timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [])
 
   // 1. Fetch Order Details
   const { data: order, isLoading: isOrderLoading } = useQuery<LabOrder>({
@@ -416,6 +428,28 @@ export const LabResultEntryPage: React.FC = () => {
       }
       return evaluateCalculatedParameters(next)
     })
+
+    // Debounced automatic background save when results are entered
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+    if (order?.status !== "authorized") {
+      autoSaveTimerRef.current = setTimeout(() => {
+        setAutoSaveStatus("saving")
+        saveMutation.mutate(
+          { action: "draft", silent: true },
+          {
+            onSuccess: () => {
+              setAutoSaveStatus("saved")
+              setTimeout(() => setAutoSaveStatus("idle"), 3000)
+            },
+            onError: () => {
+              setAutoSaveStatus("idle")
+            },
+          }
+        )
+      }, 1500)
+    }
   }
 
   // DLC Sum Check (Differential Leukocyte Count Validation: Neutrophils% + Lymphocytes% + Monocytes% + Eosinophils% + Basophils%)
@@ -466,7 +500,12 @@ export const LabResultEntryPage: React.FC = () => {
 
   // Save Results & Optional 1-Click Approval Mutation
   const saveMutation = useMutation({
-    mutationFn: async (opts?: { action?: "draft" | "approve"; redirect?: boolean }) => {
+    mutationFn: async (opts?: {
+      action?: "draft" | "approve"
+      redirect?: boolean
+      approved_item_ids?: number[]
+      silent?: boolean
+    }) => {
       if (!order) throw new Error("Order not loaded")
       const action = opts?.action || "draft"
 
@@ -498,15 +537,20 @@ export const LabResultEntryPage: React.FC = () => {
         technician_remarks: technicianRemarks,
         clinical_notes: clinicalNotes,
         action,
+        approved_item_ids: opts?.approved_item_ids,
         doctor_id: order.doctor_id,
       })
     },
     onSuccess: (_, vars) => {
       const isApprove = vars?.action === "approve"
       if (isApprove) {
-        toast.success("Diagnostic report approved and officially released by Pathologist!")
-      } else {
-        toast.success("Lab test results saved successfully!")
+        if (vars?.approved_item_ids && vars.approved_item_ids.length > 0) {
+          toast.success(`${vars.approved_item_ids.length} test panel(s) approved and signed off!`)
+        } else {
+          toast.success("Diagnostic report approved and officially released by Pathologist!")
+        }
+      } else if (!vars?.silent) {
+        toast.success("Lab test results saved successfully (Results Entered)!")
       }
       queryClient.invalidateQueries({ queryKey: ["lab", "orders"] })
       queryClient.invalidateQueries({ queryKey: ["lab", "order", orderId] })
@@ -524,10 +568,12 @@ export const LabResultEntryPage: React.FC = () => {
   const approveItemsMutation = useMutation({
     mutationFn: async (itemIds: number[]) => {
       if (!order) throw new Error("Order not loaded")
-      return labService.approveOrderItems(order.id, itemIds, "Independently approved ready test panels")
+      return saveMutation.mutateAsync({
+        action: "approve",
+        approved_item_ids: itemIds,
+      })
     },
-    onSuccess: (_, vars) => {
-      toast.success(`${vars.length} test panel(s) approved and signed off successfully!`)
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lab", "orders"] })
       queryClient.invalidateQueries({ queryKey: ["lab", "order", orderId] })
       queryClient.invalidateQueries({ queryKey: ["lab", "auditLogs", orderId] })
@@ -599,6 +645,129 @@ export const LabResultEntryPage: React.FC = () => {
 
     return Array.from(map.values())
   }, [order?.items, paramStates])
+
+  // Live completion status for every test panel in order
+  const itemCompletionMap = useMemo(() => {
+    const map = new Map<
+      number,
+      {
+        isComplete: boolean
+        isPartiallyFilled: boolean
+        isEmpty: boolean
+        filledCount: number
+        totalCount: number
+        statusBadge: { text: string; className: string }
+        canApprove: boolean
+      }
+    >()
+
+    groupedItems.forEach(({ item, params }) => {
+      const isAuthorized = item.status === "authorized"
+      const totalCount = params.length
+      const filledCount = params.filter(
+        (p) =>
+          p.state.observed_value !== undefined &&
+          p.state.observed_value !== null &&
+          String(p.state.observed_value).trim() !== ""
+      ).length
+
+      const isComplete = totalCount > 0 && filledCount >= totalCount
+      const isPartiallyFilled = filledCount > 0 && filledCount < totalCount
+      const isEmpty = filledCount === 0
+
+      let statusBadge = {
+        text: "Pending Entry",
+        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+      }
+
+      if (isAuthorized) {
+        statusBadge = {
+          text: "✓ Approved",
+          className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+        }
+      } else if (isComplete) {
+        statusBadge = {
+          text: "✓ Results Entered",
+          className: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+        }
+      } else if (isPartiallyFilled) {
+        statusBadge = {
+          text: `${filledCount}/${totalCount} Entered`,
+          className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+        }
+      }
+
+      map.set(item.id, {
+        isComplete,
+        isPartiallyFilled,
+        isEmpty,
+        filledCount,
+        totalCount,
+        statusBadge,
+        canApprove: isComplete && !isAuthorized,
+      })
+    })
+
+    return map
+  }, [groupedItems])
+
+  // Ready item IDs that have complete results and are not yet authorized
+  const readyItemIds = useMemo(() => {
+    return groupedItems
+      .filter(({ item }) => item.status !== "authorized")
+      .filter(({ item }) => itemCompletionMap.get(item.id)?.isComplete)
+      .map(({ item }) => item.id)
+  }, [groupedItems, itemCompletionMap])
+
+  // Selected item IDs that are valid and complete for batch approval
+  const validSelectedForApprovalIds = useMemo(() => {
+    return selectedForApprovalIds.filter((id) => itemCompletionMap.get(id)?.isComplete)
+  }, [selectedForApprovalIds, itemCompletionMap])
+
+  // Automatically sync ready checkboxes when test parameter entries become complete
+  useEffect(() => {
+    if (!order?.items) return
+    setSelectedForApprovalIds((prev) => {
+      const next = new Set(prev)
+      let changed = false
+
+      groupedItems.forEach(({ item }) => {
+        if (item.status === "authorized") {
+          if (next.has(item.id)) {
+            next.delete(item.id)
+            changed = true
+          }
+          return
+        }
+
+        const comp = itemCompletionMap.get(item.id)
+        if (comp?.isComplete && !next.has(item.id)) {
+          next.add(item.id)
+          changed = true
+        } else if (!comp?.isComplete && next.has(item.id)) {
+          next.delete(item.id)
+          changed = true
+        }
+      })
+
+      return changed ? Array.from(next) : prev
+    })
+  }, [itemCompletionMap, order?.items, groupedItems])
+
+  // Approve single test safely with full parameter save
+  const handleApproveSingleTest = (itemId: number) => {
+    const comp = itemCompletionMap.get(itemId)
+    if (!comp?.isComplete) {
+      toast.error(
+        `Cannot approve: Results pending (${comp?.filledCount || 0}/${comp?.totalCount || 0} entered). Please enter results first.`
+      )
+      return
+    }
+    saveMutation.mutate({
+      action: "approve",
+      approved_item_ids: [itemId],
+    })
+  }
 
   // Count abnormal and critical parameters
   const stats = useMemo(() => {
@@ -681,6 +850,20 @@ export const LabResultEntryPage: React.FC = () => {
             Print ({selectedItemIds.length})
           </Button>
 
+          {/* Auto-save Status Indicator */}
+          {autoSaveStatus === "saving" && (
+            <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 animate-pulse">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Auto-saving...
+            </span>
+          )}
+          {autoSaveStatus === "saved" && (
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <CheckCircle2 className="h-3 w-3" />
+              Auto-saved
+            </span>
+          )}
+
           {/* Save Draft / Update Results (ALWAYS ALLOWED, EVEN ON AUTHORIZED ORDERS!) */}
           <Button
             variant="outline"
@@ -699,19 +882,19 @@ export const LabResultEntryPage: React.FC = () => {
           </Button>
 
           {/* Approve Selected Ready Panels */}
-          {selectedForApprovalIds.length > 0 && order.status !== "authorized" && (
+          {validSelectedForApprovalIds.length > 0 && order.status !== "authorized" && (
             <Button
               variant="default"
               size="sm"
-              onClick={() => approveItemsMutation.mutate(selectedForApprovalIds)}
-              disabled={approveItemsMutation.isPending}
+              onClick={() => approveItemsMutation.mutate(validSelectedForApprovalIds)}
+              disabled={approveItemsMutation.isPending || saveMutation.isPending}
               className="text-xs font-bold gap-1.5 h-9 bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
-              title="Approve only selected tests (e.g. 2 of 5 tests) and mark order Partial Approved"
+              title="Approve only selected tests and mark order Partial Approved"
             >
               <ShieldCheck className="h-4 w-4" />
               {approveItemsMutation.isPending
                 ? "Approving..."
-                : `Approve Selected (${selectedForApprovalIds.length})`}
+                : `Approve Selected (${validSelectedForApprovalIds.length})`}
             </Button>
           )}
 
@@ -732,13 +915,31 @@ export const LabResultEntryPage: React.FC = () => {
             <Button
               variant="default"
               size="sm"
-              onClick={() => saveMutation.mutate({ action: "approve" })}
-              disabled={saveMutation.isPending}
-              className="text-xs font-bold gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-              title="Approve and officially sign off all completed tests"
+              onClick={() => {
+                if (readyItemIds.length === 0) {
+                  toast.error("Cannot approve: No test has complete results entered. Please enter observed results first.")
+                  return
+                }
+                saveMutation.mutate({ action: "approve", approved_item_ids: readyItemIds })
+              }}
+              disabled={saveMutation.isPending || readyItemIds.length === 0}
+              className={`text-xs font-bold gap-1.5 h-9 shadow-sm transition-all ${
+                readyItemIds.length > 0
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                  : "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60 hover:bg-muted"
+              }`}
+              title={
+                readyItemIds.length > 0
+                  ? `Approve and officially sign off ${readyItemIds.length} completed test(s)`
+                  : "Cannot approve: Enter test parameter results first"
+              }
             >
               <ShieldCheck className="h-4 w-4" />
-              {saveMutation.isPending ? "Validating..." : "Approve Ready Tests"}
+              {saveMutation.isPending
+                ? "Validating & Approving..."
+                : readyItemIds.length > 0
+                ? `Approve Ready Tests (${readyItemIds.length})`
+                : "Approve Ready Tests (0)"}
             </Button>
           )}
         </div>
@@ -934,6 +1135,7 @@ export const LabResultEntryPage: React.FC = () => {
         {groupedItems
           .filter(({ item }) => activeTestTab === "all" || activeTestTab === String(item.id))
           .map(({ item, params }) => {
+            const comp = itemCompletionMap.get(item.id)
             const isSelectedForPrint = selectedItemIds.includes(item.id)
             const isWidal =
               item.test_code?.toUpperCase() === "WIDAL" ||
@@ -985,38 +1187,46 @@ export const LabResultEntryPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* Item Independent Status Badge */}
+                    {/* Item Dynamic Status Badge */}
                     <Badge
                       variant="outline"
-                      className={`text-[10px] px-2 py-0.5 font-bold ${
-                        item.status === "authorized"
-                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                          : item.status === "completed" || item.status === "result_entered"
-                          ? "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30"
-                          : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                      className={`text-[10px] px-2.5 py-0.5 font-bold transition-all ${
+                        comp?.statusBadge.className || "bg-amber-500/10 text-amber-700 border-amber-500/20"
                       }`}
                     >
-                      {item.status === "authorized"
-                        ? "✓ Approved"
-                        : item.status === "completed" || item.status === "result_entered"
-                        ? "Results Entered"
-                        : "Pending Entry"}
+                      {comp?.statusBadge.text || "Pending Entry"}
                     </Badge>
 
                     {/* Checkbox for batch approval */}
                     {item.status !== "authorized" && (
-                      <label className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground cursor-pointer hover:text-foreground">
+                      <label
+                        className={`flex items-center gap-1.5 text-[11px] font-semibold transition-opacity select-none ${
+                          comp?.isComplete
+                            ? "text-foreground cursor-pointer"
+                            : "text-muted-foreground/60 cursor-not-allowed opacity-60"
+                        }`}
+                        title={
+                          comp?.isComplete
+                            ? "Marked ready for batch sign-off"
+                            : `Results pending (${comp?.filledCount || 0}/${comp?.totalCount || 0} entered). Enter all results to make ready.`
+                        }
+                      >
                         <input
                           type="checkbox"
                           checked={selectedForApprovalIds.includes(item.id)}
+                          disabled={!comp?.isComplete}
                           onChange={(e) => {
                             if (e.target.checked) {
+                              if (!comp?.isComplete) {
+                                toast.error(`Cannot select: Results not entered yet for ${item.test_name}`)
+                                return
+                              }
                               setSelectedForApprovalIds((prev) => [...prev, item.id])
                             } else {
                               setSelectedForApprovalIds((prev) => prev.filter((id) => id !== item.id))
                             }
                           }}
-                          className="rounded border-border text-primary cursor-pointer"
+                          className="rounded border-border text-primary cursor-pointer disabled:cursor-not-allowed"
                         />
                         <span>Ready</span>
                       </label>
@@ -1041,10 +1251,18 @@ export const LabResultEntryPage: React.FC = () => {
                         type="button"
                         variant="default"
                         size="sm"
-                        onClick={() => approveItemsMutation.mutate([item.id])}
-                        disabled={approveItemsMutation.isPending}
-                        className="text-[11px] h-7 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                        title="Approve this test panel independently"
+                        onClick={() => handleApproveSingleTest(item.id)}
+                        disabled={saveMutation.isPending || approveItemsMutation.isPending || !comp?.canApprove}
+                        className={`text-[11px] h-7 gap-1 font-bold shadow-xs transition-all ${
+                          comp?.canApprove
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                            : "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60 hover:bg-muted"
+                        }`}
+                        title={
+                          comp?.canApprove
+                            ? "Save observed results and approve this test panel now"
+                            : `Cannot approve: Results not entered yet (${comp?.filledCount || 0}/${comp?.totalCount || 0} entered). Enter results first.`
+                        }
                       >
                         <ShieldCheck className="h-3 w-3" />
                         Approve This Test
@@ -1383,6 +1601,20 @@ export const LabResultEntryPage: React.FC = () => {
               <FileText className="h-3.5 w-3.5" />
               Stationery Paper
             </Button>
+            {/* Auto-save Status Indicator */}
+            {autoSaveStatus === "saving" && (
+              <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 animate-pulse">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Auto-saving...
+              </span>
+            )}
+            {autoSaveStatus === "saved" && (
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <CheckCircle2 className="h-3 w-3" />
+                Auto-saved
+              </span>
+            )}
+
             <Button
               variant="outline"
               size="sm"
@@ -1397,6 +1629,24 @@ export const LabResultEntryPage: React.FC = () => {
                 ? "Save / Update Results"
                 : "Save Draft"}
             </Button>
+
+            {/* Approve Selected Ready Panels */}
+            {validSelectedForApprovalIds.length > 0 && order.status !== "authorized" && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => approveItemsMutation.mutate(validSelectedForApprovalIds)}
+                disabled={approveItemsMutation.isPending || saveMutation.isPending}
+                className="text-xs font-bold gap-1.5 h-9 bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
+                title="Approve only selected tests and mark order Partial Approved"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                {approveItemsMutation.isPending
+                  ? "Approving..."
+                  : `Approve Selected (${validSelectedForApprovalIds.length})`}
+              </Button>
+            )}
+
             {order.status === "authorized" ? (
               <Button
                 variant="outline"
@@ -1412,12 +1662,31 @@ export const LabResultEntryPage: React.FC = () => {
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => saveMutation.mutate({ action: "approve" })}
-                disabled={saveMutation.isPending}
-                className="text-xs font-bold gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                onClick={() => {
+                  if (readyItemIds.length === 0) {
+                    toast.error("Cannot approve: No test has complete results entered. Please enter observed results first.")
+                    return
+                  }
+                  saveMutation.mutate({ action: "approve", approved_item_ids: readyItemIds })
+                }}
+                disabled={saveMutation.isPending || readyItemIds.length === 0}
+                className={`text-xs font-bold gap-1.5 h-9 shadow-sm transition-all ${
+                  readyItemIds.length > 0
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                    : "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60 hover:bg-muted"
+                }`}
+                title={
+                  readyItemIds.length > 0
+                    ? `Approve and officially sign off ${readyItemIds.length} completed test(s)`
+                    : "Cannot approve: Enter test parameter results first"
+                }
               >
                 <ShieldCheck className="h-4 w-4" />
-                {saveMutation.isPending ? "Validating..." : "Approve Ready Tests"}
+                {saveMutation.isPending
+                  ? "Validating & Approving..."
+                  : readyItemIds.length > 0
+                  ? `Approve Ready Tests (${readyItemIds.length})`
+                  : "Approve Ready Tests (0)"}
               </Button>
             )}
           </div>

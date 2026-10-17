@@ -1,11 +1,17 @@
 import { apiClient } from "./apiClient"
 import type {
   LabOrder,
+  LabOrderItem,
   LabTestTemplate,
   DiagnosticReportPayload,
   DeltaHistoryItem,
   QueueDisplayResponse,
   LabAuditLog,
+  LabExternalVendor,
+  LabOutsourceManifest,
+  LabRateListMatrixItem,
+  LabProfitabilityAnalytics,
+  LabReconciliationVendorSummary,
 } from "@/types/lab"
 
 export const labService = {
@@ -18,6 +24,7 @@ export const labService = {
       name: string
       gender: string
       age?: number
+      age_unit?: "Years" | "Months" | "Days"
       dob?: string
       mobile?: string
       address?: string
@@ -44,6 +51,9 @@ export const labService = {
       walkin_patient?: {
         name?: string
         gender?: string
+        age?: number
+        age_unit?: "Years" | "Months" | "Days"
+        dob?: string
         mobile?: string
         address?: string
       }
@@ -67,7 +77,16 @@ export const labService = {
    */
   collectPayment: async (
     orderId: number,
-    data: { amount: number; payment_method?: string; transaction_reference?: string; notes?: string } | number
+    data:
+      | {
+          amount: number
+          payment_method?: string
+          transaction_reference?: string
+          utr_number?: string
+          payment_breakdown?: Array<{ method: string; amount: number; ref?: string }>
+          notes?: string
+        }
+      | number
   ): Promise<LabOrder> => {
     const payload = typeof data === "number" ? { amount: data } : data
     return apiClient<LabOrder>(`/lab/orders/${orderId}/collect-payment`, {
@@ -378,5 +397,109 @@ export const labService = {
     return apiClient<any>(`/lab/templates/${id}`, {
       method: "DELETE",
     })
+  },
+
+  // ─── OUTSOURCE REFERENCE LAB DESK ─────────────────────────────────────────
+
+  getVendors: async (): Promise<LabExternalVendor[]> => {
+    return apiClient<LabExternalVendor[]>("/lab/outsource/vendors")
+  },
+
+  saveVendor: async (payload: Partial<LabExternalVendor>): Promise<LabExternalVendor> => {
+    return apiClient<LabExternalVendor>("/lab/outsource/vendors", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  getPendingDispatch: async (): Promise<LabOrderItem[]> => {
+    return apiClient<LabOrderItem[]>("/lab/outsource/pending-dispatch")
+  },
+
+  createManifest: async (payload: {
+    vendor_id: number
+    item_ids: number[]
+    temperature_condition?: "ambient" | "cold_chain" | "frozen" | "formalin"
+    courier_name?: string
+    courier_phone?: string
+    courier_tracking_no?: string
+    notes?: string
+  }): Promise<LabOutsourceManifest> => {
+    return apiClient<LabOutsourceManifest>("/lab/outsource/manifests", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  getManifests: async (params?: { page?: number; per_page?: number }): Promise<any> => {
+    const q = new URLSearchParams()
+    if (params?.page) q.append("page", params.page.toString())
+    if (params?.per_page) q.append("per_page", params.per_page.toString())
+    return apiClient<any>(`/lab/outsource/manifests?${q.toString()}`)
+  },
+
+  getManifestDetails: async (id: number): Promise<LabOutsourceManifest> => {
+    return apiClient<LabOutsourceManifest>(`/lab/outsource/manifests/${id}`)
+  },
+
+  receiveSample: async (payload: {
+    order_item_id: number
+    external_accession_no?: string
+    external_report_file?: string
+    technician_remarks?: string
+    status?: "completed" | "authorized"
+  }): Promise<LabOrderItem> => {
+    return apiClient<LabOrderItem>("/lab/outsource/receive-sample", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  getReconciliation: async (month?: string): Promise<{ month: string; vendors: LabReconciliationVendorSummary[] }> => {
+    const q = month ? `?month=${month}` : ""
+    return apiClient<{ month: string; vendors: LabReconciliationVendorSummary[] }>(`/lab/outsource/reconciliation${q}`)
+  },
+
+  // ─── DIRECT RATE LIST & PRICING MATRIX ───────────────────────────────────
+
+  getRateList: async (params?: { category?: string; fulfillment_type?: string; search?: string }): Promise<{ total_tests: number; tests: LabRateListMatrixItem[] }> => {
+    const q = new URLSearchParams()
+    if (params?.category) q.append("category", params.category)
+    if (params?.fulfillment_type) q.append("fulfillment_type", params.fulfillment_type)
+    if (params?.search) q.append("search", params.search)
+    return apiClient<{ total_tests: number; tests: LabRateListMatrixItem[] }>(`/lab/rate-list?${q.toString()}`)
+  },
+
+  bulkUpdateRateList: async (items: Array<{
+    id: number
+    standard_price?: number
+    b2b_cost?: number
+    reagent_cost?: number
+    fulfillment_type?: "in_house" | "outsourced" | "hybrid"
+    default_vendor_id?: number | null
+    tat_hours?: number
+    is_active?: boolean
+  }>): Promise<any> => {
+    return apiClient<any>("/lab/rate-list/bulk-update", {
+      method: "PUT",
+      body: JSON.stringify({ items }),
+    })
+  },
+
+  applyPercentage: async (payload: {
+    category?: string
+    fulfillment_type?: string
+    field: "standard_price" | "b2b_cost" | "reagent_cost"
+    percentage: number
+    round_to?: number
+  }): Promise<any> => {
+    return apiClient<any>("/lab/rate-list/apply-percentage", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+  },
+
+  getProfitabilityAnalytics: async (): Promise<LabProfitabilityAnalytics> => {
+    return apiClient<LabProfitabilityAnalytics>("/lab/analytics/profitability")
   },
 }

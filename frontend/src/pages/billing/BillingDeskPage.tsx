@@ -18,9 +18,23 @@ import {
   Clock,
   CreditCard,
   FlaskConical,
+  CheckCircle2,
+  RotateCcw,
+  DoorOpen,
+  BarChart3,
+  Banknote,
+  ShieldCheck,
 } from "lucide-react"
 
-import { OpdQuickBillCounterTab } from "@/components/billing/OpdQuickBillCounterTab"
+import {
+  OpdQuickBillCounterTab,
+  CollectAdvanceDepositModal,
+  CashierDayEndModal,
+  PrintTaxInvoiceModal,
+  PrintGatePassModal,
+  CentralSettlementModal,
+  IssueRefundModal,
+} from "@/components/billing"
 import { DirectLabBookingModal } from "@/components/lab/DirectLabBookingModal"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable, type Column } from "@/components/common/DataTable"
@@ -42,14 +56,36 @@ import type {
   CreateCategoryPayload,
   PostLedgerPayload,
   BedBillingConfig,
-  Invoice,
+  PendingDischargeItem,
 } from "@/types/billing"
 
 export const BillingDeskPage: React.FC = () => {
   const queryClient = useQueryClient()
 
   // ─── Active Tab ──────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"opd-counter" | "tariff" | "ledger" | "rules" | "invoices">("opd-counter")
+  const [activeTab, setActiveTab] = useState<
+    "opd-counter" | "pending-discharge" | "invoices" | "ledger" | "tariff" | "rules"
+  >("opd-counter")
+
+  // ─── Modal States for Enhanced Billing Desk ─────────────────────────
+  const [depositModalOpen, setDepositModalOpen] = useState(false)
+  const [dayEndModalOpen, setDayEndModalOpen] = useState(false)
+  const [taxInvoiceModalOpen, setTaxInvoiceModalOpen] = useState(false)
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null)
+  const [gatePassModalOpen, setGatePassModalOpen] = useState(false)
+  const [selectedGatePassAdmissionId, setSelectedGatePassAdmissionId] = useState<number | null>(null)
+  const [settlementModalOpen, setSettlementModalOpen] = useState(false)
+  const [selectedSettlementAdmissionId, setSelectedSettlementAdmissionId] = useState<number | null>(null)
+  const [refundModalOpen, setRefundModalOpen] = useState(false)
+  const [refundPatient, setRefundPatient] = useState<{ id: number; name: string; uhid: string } | null>(null)
+
+  // ─── Global Invoices Register Filters & Pagination ───────────────────
+  const [invoiceSearch, setInvoiceSearch] = useState("")
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<"all" | "paid" | "partially_paid" | "pending">("all")
+  const [invoiceEncounterFilter, setInvoiceEncounterFilter] = useState<"all" | "ipd" | "opd" | "emergency" | "lab" | "pharmacy">("all")
+  const [invoiceDateFrom, setInvoiceDateFrom] = useState("")
+  const [invoiceDateTo, setInvoiceDateTo] = useState("")
+  const [invoicePage, setInvoicePage] = useState(1)
 
   // ─── Tariff Tab Filters & States ─────────────────────────────────────
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
@@ -66,12 +102,9 @@ export const BillingDeskPage: React.FC = () => {
   const [itemToCancel, setItemToCancel] = useState<BillingLedgerItem | null>(null)
   const [cancelReason, setCancelReason] = useState<string>("")
 
-  // ─── Invoices Tab States ─────────────────────────────────────────────
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
-  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
-
   // ─── Direct Lab Billing Modal State ──────────────────────────────────
   const [directLabModalOpen, setDirectLabModalOpen] = useState(false)
+
 
   // ─── Queries ────────────────────────────────────────────────────────
   // 1. Categories
@@ -120,18 +153,48 @@ export const BillingDeskPage: React.FC = () => {
     enabled: !!selectedPatientId,
   })
 
-  // 6. Selected Patient's Invoices
-  const { data: patientInvoices = [] } = useQuery({
-    queryKey: queryKeys.billing.patientInvoices(selectedPatientId || 0),
-    queryFn: () => billingService.getPatientInvoices(selectedPatientId!),
-    enabled: !!selectedPatientId && activeTab === "invoices",
-  })
-
   // 7. Bed Billing Configuration
   const { data: bedConfig, refetch: refetchBedConfig } = useQuery({
     queryKey: queryKeys.billing.bedConfig,
     queryFn: () => billingService.getBedBillingConfig(),
   })
+
+  // 8. Global Invoices Register & Master Audit
+  const {
+    data: globalInvoicesData,
+    isLoading: globalInvoicesLoading,
+  } = useQuery({
+    queryKey: queryKeys.billing.invoices({
+      search: invoiceSearch,
+      payment_status: invoiceStatusFilter,
+      encounter_type: invoiceEncounterFilter,
+      date_from: invoiceDateFrom,
+      date_to: invoiceDateTo,
+      page: invoicePage,
+    }),
+    queryFn: () =>
+      billingService.getInvoices({
+        search: invoiceSearch || undefined,
+        payment_status: invoiceStatusFilter,
+        encounter_type: invoiceEncounterFilter,
+        date_from: invoiceDateFrom || undefined,
+        date_to: invoiceDateTo || undefined,
+        page: invoicePage,
+        per_page: 15,
+      }),
+    enabled: activeTab === "invoices",
+  })
+
+  // 9. Pending Discharge Settlement Queue
+  const {
+    data: pendingDischarges = [],
+    isLoading: pendingDischargesLoading,
+    refetch: refetchPendingDischarges,
+  } = useQuery({
+    queryKey: queryKeys.billing.pendingDischarges(),
+    queryFn: () => billingService.getPendingDischarges(),
+  })
+
 
   // ─── Mutations ──────────────────────────────────────────────────────
   // Create / Update Charge
@@ -533,7 +596,258 @@ export const BillingDeskPage: React.FC = () => {
     },
   ]
 
+  // ─── Table Columns: Pending Discharge Settlement Queue ──────────────
+  const pendingDischargeColumns: Column<PendingDischargeItem>[] = [
+    {
+      key: "ipd_number",
+      header: "IPD #",
+      className: "w-[120px]",
+      cell: (row) => (
+        <div>
+          <span className="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded">
+            {row.ipd_number}
+          </span>
+          <div className="text-[10px] text-muted-foreground mt-0.5">
+            Admitted {row.days_admitted}d ago
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "patient",
+      header: "Patient Details",
+      cell: (row) => (
+        <div>
+          <div className="font-bold text-foreground text-xs flex items-center gap-1.5">
+            {row.patient?.name}
+            <Badge variant="outline" className="text-[10px] font-mono">
+              {row.patient?.uhid}
+            </Badge>
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            {row.patient?.gender} • Mob: {row.patient?.mobile || "N/A"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "ward",
+      header: "Ward & Bed",
+      cell: (row) => (
+        <div>
+          <div className="font-semibold text-xs flex items-center gap-1 text-foreground">
+            <Building className="h-3 w-3 text-primary" />
+            {row.ward?.name || "General"}
+          </div>
+          <div className="text-[10px] text-muted-foreground font-mono">
+            Bed: {row.bed?.bed_number || "Allotted"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "doctor",
+      header: "Consultant",
+      cell: (row) => (
+        <span className="text-xs font-medium text-foreground">
+          {row.doctor?.name || "Dr. Arvind Mehra"}
+        </span>
+      ),
+    },
+    {
+      key: "unbilled",
+      header: "Unbilled Items",
+      className: "w-[100px] text-center",
+      cell: (row) => (
+        <Badge variant="secondary" className="font-mono text-[10px]">
+          {row.unbilled_items_count} charges
+        </Badge>
+      ),
+    },
+    {
+      key: "gross_amount",
+      header: "Gross Bill",
+      className: "text-right w-[110px]",
+      cell: (row) => (
+        <span className="font-mono font-semibold text-xs">
+          ₹{row.gross_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      key: "advance_paid",
+      header: "Advance Paid",
+      className: "text-right w-[110px]",
+      cell: (row) => (
+        <span className="font-mono text-emerald-600 font-bold text-xs">
+          -₹{row.advance_deposit_paid.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      key: "estimated_due",
+      header: "Est. Net Balance Due",
+      className: "text-right w-[130px]",
+      cell: (row) => (
+        <span className="font-mono font-extrabold text-xs text-amber-700 dark:text-amber-400">
+          ₹{row.estimated_due.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Clearance Action",
+      className: "w-[150px] text-right",
+      cell: (row) => (
+        <Button
+          size="sm"
+          className="h-7 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+          onClick={() => {
+            setSelectedSettlementAdmissionId(row.id)
+            setSettlementModalOpen(true)
+          }}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" /> Settle & Clear
+        </Button>
+      ),
+    },
+  ]
+
+  // ─── Table Columns: Global Invoices Register ─────────────────────────
+  const invoiceColumns: Column<any>[] = [
+    {
+      key: "invoice_number",
+      header: "Invoice #",
+      className: "w-[150px]",
+      cell: (row) => (
+        <div>
+          <span className="font-mono text-xs font-bold text-foreground">
+            {row.invoice_number}
+          </span>
+          {row.gate_pass_number && (
+            <div className="text-[10px] text-emerald-600 font-mono flex items-center gap-1 mt-0.5">
+              <ShieldCheck className="h-3 w-3" /> {row.gate_pass_number}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "patient",
+      header: "Patient",
+      cell: (row) => (
+        <div>
+          <div className="font-bold text-foreground text-xs flex items-center gap-1.5">
+            {row.patient?.name}
+            <Badge variant="outline" className="text-[10px] font-mono">
+              {row.patient?.uhid}
+            </Badge>
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            {row.patient?.gender} • {row.patient?.mobile || "No Mobile"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "encounter_type",
+      header: "Dept / Encounter",
+      className: "w-[110px]",
+      cell: (row) => (
+        <Badge variant="secondary" className="uppercase font-mono text-[9px]">
+          {row.encounter_type || "IPD"}
+        </Badge>
+      ),
+    },
+    {
+      key: "invoice_date",
+      header: "Issued Date",
+      className: "w-[130px]",
+      cell: (row) => (
+        <span className="text-xs text-muted-foreground">
+          {new Date(row.invoice_date || row.issued_at).toLocaleString([], {
+            dateStyle: "short",
+            timeStyle: "short",
+          })}
+        </span>
+      ),
+    },
+    {
+      key: "net_amount",
+      header: "Net Amount",
+      className: "text-right w-[110px]",
+      cell: (row) => (
+        <span className="font-mono font-bold text-xs text-foreground">
+          ₹{Number(row.net_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      key: "amount_paid",
+      header: "Amount Paid",
+      className: "text-right w-[110px]",
+      cell: (row) => (
+        <span className="font-mono font-bold text-xs text-emerald-600">
+          ₹{Number(row.amount_paid).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      key: "payment_status",
+      header: "Status",
+      className: "w-[90px]",
+      cell: (row) => (
+        <Badge
+          className={
+            row.payment_status === "paid"
+              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[9px]"
+              : row.payment_status === "partially_paid"
+              ? "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30 text-[9px]"
+              : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[9px]"
+          }
+        >
+          {String(row.payment_status).toUpperCase()}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "w-[180px] text-right",
+      cell: (row) => (
+        <div className="flex justify-end gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
+            onClick={() => {
+              setSelectedInvoiceId(row.id)
+              setTaxInvoiceModalOpen(true)
+            }}
+          >
+            <Printer className="h-3 w-3" /> Tax Invoice
+          </Button>
+
+          {(row.encounter_type === "ipd" || row.gate_pass_number) && row.encounter_id && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1 border-slate-700/40 text-slate-700 dark:text-slate-300 hover:bg-slate-500/10"
+              onClick={() => {
+                setSelectedGatePassAdmissionId(row.encounter_id)
+                setGatePassModalOpen(true)
+              }}
+            >
+              <DoorOpen className="h-3 w-3" /> Gate Pass
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ]
+
   return (
+
     <div className="space-y-6">
       {/* ────────────────────────────────────────────────────────────────
           TOP BAR: PAGE HEADER & ACTIONS
@@ -546,6 +860,28 @@ export const BillingDeskPage: React.FC = () => {
         icon={Receipt}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+
+              size="sm"
+              onClick={() => setDepositModalOpen(true)}
+              className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm"
+              title="Collect advance deposit and generate official deposit voucher"
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              Collect Advance Deposit
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDayEndModalOpen(true)}
+              className="gap-1.5 text-xs border-sky-500/40 text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 font-bold"
+              title="Cash drawer reconciliation, payment modes breakup and shift closing sheet"
+            >
+              <BarChart3 className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+              Day-End Summary
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
@@ -613,14 +949,31 @@ export const BillingDeskPage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setActiveTab("tariff")}
+          onClick={() => setActiveTab("pending-discharge")}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
-            activeTab === "tariff"
+            activeTab === "pending-discharge"
               ? "border-primary text-primary bg-primary/5 font-bold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Tag className="h-4 w-4" /> Service Tariff Master ({charges.length})
+          <DoorOpen className="h-4 w-4" />
+          Pending Discharges
+          {pendingDischarges.length > 0 && (
+            <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 h-4 rounded-full font-mono">
+              {pendingDischarges.length}
+            </Badge>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("invoices")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
+            activeTab === "invoices"
+              ? "border-primary text-primary bg-primary/5 font-bold"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Receipt className="h-4 w-4" /> Global Invoices & Audit
         </button>
 
         <button
@@ -635,6 +988,17 @@ export const BillingDeskPage: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab("tariff")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
+            activeTab === "tariff"
+              ? "border-primary text-primary bg-primary/5 font-bold"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Tag className="h-4 w-4" /> Service Tariff Master ({charges.length})
+        </button>
+
+        <button
           onClick={() => setActiveTab("rules")}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "rules"
@@ -644,23 +1008,51 @@ export const BillingDeskPage: React.FC = () => {
         >
           <Settings className="h-4 w-4" /> Bed Billing Policy & Rules
         </button>
-
-        <button
-          onClick={() => setActiveTab("invoices")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
-            activeTab === "invoices"
-              ? "border-primary text-primary bg-primary/5 font-bold"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Receipt className="h-4 w-4" /> Final Tax Invoices
-        </button>
       </div>
+
 
       {/* ════════════════════════════════════════════════════════════════
           TAB 0: OPD TOKEN QUICK BILL COUNTER
          ════════════════════════════════════════════════════════════════ */}
       {activeTab === "opd-counter" && <OpdQuickBillCounterTab />}
+
+      {/* ════════════════════════════════════════════════════════════════
+          TAB: PENDING INPATIENT DISCHARGE SETTLEMENT QUEUE
+         ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "pending-discharge" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-3 bg-muted/30 border rounded-xl">
+            <div>
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <DoorOpen className="h-4 w-4 text-primary" />
+                Inpatient Discharge Clearance Queue ({pendingDischarges.length})
+              </h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Review running estimates, adjust advances, authorize concessions, settle balance & generate Security Gate Passes.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchPendingDischarges()}
+              disabled={pendingDischargesLoading}
+              className="gap-1.5 text-xs font-semibold"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${pendingDischargesLoading ? "animate-spin" : ""}`} /> Refresh Queue
+            </Button>
+          </div>
+
+          <DataTable
+            columns={pendingDischargeColumns}
+            data={pendingDischarges}
+            isLoading={pendingDischargesLoading}
+            rowKey="id"
+            emptyTitle="No Pending Discharge Settlements"
+            emptyDescription="All admitted patients are either under ongoing care or have settled their final discharge invoices."
+          />
+        </div>
+      )}
+
 
       {/* ════════════════════════════════════════════════════════════════
           TAB 1: SERVICE TARIFF MASTER
@@ -826,32 +1218,59 @@ export const BillingDeskPage: React.FC = () => {
               )}
 
               {/* Action Strip & Ledger Table */}
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <h3 className="font-bold text-sm text-foreground">
                   Itemized Running Charges Accumulator
                 </h3>
-                <Button
-                  size="sm"
-                  className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                  onClick={() => {
-                    setLedgerPayload({
-                      patient_id: selectedPatientId,
-                      encounter_type: "ipd",
-                      encounter_id: 1,
-                      charge_id: undefined,
-                      item_name: "",
-                      unit_price: 0,
-                      quantity: 1,
-                      tax_amount: 0,
-                      discount_amount: 0,
-                      notes: "",
-                    })
-                    setPostChargeModalOpen(true)
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5" /> Post Bedside / Service Charge
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs border-emerald-600/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold"
+                    onClick={() => setDepositModalOpen(true)}
+                  >
+                    <Banknote className="h-3.5 w-3.5 text-emerald-600" /> Collect Deposit
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/10"
+                    onClick={() => {
+                      if (selectedPatientId && searchResultsPatients) {
+                        const p = searchResultsPatients.find((pt: any) => pt.id === selectedPatientId)
+                        setRefundPatient({ id: selectedPatientId, name: p?.name || "Patient", uhid: p?.uhid || "" })
+                        setRefundModalOpen(true)
+                      }
+                    }}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 text-rose-600" /> Issue Refund
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                    onClick={() => {
+                      setLedgerPayload({
+                        patient_id: selectedPatientId,
+                        encounter_type: "ipd",
+                        encounter_id: 1,
+                        charge_id: undefined,
+                        item_name: "",
+                        unit_price: 0,
+                        quantity: 1,
+                        tax_amount: 0,
+                        discount_amount: 0,
+                        notes: "",
+                      })
+                      setPostChargeModalOpen(true)
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Post Charge
+                  </Button>
+                </div>
               </div>
+
 
               <DataTable
                 columns={ledgerColumns}
@@ -1075,114 +1494,194 @@ export const BillingDeskPage: React.FC = () => {
       )}
 
       {/* ════════════════════════════════════════════════════════════════
-          TAB 4: INVOICES & RECEIPTS
+          TAB: GLOBAL INVOICES REGISTER & MASTER AUDIT
          ════════════════════════════════════════════════════════════════ */}
       {activeTab === "invoices" && (
         <div className="space-y-4">
-          <div className="p-4 rounded-xl border border-border bg-card space-y-3">
-            <Label className="text-xs font-bold uppercase tracking-wider block">
-              Patient Invoice Lookup
-            </Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={patientSearchTerm}
-                onChange={(e) => setPatientSearchTerm(e.target.value)}
-                placeholder="Search patient by name, mobile, or UHID to view final tax invoices..."
-                className="pl-9 text-xs"
-              />
-
-              {searchResultsPatients.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-popover border rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                  {searchResultsPatients.map((p: any) => (
-                    <div
-                      key={p.id}
-                      onClick={() => {
-                        setSelectedPatientId(p.id)
-                        setPatientSearchTerm(`${p.name} (${p.uhid})`)
-                      }}
-                      className="p-2.5 hover:bg-muted cursor-pointer flex justify-between items-center text-xs border-b last:border-0"
-                    >
-                      <span className="font-semibold text-foreground">{p.name}</span>
-                      <span className="font-mono text-[11px] text-muted-foreground">
-                        {p.uhid} • {p.mobile || "No Mobile"}
-                      </span>
-                    </div>
-                  ))}
+          {/* Revenue KPI Summary Cards */}
+          {globalInvoicesData?.summary && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 bg-muted/40 border rounded-xl space-y-1">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                  Total Invoiced (Net)
+                </span>
+                <div className="font-mono font-bold text-lg text-foreground">
+                  ₹{globalInvoicesData.summary.total_net_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </div>
-              )}
+                <span className="text-[10px] text-muted-foreground">
+                  {globalInvoicesData.summary.total_invoices_count} invoices generated
+                </span>
+              </div>
+
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-1">
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 uppercase font-bold tracking-wider">
+                  Total Collected
+                </span>
+                <div className="font-mono font-bold text-lg text-emerald-700 dark:text-emerald-300">
+                  ₹{globalInvoicesData.summary.total_amount_paid.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </div>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-500">
+                  Realized revenue on record
+                </span>
+              </div>
+
+              <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl space-y-1">
+                <span className="text-[10px] text-sky-700 dark:text-sky-400 uppercase font-bold tracking-wider">
+                  Discounts / Concessions
+                </span>
+                <div className="font-mono font-bold text-lg text-sky-700 dark:text-sky-300">
+                  ₹{globalInvoicesData.summary.total_discount_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </div>
+                <span className="text-[10px] text-sky-600 dark:text-sky-500">
+                  Approved courtesy discounts
+                </span>
+              </div>
+
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1">
+                <span className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold tracking-wider">
+                  Balance Outstanding
+                </span>
+                <div className="font-mono font-bold text-lg text-amber-700 dark:text-amber-300">
+                  ₹{globalInvoicesData.summary.total_balance_due.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </div>
+                <span className="text-[10px] text-amber-600 dark:text-amber-500">
+                  Credit & partially paid balance
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Filter Toolbar */}
+          <div className="p-3 bg-card border rounded-xl space-y-3">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={invoiceSearch}
+                  onChange={(e) => {
+                    setInvoiceSearch(e.target.value)
+                    setInvoicePage(1)
+                  }}
+                  placeholder="Search Invoice #, UHID, Name, Mobile..."
+                  className="pl-8 text-xs h-8"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <select
+                  value={invoiceStatusFilter}
+                  onChange={(e) => {
+                    setInvoiceStatusFilter(e.target.value as any)
+                    setInvoicePage(1)
+                  }}
+                  className="text-xs rounded-md border border-input bg-background px-2.5 py-1.5 h-8 font-medium"
+                >
+                  <option value="all">All Payment Statuses</option>
+                  <option value="paid">Paid (Fully Cleared)</option>
+                  <option value="partially_paid">Partially Paid</option>
+                  <option value="pending">Pending Balance</option>
+                </select>
+
+                <select
+                  value={invoiceEncounterFilter}
+                  onChange={(e) => {
+                    setInvoiceEncounterFilter(e.target.value as any)
+                    setInvoicePage(1)
+                  }}
+                  className="text-xs rounded-md border border-input bg-background px-2.5 py-1.5 h-8 font-medium"
+                >
+                  <option value="all">All Departments</option>
+                  <option value="ipd">IPD (Inpatient)</option>
+                  <option value="opd">OPD (Outpatient)</option>
+                  <option value="emergency">Emergency / Casualty</option>
+                  <option value="lab">Pathology / LIS</option>
+                  <option value="pharmacy">Pharmacy Dispense</option>
+                </select>
+
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Input
+                    type="date"
+                    value={invoiceDateFrom}
+                    onChange={(e) => {
+                      setInvoiceDateFrom(e.target.value)
+                      setInvoicePage(1)
+                    }}
+                    className="text-xs h-8 w-32 font-mono"
+                    title="From Date"
+                  />
+                  <span>to</span>
+                  <Input
+                    type="date"
+                    value={invoiceDateTo}
+                    onChange={(e) => {
+                      setInvoiceDateTo(e.target.value)
+                      setInvoicePage(1)
+                    }}
+                    className="text-xs h-8 w-32 font-mono"
+                    title="To Date"
+                  />
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setInvoiceSearch("")
+                    setInvoiceStatusFilter("all")
+                    setInvoiceEncounterFilter("all")
+                    setInvoiceDateFrom("")
+                    setInvoiceDateTo("")
+                    setInvoicePage(1)
+                  }}
+                  className="text-xs h-8 text-muted-foreground hover:text-foreground"
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
           </div>
 
-          {selectedPatientId && patientInvoices.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {patientInvoices.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all space-y-3"
+          {/* DataTable */}
+          <DataTable
+            columns={invoiceColumns}
+            data={globalInvoicesData?.data || []}
+            isLoading={globalInvoicesLoading}
+            rowKey="id"
+            emptyTitle="No Invoices Found"
+            emptyDescription="No finalized billing invoices matched your selected search and filter criteria."
+          />
+
+          {/* Pagination Controls */}
+          {globalInvoicesData?.pagination && globalInvoicesData.pagination.last_page > 1 && (
+            <div className="flex justify-between items-center pt-2 text-xs text-muted-foreground">
+              <span>
+                Page {globalInvoicesData.pagination.current_page} of {globalInvoicesData.pagination.last_page} (Total {globalInvoicesData.pagination.total} invoices)
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setInvoicePage((p) => Math.max(1, p - 1))}
+                  disabled={invoicePage <= 1}
+                  className="h-7 text-xs"
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-[11px] text-muted-foreground font-mono">
-                        INVOICE NUMBER
-                      </span>
-                      <h4 className="font-bold text-sm text-foreground font-mono">
-                        {inv.invoice_number}
-                      </h4>
-                    </div>
-                    <Badge
-                      className={
-                        inv.payment_status === "paid"
-                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                          : "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                      }
-                    >
-                      {inv.payment_status.toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs border-y py-2">
-                    <div>
-                      <span className="text-[10px] text-muted-foreground block">Net Bill:</span>
-                      <span className="font-mono font-bold">₹{inv.net_amount}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-muted-foreground block">Amount Paid:</span>
-                      <span className="font-mono font-bold text-emerald-600">
-                        ₹{inv.amount_paid}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-muted-foreground block">Payment Mode:</span>
-                      <span className="capitalize">{inv.payment_method}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-muted-foreground block">Issued Date:</span>
-                      <span>{new Date(inv.issued_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full text-xs gap-1.5"
-                    onClick={() => {
-                      setSelectedInvoice(inv)
-                      setInvoiceModalOpen(true)
-                    }}
-                  >
-                    <Printer className="h-3.5 w-3.5" /> View & Print Tax Invoice
-                  </Button>
-                </div>
-              ))}
+                  Previous
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setInvoicePage((p) => Math.min(globalInvoicesData.pagination.last_page, p + 1))}
+                  disabled={invoicePage >= globalInvoicesData.pagination.last_page}
+                  className="h-7 text-xs"
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-          ) : selectedPatientId ? (
-            <div className="p-8 text-center border-2 border-dashed rounded-xl border-border text-xs text-muted-foreground">
-              No finalized tax invoices found for this patient.
-            </div>
-          ) : null}
+          )}
         </div>
       )}
+
 
       {/* ────────────────────────────────────────────────────────────────
           MODAL: ADD / EDIT SERVICE TARIFF RATE
@@ -1568,93 +2067,6 @@ export const BillingDeskPage: React.FC = () => {
         </div>
       </FormContainer>
 
-      {/* ────────────────────────────────────────────────────────────────
-          MODAL: PRINT FINAL TAX INVOICE
-         ──────────────────────────────────────────────────────────────── */}
-      <FormContainer
-        open={invoiceModalOpen}
-        onOpenChange={setInvoiceModalOpen}
-        title="Tax Invoice"
-        description={`Invoice #${selectedInvoice?.invoice_number}`}
-        size="xl"
-        footer={
-          <div className="flex justify-end gap-2 w-full">
-            <Button variant="outline" onClick={() => setInvoiceModalOpen(false)}>
-              Close
-            </Button>
-            <Button onClick={() => window.print()} className="gap-2">
-              <Printer className="h-4 w-4" /> Print Invoice
-            </Button>
-          </div>
-        }
-      >
-        {selectedInvoice && (
-          <div className="p-6 border-2 border-dashed border-border rounded-2xl bg-card space-y-4 text-xs font-mono">
-            <div className="text-center pb-3 border-b">
-              <h2 className="font-bold text-lg text-foreground uppercase tracking-widest">
-                FINAL TAX INVOICE
-              </h2>
-              <Badge className="mt-1 bg-emerald-600 text-white font-mono">
-                {selectedInvoice.invoice_number}
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs border-b pb-3">
-              <div>
-                <span className="text-muted-foreground block text-[10px]">PATIENT NAME:</span>
-                <span className="font-bold">{selectedInvoice.patient?.name}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block text-[10px]">UHID:</span>
-                <span className="font-bold">{selectedInvoice.patient?.uhid}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block text-[10px]">PAYMENT MODE:</span>
-                <span className="font-bold uppercase">{selectedInvoice.payment_method}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block text-[10px]">DATE:</span>
-                <span className="font-bold">
-                  {new Date(selectedInvoice.issued_at).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1.5 pt-2">
-              <div className="flex justify-between">
-                <span>Total Gross Charges:</span>
-                <span className="font-bold">₹{selectedInvoice.total_amount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Advance Adjusted:</span>
-                <span className="text-emerald-600 font-bold">
-                  -₹{selectedInvoice.advance_adjusted}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Courtesy Discount:</span>
-                <span className="text-emerald-600 font-bold">
-                  -₹{selectedInvoice.discount_amount}
-                </span>
-              </div>
-              {selectedInvoice.insurance_amount > 0 && (
-                <div className="flex justify-between">
-                  <span>Insurance / TPA Claim:</span>
-                  <span className="text-sky-600 font-bold">
-                    -₹{selectedInvoice.insurance_amount}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between border-t pt-2 text-sm font-bold">
-                <span>Amount Paid:</span>
-                <span className="text-emerald-600 font-mono">
-                  ₹{selectedInvoice.amount_paid}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </FormContainer>
 
       {/* Direct Walk-In Lab Booking & Invoice Modal */}
       <DirectLabBookingModal
@@ -1666,7 +2078,75 @@ export const BillingDeskPage: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ["lab", "orders"] })
         }}
       />
+
+      {/* ────────────────────────────────────────────────────────────────
+          ENHANCED BILLING & FINANCE MODALS
+         ──────────────────────────────────────────────────────────────── */}
+      {/* 1. Advance Deposit Collection Modal */}
+      <CollectAdvanceDepositModal
+        isOpen={depositModalOpen}
+        onClose={() => setDepositModalOpen(false)}
+        defaultPatientId={selectedPatientId || undefined}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.billing.all })
+        }}
+      />
+
+      {/* 2. Cashier Day-End Closing & Shift Handover Modal */}
+      <CashierDayEndModal
+        isOpen={dayEndModalOpen}
+        onClose={() => setDayEndModalOpen(false)}
+      />
+
+      {/* 3. Official NABH/ABDM/GST 3-Copy Tax Invoice Modal */}
+      <PrintTaxInvoiceModal
+        isOpen={taxInvoiceModalOpen}
+        onClose={() => {
+          setTaxInvoiceModalOpen(false)
+          setSelectedInvoiceId(null)
+        }}
+        invoiceId={selectedInvoiceId}
+      />
+
+      {/* 4. Security Clearance Gate Pass Modal */}
+      <PrintGatePassModal
+        isOpen={gatePassModalOpen}
+        onClose={() => {
+          setGatePassModalOpen(false)
+          setSelectedGatePassAdmissionId(null)
+        }}
+        admissionId={selectedGatePassAdmissionId}
+      />
+
+      {/* 5. Central Cashier Inpatient Settlement Modal */}
+      <CentralSettlementModal
+        isOpen={settlementModalOpen}
+        onClose={() => {
+          setSettlementModalOpen(false)
+          setSelectedSettlementAdmissionId(null)
+        }}
+        admissionId={selectedSettlementAdmissionId}
+        onSettledSuccess={(invId, admId) => {
+          setSelectedInvoiceId(invId)
+          setSelectedGatePassAdmissionId(admId)
+          setTaxInvoiceModalOpen(true)
+        }}
+      />
+
+      {/* 6. Patient Refund / Credit Note Modal */}
+      <IssueRefundModal
+        isOpen={refundModalOpen}
+        onClose={() => {
+          setRefundModalOpen(false)
+          setRefundPatient(null)
+        }}
+        patientId={refundPatient?.id}
+        patientName={refundPatient?.name}
+        uhid={refundPatient?.uhid}
+        encounterType="ipd"
+      />
     </div>
+
   )
 }
 

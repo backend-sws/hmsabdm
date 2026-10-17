@@ -26,10 +26,16 @@ class LabTestTemplate extends Model
         'is_panel',
         'is_active',
         'sort_order',
+        'fulfillment_type',
+        'default_vendor_id',
+        'b2b_cost',
+        'reagent_cost',
     ];
 
     protected $casts = [
         'standard_price' => 'float',
+        'b2b_cost'       => 'float',
+        'reagent_cost'   => 'float',
         'tat_hours'      => 'integer',
         'is_panel'       => 'boolean',
         'is_active'      => 'boolean',
@@ -39,6 +45,11 @@ class LabTestTemplate extends Model
     public function department()
     {
         return $this->belongsTo(LabDepartment::class, 'department_id');
+    }
+
+    public function defaultVendor()
+    {
+        return $this->belongsTo(LabExternalVendor::class, 'default_vendor_id');
     }
 
     public function parameters()

@@ -45,6 +45,31 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
   const [paymentStatus, setPaymentStatus] = useState<string>("waived")
   const [paymentMethod, setPaymentMethod] = useState<string>("cash")
   const [slotTime, setSlotTime] = useState<string>("")
+  const [upiUtr, setUpiUtr] = useState<string>("")
+  const [splitCashAmount, setSplitCashAmount] = useState<number>(0)
+  const [splitUpiAmount, setSplitUpiAmount] = useState<number>(0)
+  const [splitUpiUtr, setSplitUpiUtr] = useState<string>("")
+
+  // Auto-sync split amounts when fee changes or split is selected
+  useEffect(() => {
+    if (paymentMethod === "split") {
+      const half = Math.floor(feeCharged / 2)
+      setSplitCashAmount(half)
+      setSplitUpiAmount(feeCharged - half)
+    }
+  }, [paymentMethod, feeCharged])
+
+  const handleCashChange = (val: number) => {
+    const cash = Math.max(0, val)
+    setSplitCashAmount(cash)
+    setSplitUpiAmount(Math.max(0, feeCharged - cash))
+  }
+
+  const handleUpiChange = (val: number) => {
+    const upi = Math.max(0, val)
+    setSplitUpiAmount(upi)
+    setSplitCashAmount(Math.max(0, feeCharged - upi))
+  }
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isLinkAbhaOpen, setIsLinkAbhaOpen] = useState(false)
@@ -211,6 +236,19 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
       return
     }
 
+    let paymentBreakdown: any[] | undefined = undefined
+    let paymentRef: string | undefined = undefined
+
+    if (paymentMethod === "split") {
+      paymentBreakdown = [
+        { method: "cash", amount: Number(splitCashAmount) || 0 },
+        { method: "upi", amount: Number(splitUpiAmount) || 0, ref: splitUpiUtr.trim() || undefined },
+      ]
+      paymentRef = splitUpiUtr.trim() || undefined
+    } else if (paymentMethod === "upi") {
+      paymentRef = upiUtr.trim() || undefined
+    }
+
     revisitMutation.mutate({
       patient_id: selectedPatient.id,
       uhid: selectedPatient.uhid,
@@ -222,6 +260,8 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
       amount_paid: feeCharged,
       payment_status: paymentStatus,
       payment_method: feeCharged === 0 ? "cash" : paymentMethod,
+      payment_ref: paymentRef,
+      payment_breakdown: paymentBreakdown,
       notes: eligibility?.is_eligible_for_free_followup
         ? `Free Follow-up Revisit (Within 15 days, previous visit ${eligibility.last_visit?.opd_number})`
         : `Standard Revisit OPD Consultation`,
@@ -601,13 +641,84 @@ export const RevisitFlow: React.FC<RevisitFlowProps> = ({
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
                 >
                   <option value="cash">Cash</option>
-                  <option value="upi">UPI / QR</option>
+                  <option value="upi">UPI / QR Code</option>
+                  <option value="split">Split (Cash + UPI)</option>
                   <option value="card">Debit / Credit Card</option>
                   <option value="insurance">Insurance / TPA</option>
                   <option value="other">Other</option>
                 </select>
               </div>
             </div>
+
+            {/* Optional UTR for single UPI */}
+            {paymentMethod === "upi" && feeCharged > 0 && (
+              <div className="animate-in fade-in duration-200">
+                <Label className="text-xs font-semibold flex items-center justify-between">
+                  <span>UPI / Bank Reference (UTR) Number</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">Optional</span>
+                </Label>
+                <Input
+                  placeholder="e.g. 423456789012 or UPI txn ID"
+                  value={upiUtr}
+                  onChange={(e) => setUpiUtr(e.target.value)}
+                  className="mt-1 text-xs font-mono"
+                />
+              </div>
+            )}
+
+            {/* Split Payment Breakdown Box */}
+            {paymentMethod === "split" && feeCharged > 0 && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                    ⚡ Split Payment Breakdown (Fee: ₹{feeCharged})
+                  </span>
+                  <span
+                    className={`text-[11px] font-mono font-semibold ${
+                      Number(splitCashAmount) + Number(splitUpiAmount) === Number(feeCharged)
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-rose-600 dark:text-rose-400"
+                    }`}
+                  >
+                    Sum: ₹{Number(splitCashAmount) + Number(splitUpiAmount)} / ₹{feeCharged}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-[11px] font-medium text-muted-foreground">Cash Amount (₹)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={splitCashAmount}
+                      onChange={(e) => handleCashChange(Number(e.target.value))}
+                      className="mt-1 text-xs font-mono font-bold bg-background"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-[11px] font-medium text-muted-foreground">UPI Amount (₹)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={splitUpiAmount}
+                      onChange={(e) => handleUpiChange(Number(e.target.value))}
+                      className="mt-1 text-xs font-mono font-bold bg-background"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-[11px] font-medium text-muted-foreground">UPI UTR # (Optional)</Label>
+                    <Input
+                      placeholder="e.g. 4291823901"
+                      value={splitUpiUtr}
+                      onChange={(e) => setSplitUpiUtr(e.target.value)}
+                      className="mt-1 text-xs font-mono bg-background"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Submit Action */}
             <div className="pt-3 flex items-center justify-end gap-3">

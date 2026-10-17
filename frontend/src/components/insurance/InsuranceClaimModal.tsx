@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import {
@@ -35,6 +36,8 @@ import { PatientAdmissionPicker } from "./PatientAdmissionPicker"
 
 interface Props {
   embedded?: boolean
+  initialOpenCreate?: boolean
+  onResetOpenCreate?: () => void
   onClose?: () => void
   onRefresh?: () => void
   initialData?: any
@@ -54,10 +57,23 @@ const CLAIM_STATUS_MAP: Record<string, { label: string; color: string }> = {
   written_off: { label: "Written Off", color: "bg-neutral-500/10 text-neutral-700 dark:text-neutral-400 border-neutral-500/20" },
 }
 
-export const InsuranceClaimModal: React.FC<Props> = ({ embedded, onClose, onRefresh, initialData }) => {
+export const InsuranceClaimModal: React.FC<Props> = ({
+  embedded,
+  initialOpenCreate = false,
+  onResetOpenCreate,
+  onClose,
+  onRefresh,
+  initialData,
+}) => {
   const [statusFilter, setStatusFilter] = useState("all")
   const [search, setSearch] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
+
+  useEffect(() => {
+    if (initialOpenCreate) {
+      setShowCreateForm(true)
+    }
+  }, [initialOpenCreate])
   const [showSettleModal, setShowSettleModal] = useState<any>(null)
   const [showGrievanceModal, setShowGrievanceModal] = useState<any>(null)
   const [showDossierModal, setShowDossierModal] = useState<any>(null)
@@ -136,6 +152,7 @@ export const InsuranceClaimModal: React.FC<Props> = ({ embedded, onClose, onRefr
     onSuccess: () => {
       toast.success("Claim created successfully")
       setShowCreateForm(false)
+      onResetOpenCreate?.()
       refetch()
       onRefresh?.()
     },
@@ -611,8 +628,9 @@ export const InsuranceClaimModal: React.FC<Props> = ({ embedded, onClose, onRefr
       </div>
 
       {/* ── CREATE CLAIM MODAL ─────────────────────────────────────── */}
-      {showCreateForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
+      {showCreateForm &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-4 max-h-[92vh] overflow-y-auto border border-border animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
@@ -624,7 +642,15 @@ export const InsuranceClaimModal: React.FC<Props> = ({ embedded, onClose, onRefr
                   <p className="text-xs text-muted-foreground">IRDAI compliant claim submission & settlement registration</p>
                 </div>
               </div>
-              <button onClick={() => setShowCreateForm(false)} className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground">✕</button>
+              <button
+                onClick={() => {
+                  setShowCreateForm(false)
+                  onResetOpenCreate?.()
+                }}
+                className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="space-y-4 text-xs">
@@ -751,12 +777,14 @@ export const InsuranceClaimModal: React.FC<Props> = ({ embedded, onClose, onRefr
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── SETTLE CLAIM MODAL ─────────────────────────────────────── */}
-      {showSettleModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      {showSettleModal &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <h3 className="font-semibold text-base flex items-center gap-2">
               <Landmark className="h-4 w-4 text-emerald-600" /> Record Claim Settlement
@@ -814,12 +842,14 @@ export const InsuranceClaimModal: React.FC<Props> = ({ embedded, onClose, onRefr
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── GRIEVANCE MODAL ────────────────────────────────────────── */}
-      {showGrievanceModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
+      {showGrievanceModal &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-xl p-6 space-y-4 max-h-[92vh] overflow-y-auto border border-border animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
@@ -990,12 +1020,14 @@ export const InsuranceClaimModal: React.FC<Props> = ({ embedded, onClose, onRefr
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── PRINTABLE FORMAL DISPUTE NOTICE MODAL ───────────────────── */}
-      {printDisputeClaim && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-6 backdrop-blur-xs">
+      {printDisputeClaim &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-3 sm:p-6 backdrop-blur-xs">
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl p-6 sm:p-8 space-y-4 max-h-[92vh] overflow-y-auto border border-border">
             <div className="flex items-center justify-between border-b pb-3">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -1109,12 +1141,14 @@ export const InsuranceClaimModal: React.FC<Props> = ({ embedded, onClose, onRefr
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── CLAIM DOSSIER MODAL ────────────────────────────────────── */}
-      {showDossierModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      {showDossierModal &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-xl p-6 space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-semibold text-base flex items-center gap-2">
@@ -1150,7 +1184,8 @@ export const InsuranceClaimModal: React.FC<Props> = ({ embedded, onClose, onRefr
               <Button onClick={() => setShowDossierModal(null)}>Close</Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
