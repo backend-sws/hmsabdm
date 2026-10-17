@@ -22,12 +22,13 @@ class PatientFactory extends Factory
 
     private function safeFaker(): object
     {
-        if (isset($this->faker)) {
-            return $this->faker;
-        }
-
-        if (function_exists('\fake')) {
-            return \fake();
+        if (class_exists(\Faker\Generator::class)) {
+            if (isset($this->faker)) {
+                return $this->faker;
+            }
+            if (function_exists('\fake')) {
+                return \fake();
+            }
         }
 
         return new class {

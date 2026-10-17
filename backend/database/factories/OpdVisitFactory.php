@@ -12,13 +12,15 @@ class OpdVisitFactory extends Factory
 {
     public function definition(): array
     {
+        $hasFaker = class_exists(\Faker\Generator::class);
+
         return [
             'hospital_id' => Hospital::factory(),
             'patient_id' => Patient::factory(),
             'doctor_id' => Doctor::factory(),
             'department_id' => Department::factory(),
             'visit_date' => now()->toDateString(),
-            'queue_token' => $this->faker->numberBetween(1, 100),
+            'queue_token' => $hasFaker ? $this->faker->numberBetween(1, 100) : rand(1, 100),
             'status' => 'waiting',
         ];
     }
