@@ -9,6 +9,7 @@
         "php": "^8.3",
         "darkaonline/l5-swagger": "^11.1",
         "dompdf/dompdf": "^3.1",
+        "fakerphp/faker": "^1.23",
         "laravel/framework": "^13.8",
         "laravel/reverb": "^1.11",
         "laravel/sanctum": "^4.0",
@@ -18,7 +19,6 @@
         "spatie/laravel-query-builder": "^7.3"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.23",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",

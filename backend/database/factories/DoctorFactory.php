@@ -13,8 +13,8 @@ class DoctorFactory extends Factory
         return [
             'hospital_id' => Hospital::factory(),
             'department_id' => Department::factory(),
-            'name' => 'Dr. ' . fake()->name(),
-            'specialization' => fake()->word(),
+            'name' => 'Dr. ' . $this->faker->name(),
+            'specialization' => $this->faker->word(),
             'is_active' => true,
         ];
     }

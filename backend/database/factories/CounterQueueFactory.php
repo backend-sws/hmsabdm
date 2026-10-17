@@ -13,7 +13,7 @@ class CounterQueueFactory extends Factory
         return [
             'hospital_id' => Hospital::factory(),
             'patient_id' => Patient::factory(),
-            'link_token' => (string) fake()->numberBetween(100, 999),
+            'link_token' => (string) $this->faker->numberBetween(100, 999),
             'counter_code' => 'HIP123',
             'status' => 'waiting_confirmation',
             'expires_at' => now()->addMinutes(30),

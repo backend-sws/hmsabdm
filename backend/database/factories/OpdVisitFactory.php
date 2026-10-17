@@ -18,7 +18,7 @@ class OpdVisitFactory extends Factory
             'doctor_id' => Doctor::factory(),
             'department_id' => Department::factory(),
             'visit_date' => now()->toDateString(),
-            'queue_token' => fake()->numberBetween(1, 100),
+            'queue_token' => $this->faker->numberBetween(1, 100),
             'status' => 'waiting',
         ];
     }
